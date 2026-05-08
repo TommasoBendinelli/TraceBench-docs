@@ -1,0 +1,185 @@
+\section{Experimental Setup}
+
+
+\subsection{Physical Simulators}
+For our experiments we generate tasks following the \name{} pipeline for three simple simulators
+\begin{itemize}[leftmargin=*,topsep=3pt,nosep]
+    \item \texttt{BallDrop}: a ball moving vertically under gravity and bouncing on a ground surface.
+    \item \texttt{DampedMassBetweenWalls} : a damped mass moving along a tilted one-dimensional track and colliding with two rigid walls.
+    \item \texttt{InclinedPlane}: a mass moving along a tilted plane with a force applied periodically.
+\end{itemize}
+Each simulator is implemented in Simulink.
+For each environment \(e\), we chose an environment-specific noise scale \(\kappa_{\mathrm{low}}^{(e)}\) and \(\kappa_{\mathrm{high}}^{(e)} = 4\kappa_{\mathrm{low}}^{(e)}\) to create two different noise regimes. 
+We report the resulting per-channel SNRs and representative noisy trajectories in the appendix.  
+
+\subsection{Metrics}
+We score agentic submissions based on top-1 accuracy.
+For top-1 accuracy, we compare the first label predicted by the agent against the ground truth label.
+
+For $\mathcal{I}_{\mathrm{direct}}$ tasks, performance is evaluated on the episode batch, i.e., the test files visible to the agent. 
+For $\mathcal{I}_{\mathrm{code}}$ tasks, we report performance on both the episode batch and a held-out batch of additional samples. 
+
+Random chance is the macro-average of uniform guessing over the three simulator label spaces, approximately 0.18.
+Table entries report mean accuracy across seeds and simulators, with standard deviation computed across evaluation episodes.
+
+\subsection{Agent models}
+We evaluate a set of closed- and open-weight tool-using agents using their corresponding terminal-based execution platforms.
+Specifically, we evaluated \texttt{gpt-5.5 (high)}, \texttt{gemini-3.1-pro-preview (high)}, \texttt{claude-opus-4-6 (high)} and \texttt{minimax-m2.7}.
+For models that expose a reasoning-effort setting, we use the high setting, denoted by ``(high)'' in the result tables.
+All agents are evaluated under the same task interface, file layout, and scoring procedure.
+The full list of agent profiles, platform commands, available tools, and token-cost metadata is provided in the appendix.
+
+\subsection{Runtime environment}
+Each evaluation episode is executed in an isolated containerized environment with a timeout of one hour.
+The agent has access to the task prompt, the sample files, and a Python environment with standard scientific libraries such as NumPy, pandas, SciPy, scikit-learn, and matplotlib.
+The entire list is in the appendix. 
+The agent may run terminal commands and Python scripts to inspect, transform, or visualize the time series. 
+Internet access is disabled.
+
+An episode ends when the agent returns control to the harness. 
+For direct-prediction tasks, the final artifact is \texttt{results.json}. 
+For code-rule tasks, the final artifact is \texttt{rule.py}. 
+If the required artifact is missing or invalid, the episode receives zero score for the entire batch score. 
+To avoid penalizing performance for API runtime errors, we allow rerunning twice in the case of final artifact error.
+We report error of such type separately.
+
+
+\subsection{Experimental setup}
+We repeat each experiment with five different seeds for each physical simulator.
+Each experiment is defined by its test set and its controllable factors, namely the noise regime, the task interface, the number of labeled examples, and the level of the textual description.
+To support controlled comparisons across prompt and evidence conditions, matched experimental conditions use the same test samples.
+This pairing ensures that differences between conditions reflect changes in one of the controllable factors rather than changes in the underlying test samples.
+Each test batch contains \(B=10\) samples. When \(B\) is not divisible by the number of label classes in an environment, test batches are balanced as evenly as possible, so that any two class counts differ by at most one sample.
+
+Our main experiment evaluates a grid over \(\{\kappa_{\mathrm{low}}, \kappa_{\mathrm{high}}\} \times \{\mathcal{I}_{\mathrm{direct}}, \mathcal{I}_{\mathrm{code}}\}\), using three labeled samples per class and a high-detail textual description.
+This yields 60 evaluation episodes per agent: 15 episodes per condition and a total of 150 visible test samples per condition.
+We then perform two additional ablations over the textual description and the number of training labels while keeping \(\kappa_{\mathrm{high}}\) fixed for both \(\mathcal{I}_{\mathrm{direct}}\) and \(\mathcal{I}_{\mathrm{code}}\).
+Due to cost constraints, we evaluated only these two ablations with \texttt{gpt-5.5} and \texttt{gemini-3.1-pro-preview}.
+
+We present the aggregate analysis in the following sections and provide supporting tables in the appendix.
+
+\section{Results}
+\subsection{Main results}
+Table~\ref{tab:acc_main_experiment_table} shows the accuracy averaged over seeds and simulators for each condition. 
+Note that \texttt{claude-opus-4-6} could not be evaluated on \((\kappa_{\mathrm{high}}, \mathcal{I}_{\mathrm{code}})\) with \texttt{DampedMassBetweenWalls} because its run lasted longer than one hour.
+\texttt{gpt-5.5} and \texttt{claude-opus-4-6} are the strongest performers, followed by \texttt{gemini-3.1-pro-preview}. 
+By contrast, \texttt{minimax-m2.7} performs substantially worse.  
+\texttt{minimax-m2.7} is strong on agentic software-engineering benchmarks such as SWE-Pro and Terminal Bench 2~\citep{minimax_m27_report_2026}, but strong performance on software-engineering benchmarks does not imply strong performance on TSENV.
+
+Performance decreases as noise increases from \(\kappa_{\mathrm{low}}\) to \(\kappa_{\mathrm{high}}\).
+\texttt{gemini-3.1-pro-preview} is the most sensitive to noise with a drop of 16.7 percentage points.
+
+The \(\mathcal{I}_{\mathrm{code}}\) episode accuracy is worse than direct prediction \(\mathcal{I}_{\mathrm{direct}}\), indicating a gap between recognizing diagnostic evidence in a batch and encoding it as a reusable rule.
+Additionally, the held-out accuracy is often lower than episode accuracy, suggesting that rules fitted during exploration may not always capture stable physical signatures of the intervention
+
+\begin{table}[ht]
+\centering
+\caption{Top-1 accuracy for the main experiment, aggregated across simulators.
+\texttt{Episode} refers to accuracy measured on the visible test samples in the episode batch.
+\texttt{Held-out} refers to accuracy measured on additional samples that are not visible to the agent during the episode.
+}
+\label{tab:acc_main_experiment_table}
+\input{tables/main_tables/acc_main_experiment_table}
+\end{table}
+
+\FloatBarrier
+
+\paragraph{More tool use does not reliably improve accuracy}
+We analysed the agentic rollout to explore correlation between the accuracy and exploration and reasoning.
+Fig. \ref{fig:accuracy-vs-compute} shows the accuracy on the y-axis plotted against cumulative token usage and python calls.
+As shown, more exploration or longer trajectories do not lead to better outcomes. 
+On the contrary there is a negative correlation.
+Weaker agents often spend more steps running generic analyses, while stronger agents spend fewer steps constructing targeted diagnostics.
+
+
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{pictures/accuracy_vs_tokens_and_python_calls.pdf}
+\caption{Top-1 accuracy as a function of cumulative token usage (left) and Python calls (right) for the results in the main table. 
+    Each point aggregates one agent and experimental condition across completed seeds and environments; horizontal and vertical bars show standard deviation across runs.}
+\label{fig:accuracy-vs-compute}
+\end{figure}
+
+
+Table~\ref{tab:cum-main-experiment-table} reports cumulative token usage in millions of tokens for the main experiment.
+
+Token usage varies substantially by model and interface: \texttt{gpt-5.5} uses the fewest tokens, ranging from 0.78M--0.98M in direct mode and 0.93M--1.19M in code mode, while \texttt{claude-opus-4-6} uses the most, reaching 4.39M--4.51M tokens in direct mode and 6.59M--6.63M in code mode.
+Overall while both \texttt{GPT-5.5} and \texttt{claude-opus-4-6} are on the same level of performance on the task, \texttt{claude-opus-4-6} uses many more tokens to solve them.
+Across agents, code-rule tasks require more tokens than direct classification in both noise regimes.
+This increase is especially visible for \texttt{claude-opus-4-6} and \texttt{minimax-m2.7}, where code-mode runs require roughly 1.5--3.6M more tokens than direct runs, indicating that writing and validating executable decision rules adds substantial interaction cost.
+Higher observation noise also partially increases token usage for \texttt{GPT-5.5} and \texttt{gemini-3.1-pro-preview}, but not uniformly for \texttt{claude-opus-4-6} and  \texttt{minimax-m2.7}.
+
+
+
+
+\begin{table}[ht]
+\centering
+\caption{Cumulative token usage for the main experiment, in millions of tokens.}
+\label{tab:cum-main-experiment-table}
+\input{tables/main_tables/cum_main_experiment_table}
+\end{table}
+\FloatBarrier
+
+\paragraph{Do agents visualise time-series data?}
+Plotting is often a primary method for data inspection. 
+We quantitatively measure for each agent the number of plots generated and consumed for all the agents that support image modality. 
+Surprisingly, only \texttt{GPT-5.5} uses plotting to gain insights, although sparingly in only seven different evaluation over the total of our experiments.
+\texttt{gemini-3.1-pro-preview} generates plots much more frequently, with 183 plot artifacts, but never invoked an image-viewing tool in the uploaded runs. 
+\texttt{claude-opus-4-6} generates no plot artifacts in the uploaded trajectory set. 
+Thus, current agents mostly explore TSENV through script-mediated summaries, feature extraction, correlations, changepoint checks, and train-set diagnostics, rather than through sustained visual inspection of the time series.
+
+
+
+
+
+\subsection{Ablations: Few-shot examples and textual context have opposite effects}
+Table~\ref{tab:acc_ablation_training_examples} shows the results for the two ablations.
+The left block removes the labeled examples while keeping the high-detail textual description, whereas the right block removes the detailed environment description while keeping three labeled examples per class.
+The prompts are provided in Appendix~\ref{app:prompt-example-combinations}.
+Removing the textual description has a large impact, decreasing performance by 28.9 and 22.6 percentage points for \texttt{gpt-5.5} and \texttt{gemini-3.1-pro-preview}, respectively, averaged across direct and code settings.
+By contrast, removing the labeled time-series examples improves performance by 4.2 percentage points for \texttt{gpt-5.5} and 6.2 percentage points for \texttt{gemini-3.1-pro-preview}.
+
+
+\begin{table}[ht]
+\centering
+\caption{Top-1 accuracy for the two ablation studies, aggregated across environments. Noise is set to \texttt{high}.}
+\label{tab:acc_ablation_training_examples}
+\input{tables/main_tables/acc_ablation_training_examples}
+\end{table}
+
+\FloatBarrier
+
+
+\begin{table}[ht]
+\centering
+\caption{Cumulative token usage for the two ablation studies, aggregated across environments and reported in millions of tokens.}
+\label{tab:cum-ablation-training-examples}
+\input{tables/main_tables/cum_ablation_training_examples}
+\end{table}
+
+
+We inspect the agentic trajectories to understand this pattern
+In several runs, agents explicitly test their rules or heuristics on the training samples, obtain high training accuracy with data-driven procedures, and then submit the resulting solution directly.
+By contrast, when labeled examples are unavailable, agents rely more heavily on heuristics derived from the textual description.
+This suggests that labeled examples can encourage local rule tuning rather than stable causal abstraction.
+Table~\ref{tab:cum-ablation-training-examples} reports cumulative token usage for the ablation runs.
+Textual semantics not only improve accuracy but also reduce search complexity, with lower token usage overall for both \texttt{gpt-5.5} and \texttt{gemini-3.1-pro-preview}.
+Conversely, removing the textual description increases token usage: the \texttt{three-example, no-context} condition has the highest token usage, suggesting that agents compensate for missing semantics with additional generic analyses.
+
+
+\section{Conclusion}
+In this paper, we introduced \name{}, a benchmark framework for generating root-cause time-series tasks aimed at evaluating agents on context-grounded and iterative data analysis.
+\name{} uses physics-grounded simulators and provides control over several task axes.
+Using our framework, we instantiated three environments and conducted an empirical evaluation of frontier agents to probe their data-analysis capabilities.
+Our results suggest that even state-of-the-art agents remain brittle: they often fail to reliably ground decisions in the time series, are sensitive to noise and local cues, and exhibit a persistent tension between textual priors and numerical evidence.
+
+\paragraph{Limitations.}
+First, \name{} uses a closed-ended label set to enable unambiguous evaluation and clean comparisons across conditions; however, this format does not fully capture the open-ended nature of exploratory data analysis, where analysts must often formulate hypotheses and communicate conclusions without predefined options.
+Second, due to the high cost of agent evaluations, our study includes a relatively limited number of instances and ablations, which constrains statistical power.
+Finally, our simulators focus primarily on kinematics and dynamical systems; while this was an intentional design choice to ensure interpretability, it may not capture all the nuances of real-world time-series settings.
+
+\section*{Impact statement}
+\textbf{Positive impacts.} \name can reveal failure modes missed by outcome-only evaluation and support research on better agent evaluations, evidence-linked workflows, and verification-oriented interfaces, reducing mistakes in monitoring and diagnostics.
+
+\textbf{Negative impacts and misuse.} Systems may overfit to benchmark-specific heuristics, and scores could be misused as a ``trustworthiness'' claim in high-stakes settings. Releasing trajectories may also expose shortcut strategies, despite design efforts to limit them.

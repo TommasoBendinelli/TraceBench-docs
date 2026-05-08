@@ -1,0 +1,40 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+& \textbf{\texttt{BallDrop}}
+& \textbf{\texttt{DampedMass}}
+& \textbf{\texttt{Inclined Plane}} \\
+\midrule
+\texttt{gpt-5.5}
+& \scorepm{.97}{0.100}
+& \scorepm{.88}{0.100}
+& \scorepm{.93}{0.100} \\
+
+\texttt{gemini-3.1-pro-preview}
+& \scorepm{.85}{0.100}
+& \scorepm{.82}{0.100}
+& \scorepm{.91}{0.100} \\
+
+\texttt{claude-opus-4-6}
+& \scorepm{.87}{0.100}
+& \scorepm{.94}{0.100}
+& \scorepm{.79}{0.100} \\
+
+\texttt{minimax-m2.7}
+& \scorepm{.86}{0.100}
+& \scorepm{.83}{0.100}
+& \scorepm{.89}{0.100} \\
+
+\bottomrule
+\end{tabular}%
+}
+\endgroup

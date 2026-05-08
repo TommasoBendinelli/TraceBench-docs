@@ -1,0 +1,67 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\begin{document}
+
+\suppressManualDocCenteredTitle
+\docTitle{tsENV Documentation}
+\providecommand{\manualDocPaperStartPage}{--}
+\providecommand{\manualDocPaperAppendixStartPage}{--}
+\InputIfFileExists{build/documentation_index_page_overrides.tex}{}{}
+\newcommand{\chapterstartpage}[1]{%
+  \ifcsname r@#1\endcsname
+    \pageref{#1}%
+  \else
+    --%
+  \fi
+}
+\newcommand{\indexrow}[2]{%
+  #1 & \chapterstartpage{#2} \\[1.15em]
+}
+\newcommand{\indexrowvalue}[2]{%
+  #1 & #2 \\[1.15em]
+}
+
+\vspace{0.75em}
+{\fontsize{28}{32}\selectfont\bfseries tsENV Documentation\par}
+\vspace{0.7em}
+{\Large Main chapter start pages\par}
+\vspace{1.1em}
+\noindent\rule{\textwidth}{0.6pt}
+\vspace{1.5em}
+
+\begingroup
+\setlength{\tabcolsep}{0pt}
+\renewcommand{\arraystretch}{1}
+
+{\large\bfseries
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lr@{}}
+Chapter & Page \\[0.8em]
+\end{tabular*}
+}
+
+{\Large
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lr@{}}
+\indexrow{Terminology and Shared Utilities}{docstart:terminology_shared_utilities}
+\indexrow{Agent Profiles Reference}{docstart:agent_profiles}
+\indexrow{Environments}{docstart:environment_profiles}
+\indexrow{Simulink Generated Metadata Schema}{docstart:simulink_generated_metadata_schema}
+\indexrow{Model Run Specs Schema}{docstart:model_run_specs_schema}
+\indexrow{Stage: Simulate}{docstart:simulation_stage}
+\indexrow{Stage: Compute Metrics}{docstart:compute_metrics_stage}
+\indexrow{Stage: Oracle solution}{docstart:oracle_solution}
+\indexrow{Stage: Generate Question}{docstart:generate_question_stage}
+\indexrow{Stage: Agentic Rollout}{docstart:agentic_rollout}
+\indexrow{Stage: Final Artifact Scoring}{docstart:final_artifact_scoring_stage}
+\indexrow{Agent Trajectory Schema}{docstart:atif_transcription}
+\indexrow{Stage: Agentic Trajectory Evaluation}{docstart:agentic_trajectory_evaluation}
+\indexrow{Experiment Plan}{docstart:experiment_plan}
+\indexrow{Web Model Explorer}{docstart:web_model_explorer}
+\indexrow{Paper TODOs}{docstart:paper_todos}
+\indexrowvalue{Paper}{\manualDocPaperStartPage}
+\indexrowvalue{Paper Appendix}{\manualDocPaperAppendixStartPage}
+\end{tabular*}
+}
+\endgroup
+
+\end{document}

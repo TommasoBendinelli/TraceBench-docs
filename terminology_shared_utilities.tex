@@ -1,0 +1,102 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\begin{document}
+
+\docTitle{Terminology and Common Utilities}
+\phantomsection\label{docstart:terminology_common_utilities}
+
+\section*{Terminology}
+\begin{itemize}
+\item (\termSRD): symmetric relative difference. For values \code{a} and \code{b}, \code{SRD(a,b; epsilon) = 2* abs(a - b) / (abs(a) + abs(b) + epsilon)}.
+When epsilon is omitted, assume \code{epsilon = 0}.
+The minimum \termSRD distance required is denoted by \termMinSRDDistance
+\item (\termMinAbsDist): minimum absolute distance/change required between values.
+\item (\termNoParameterChangeClass): No parameter change (i.e. no intervention) class. Class indicating that none of the exposed intervention parameters changes during the observed simulation interval. In the text we will use the symbol \termNoParameterChangeClass excepts in prompts.
+In this case we use the corresponding agent-facing class is "no parameter change".
+\item (\termDescLevel): It describes the amount of natural-language model information provided to the agent. Its allowed values are \code{none}, \code{low}, and \code{high}.
+\item (\termSimulator): The physical simulator from which we generate data. It allows values are the ones allowed in \code{ALLOWED_TSENV_MODELS}.
+\item (\termTaskMode): The required form of the agent's final answer. 
+Its allowed values are \code{direct} and \code{code}. 
+In \code{direct} mode, the agent must directly write the predictions for the test samples. In \code{code} mode, the agent must write an interpretable \code{rule.py} file defining a prediction function that is evaluated on the test samples and held-out samples.
+\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample. Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} returns the clean simulator output; \code{low} and \code{high} call the model-specific \code{add_noise(...)} implementation and must satisfy the corresponding detectability SNR thresholds. The realized effect-to-noise SNR values are reported in \code{noise_analysis}.
+\end{itemize}
+
+\section*{Common Utilities}
+This is used (i) Compute Metrics (ii) Agentic Rollout (iii) Final Artifact Scoring
+\begin{algorithm}[H]
+\phantomsection\label{def:materialize-utility}
+\textbf{\code{materialize(uuid\_path, noise\_level, seed=None, uuid\_reference\_path=None)}}\par\smallskip
+\begin{algorithmic}[1]
+\State \code{src} $\gets$ read parquet file at \code{uuid_path}
+\State \code{ref} $\gets$ \code{None}
+\State \code{noise_analysis} $\gets$ \code{None}
+\If{\code{uuid_reference_path} is not \code{None}}
+    \State \code{ref} $\gets$ read parquet file at \code{uuid_reference_path}
+\EndIf
+\If{\code{noise_level} $\neq$ \code{"none"}}
+    \State \code{(noisy_df, noise_analysis)} $\gets$ \code{add_noise(src, seed, noise_level, ref=ref)}
+    \State \code{df} $\gets$ \code{noisy_df}
+\Else
+    \State \code{df} $\gets$ \code{src}
+\EndIf
+\State Rename all columns of \code{df} to \code{col1}, \code{col2}, \ldots, \code{colN}
+\Assert \code{colN} is time (i.e. regularly sampled)
+\State \Return \code{(df, noise_analysis)}
+\end{algorithmic}
+\end{algorithm}
+
+Where \code{add_noise} is defined for each MODEL in \code{noise_adder.py}.
+\begin{algorithm}[H]
+\phantomsection\label{def:add-noise-utility}
+\textbf{\code{add_noise(src, seed, noise_level, ref=None)}}\par\smallskip
+\begin{algorithmic}[1]
+\Assert{\code{noise_level} is one of \code{"low"} or \code{"high"}}
+\State \code{current_seed} $\gets$ \code{seed}
+\State \code{src_noisy} $\gets$ apply model-specific noise to \code{src} using \code{current_seed}, \code{NOISE_DICT[noise_level]}
+\If{\code{ref} is not \code{None}}
+    \State \code{ref_noisy} $\gets$ apply model-specific noise to \code{ref} using \code{current_seed+10}, \code{NOISE_DICT[noise_level]}
+\Else
+    \State \code{ref_noisy} $\gets$ \code{None}
+\EndIf
+\State \code{noise_analysis} $\gets$ \code{quantify_effect_snr(src, src_noisy, ref, ref_noisy)}
+\State \Return \code{(src_noisy, noise_analysis)}
+
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\phantomsection\label{def:quantify-noise-utility}
+\textbf{\code{quantify_effect_snr(src, src_noisy, ref=None, ref_noisy=None)}}\par\smallskip
+\begin{algorithmic}[1]
+\State \code{snr_analysis} $\gets$ \code{[]}
+\ForAll{observed non-time signals \code{signal}}
+    \If{\code{ref} is not \code{None}}
+        \State \code{clean_effect_signal} $\gets$ \code{src[signal]} $-$ \code{ref[signal]}
+        \If{\code{ref_noisy} is not \code{None}}
+            \State \code{src_noise_signal} $\gets$ \code{src_noisy[signal]} $-$ \code{src[signal]}
+            \State \code{ref_noise_signal} $\gets$ \code{ref_noisy[signal]} $-$ \code{ref[signal]}
+            \State \code{noise_signal} $\gets$ \code{src_noise_signal} $-$ \code{ref_noise_signal}
+        \Else
+            \State \code{noise_signal} $\gets$ \code{src_noisy[signal]} $-$ \code{src[signal]}
+        \EndIf
+    \Else
+        \State \code{clean_effect_signal} $\gets$ \code{src[signal]}
+        \State \code{noise_signal} $\gets$ \code{src_noisy[signal]} $-$ \code{src[signal]}
+    \EndIf
+    \State append \code{SNR_db(clean_effect_signal, noise_signal)} to \code{snr_analysis}
+\EndFor
+\State \Return \code{snr_analysis}
+\end{algorithmic}
+\end{algorithm}
+
+Where 
+\begin{DocCode}
+    SNR_db(effect_signal, noise) = 20 log10(RMS(effect_signal) / RMS(noise))
+\end{DocCode}
+\code{effect_signal} is the intervention effect relative to the reference trajectory, not the raw signal amplitude.
+Note that the signals undergo preprocessing before the formula is applied, following \code{appendix_environment.tex::*::Signal preprocessing}
+Note that \code{quantify_effect_snr} also accepts \textbf{list} for the input arguments \code{src}, \code{src_noisy}, \code{ref=None}, \code{ref_noisy=None}.
+In that case it returns the mean SNR. The mean SNR is computed by first taking the mean over the linear effect-to-noise ratios, where n is the number of the list.
+The SNRdb is then returned by computing \code{20*log10(mean effect-to-noise ratio)}.
+\end{document}

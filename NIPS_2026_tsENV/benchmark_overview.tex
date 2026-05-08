@@ -1,0 +1,105 @@
+% !TeX root = main.tex
+\section{TSENV Framework}
+\label{sec:overview}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{pictures/Overviewfigure_v8.pdf}
+\caption{Overview of the \name{} pipeline using the BallDrop simulator. In this example, \name{} samples an intervention at time $t_{\mathrm{int}}=5$ that increases gravity.
+At evaluation time, the agent is tasked with determining, from the observed signals, whether an intervention occurred and, if so, which one.
+}
+\label{fig:data_generation}
+\end{figure*}
+
+\name{} is a benchmark framework for evaluating multi-step analysis of time-series data. 
+In each task, an agent receives a textual description of a simulated physical process and a batch of multivariate time-series observations. 
+The goal is to identify which simulator parameter, if any, changed for each time-series observation.
+The textual description provides information about the process, signals, and parameters, but does not reveal the intervention.
+Thus, agents must inspect the observed trajectories to infer the correct answer.
+
+In the following sections, we first introduce the physical simulator interface used by \name{} and the time-series generation process, then define the structure of the agentic task, and describe how we ensure reliable ground truth.
+Finally, we will describe the controllable difficulty axes, including textual context, noise level, labeled examples, and task output formats.
+
+\subsection{Physical simulator interface}
+
+\name{} makes use of physical simulators of the form
+\[
+\mathbf{y} = \mathcal{S}(\boldsymbol{\theta}, \mathbf{x}_0),
+\qquad
+\tilde{\mathbf{y}} \sim p_{\kappa}(\cdot \mid \mathbf{y}).
+\]
+
+Here, \(\boldsymbol{\theta}\) denotes the simulator parameter vector, \(\mathbf{x}_0\) the initial state, \(\mathbf{y}\in\mathbb{R}^{T\times C}\) the noise-free trajectory, and \(\tilde{\mathbf{y}}\in\mathbb{R}^{T\times C}\) the noisy observation.
+Both \(\mathbf{y}\in\mathbb{R}^{T\times C}\) and \(\tilde{\mathbf{y}}\in\mathbb{R}^{T\times C}\) are sampled at a regular rate over a finite horizon and comprise \(C\) channels. 
+
+The observation noise model \(p_\kappa\) is parametrized by a scalar tuning factor that controls the intensity of the measurement corruption.
+For each simulator, we specify the set of root-cause parameters \(\Theta^\star \subseteq \Theta\), observed signals, sampling rate, horizon, and simulator-specific sampling ranges for initial states and parameters.
+See \Cref{fig:data_generation} for an example.
+
+\subsection{Intervention-based time-series generation}
+For the \(\mathrm{NI}\) class, we generate samples by randomly sampling initial conditions and parameters and then producing the simulator trajectory \(\mathbf{y}^{\mathrm{NI}} = \mathcal{S}(\boldsymbol{\theta}, \mathbf{x}_0)\).
+
+For samples with an intervention we additionally sample an intervention time $t_{\mathrm{int}}$, a root cause parameter \(\theta_i \in \Theta^\star\) and a post-intervention value $\theta_i'$ for that parameter.
+Let \(\boldsymbol{\theta}^{(i,+)}\) be the parameter vector obtained by replacing only the \(i\)-th component of \(\boldsymbol{\theta}\) with \(\theta_i'\).
+The intervention is modeled as a single instantaneous step change,
+\[
+    \boldsymbol{\theta}^{(i)}(t) =
+    \begin{cases}
+        \boldsymbol{\theta}, & t < t_{\mathrm{int}},\\
+        \boldsymbol{\theta}^{(i,+)}, & t \geq t_{\mathrm{int}}.
+    \end{cases}
+\]
+The resulting intervention trajectory is generated as \(\mathbf{y}^{(i)} = \mathcal{S}(\boldsymbol{\theta}^{(i)}(\cdot), \mathbf{x}_0)\).
+
+\subsection{Root-cause task definition}
+A generated task by \name{} consists of three components:
+\begin{itemize}
+    \item The initial prompt, which is provided to the agent at the beginning of an episode and includes (i) the task instruction $\mathcal{I}$ and (ii) a textual description of the simulated process $D$.
+    \item A class-balanced set of unlabeled test samples $Y_{\text{test}}=\{\tilde{\mathbf{y}}_b\}_{b=1}^{B}$.
+    \item A class-balanced set of labeled time-series examples $Y_{\text{labeled}}=\{\tilde{\mathbf{y}}_{\text{labeled}}^{(n)}\}_{n=1}^{N}$ with corresponding ground-truth labels $A_{\text{labeled}}=\{a_{\text{labeled}}^{(n)}\}_{n=1}^{N}$.
+    Each ground-truth label belongs to $\mathcal{A}$,  where \(\mathcal{A}=\Theta^\star\cup\{\mathrm{NI}\}\) and $\mathrm{NI}$ denotes the no-intervention class, i.e. no parameter is updated during the simulation.
+\end{itemize} 
+At evaluation time the agent is provided with the initial prompt and the time-series samples and is required to return a response.
+\name{} supports two agent response interfaces: (i) direct prediction, where the agent returns a prediction for each element in the batch, and (ii) code-rule prediction, where the agent returns a reusable script that produces predictions.
+We provide examples of initial prompts in Appendix~\ref{app:prompt-example-combinations}.
+
+\subsection{Validity filtering: detectability and distinguishability}
+\label{sec:detectability} 
+After generating a time-series sample \(\mathbf{y}^{(i)}\) with an intervention, we proceed with a series of counterfactual checks to validate that (i) the intervention produces a detectable effect in \(\mathbf{y}^{(i)}\) and (ii) \(\mathbf{y}^{(i)}\) is distinguishable from alternative explanations.
+To do so, we use a finite set of matched counterfactual probes targeting the most common ambiguities induced by the intervention sampling process.
+To test intervention detectability, specifically we compared \(\mathbf{y}^{(i)}\) against three matched reference trajectories:
+\begin{enumerate}[leftmargin=*,topsep=3pt,nosep]
+    \item the no-intervention probe generated from the same initial condition and parameters, but without any intervention.
+    \item the static-change probe generated by setting parameter \(i\) to the post-intervention value \(\theta'_i\) from the beginning of the simulation.
+    \item the optimized alternative-root-cause probe generated by optimising the post-intervention value of each alternative root-cause parameter \(\theta_j \in \Theta^\star \setminus \{\theta_i\}\) over \(\mathbf{y}^{(i)}\) and keeping the best fitting one.
+\end{enumerate}
+Intuitively the first two probes check for (i) while the latter checks for (ii).
+If there exists a probe such that, for every channel \(c\), the root-mean-square distance between \(\mathbf{y}^{(i)}\) and that probe on channel \(c\) is below the corresponding threshold \(\tau_c\), the sample is rejected.
+
+For each physical simulator, we define channel-specific thresholds \(\tau_c\).
+We empirically validated \(\tau\) by testing agents on accepted samples \(\mathbf{y}^{(i)}\) and manually auditing any misclassifications, ensuring that errors were not due to label ambiguity.
+
+
+\subsection{Controllable task axes}
+Each task in \name{} can be instantiated by varying different axes.
+These axes determine what information the agent receives, how noisy the observations are, and what form of answer the agent must produce.
+\paragraph{Textual context}
+The description \(D\) controls how much semantic information the agent receives about the simulated process. 
+In high-context settings, the prompt describes the physical system, observed signals, and candidate root-cause parameters. 
+In no-context settings, the agent receives only an abstract description of the task and anonymized labels. 
+This axis tests whether agents can use domain context to guide time-series exploration.
+The examples of the prompts in two scenarios are provided in \Cref{app:prompt-example-combinations}.
+
+\paragraph{Observation noise}
+The noise scale \(\kappa\) controls the corruption model \(p_\kappa(\tilde{y} \mid y)\). 
+Increasing \(\kappa\) makes the same underlying root-cause intervention harder to identify from the observed trajectory.
+
+\paragraph{Labeled examples}
+The example budget \(N\) controls whether the agent receives additional labeled trajectories from the same environment and label space. 
+This axis tests whether agents can abstract useful diagnostic patterns from examples.
+
+\paragraph{Task-output interface}
+The instruction \(\mathcal{I}\) controls the form of the required answer. 
+In the direct-prediction interface, the agent returns directly for each test sample its prediction.
+In the code-rule interface, the agent writes a reusable prediction function that can be evaluated on both visible and held-out samples. 
+
+The complete output schemas, evaluation interfaces, and agentic prompt template are provided in \Cref{app:task-output-format,app:agentic-prompt}.

@@ -1,0 +1,55 @@
+# LaTeX build artifacts
+*.pdf
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.brf
+*.fdb_latexmk
+*.fls
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.idx
+*.ilg
+*.ind
+*.ist
+*.lof
+*.log
+*.lol
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex
+*.synctex.gz
+*.synctex.gz(busy)
+*.toc
+*.vrb
+*.xdv
+
+# LaTeX temporary files
+*.acn
+*.acr
+*.alg
+*.dvi
+*.loa
+*.maf
+*.mtc
+*.mtc0
+*.tmp
+
+# Generated output directories
+.render_wrappers/
+build/
+pdf/
+tmp/
+
+# OS, editor, and backup files
+.DS_Store
+*~
+*.bak
+*.swp
+*.swo

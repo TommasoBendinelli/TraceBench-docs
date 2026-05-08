@@ -1,0 +1,63 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{3}{c}{\textbf{\texttt{Noise:} \texttt{low}}}
+& \multicolumn{3}{c}{\textbf{\texttt{Noise:} \texttt{high}}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+& \multicolumn{1}{c}{\texttt{Direct}}
+& \multicolumn{2}{c}{\texttt{Code}}
+& \multicolumn{1}{c}{\texttt{Direct}}
+& \multicolumn{2}{c}{\texttt{Code}} \\
+\cmidrule(lr){2-2}\cmidrule(lr){3-4}
+\cmidrule(lr){5-5}\cmidrule(lr){6-7}
+& \texttt{Episode}
+& \texttt{Episode}
+& \texttt{Held-out}
+& \texttt{Episode}
+& \texttt{Episode}
+& \texttt{Held-out} \\
+\midrule
+\texttt{gpt-5.5 (high)}
+& \scorepm{1.007}{0.026}
+& \scorepm{1.013}{0.035}
+& \scorepm{1.019}{0.069}
+& \scorepm{1.02}{0.041}
+& \scorepm{1.0}{0.0}
+& \scorepm{1.008}{0.025} \\
+
+\texttt{gemini-3.1-pro-preview (high)}
+& \scorepm{1.287}{0.362}
+& \scorepm{3.007}{2.053}
+& \scorepm{3.001}{2.054}
+& \scorepm{1.367}{0.533}
+& \scorepm{2.347}{1.449}
+& \scorepm{2.298}{1.434} \\
+
+\texttt{claude-opus-4-6 (high)}
+& \scorepm{2.587}{2.227}
+& \scorepm{1.953}{1.326}
+& \scorepm{1.973}{1.326}
+& \scorepm{3.957}{2.264}
+& \scorepm{2.21}{1.518}
+& \scorepm{2.197}{1.521} \\
+
+\texttt{minimax-m2.7}
+& \scorepm{1.007}{0.026}
+& \scorepm{1.033}{0.129}
+& \scorepm{1.034}{0.133}
+& \scorepm{1.086}{0.268}
+& \scorepm{1.007}{0.027}
+& \scorepm{1.038}{0.143} \\
+\bottomrule
+\end{tabular}%
+}
+\endgroup

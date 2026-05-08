@@ -1,0 +1,47 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{3}{c}{Zero-example, high context}
+& \multicolumn{3}{c}{Three-example, no context} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+& \multicolumn{1}{c}{\texttt{Direct}}
+& \multicolumn{2}{c}{\texttt{Code}}
+& \multicolumn{1}{c}{\texttt{Direct}}
+& \multicolumn{2}{c}{\texttt{Code}} \\
+\cmidrule(lr){2-2}\cmidrule(lr){3-4}
+\cmidrule(lr){5-5}\cmidrule(lr){6-7}
+& \texttt{Episode}
+& \texttt{Episode}
+& \texttt{Held-out}
+& \texttt{Episode}
+& \texttt{Episode}
+& \texttt{Held-out} \\
+\midrule
+\texttt{gpt-5.5 (high)}
+& \scorepm{0.887}{0.136}
+& \scorepm{0.847}{0.151}
+& \scorepm{0.622}{0.143}
+& \scorepm{0.513}{0.22}
+& \scorepm{0.453}{0.233}
+& \scorepm{0.397}{0.164} \\
+
+\texttt{gemini-3.1-pro-preview (high)}
+& \scorepm{0.647}{0.22}
+& \scorepm{0.643}{0.179}
+& \scorepm{0.591}{0.13}
+& \scorepm{0.313}{0.203}
+& \scorepm{0.347}{0.192}
+& \scorepm{0.338}{0.21} \\
+\bottomrule
+\end{tabular}%
+}
+\endgroup

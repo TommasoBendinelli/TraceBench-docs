@@ -1,0 +1,45 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\begin{document}
+
+\docTitle{Agent Profiles Reference}
+\phantomsection\label{docstart:agent_profiles}
+This document matches the following two files: \code{shared/platform.json} and the agent-specific metadata in \code{shared/config/agents.json}.
+They are used from the agentic rollout stage onward.
+
+\section*{Platform Schema}
+\code{shared/platform.json} must contain a non-empty JSON object keyed by \code{platform_id} (one  of \code{codex}, \code{gemini-cli}, \code{claude-code}, \code{opencode})
+
+Each platform entry must define exactly these fields:
+\begin{itemize}
+\item \code{npm_package}: non-empty string containing the pinned npm package spec used to build the install command
+\item \code{required_environmental_variable}: object mapping non-empty environment-variable names to non-empty shell-command strings; the object may be empty
+\item \code{default_tools}: tools shared by all agents of this platform currently empty tbd.
+\end{itemize}
+
+\section*{Agent Schema}
+\code{shared/config/agents.json} must contain a non-empty JSON array of agent profile objects.
+
+Each agent profile object must define exactly these fields:
+\begin{itemize}
+\item \code{agent_id}: non-empty string; must be unique across entries
+\item \code{platform_id}: one of \code{codex}, \code{gemini-cli}, \code{claude-code}, \code{opencode}
+\item \code{cost}: object:
+\begin{itemize}
+    \item \code{.input_token}: non-negative number
+    \item \code{.cached_token}: non-negative number
+    \item \code{.completion_token}: non-negative number
+\end{itemize}
+\item \code{support_images}: boolean
+\item \code{available_tools}: object keyed by non-empty tool names <tool>
+\begin{itemize}
+\item \code{.<tool>.parse_method}: either boolean \code{false}, \code{"tree_sitter_bash"}, or \code{"file_path"}
+\item \code{.<tool>.subcommands}: list of non-empty strings naming shell subcommands to analyze in detail
+\end{itemize}
+\item \code{model_name}: non-empty string
+\item \code{reasoning}: \code{high}, \code{medium}, \code{low}, or \code{null}; non-null values are allowed only for \code{codex} and \code{claude-code} profiles
+\end{itemize}
+The full agent platforms and profile catalog is collected in the appendices, under Appendix: Agent Platforms and Profiles.
+
+\end{document}

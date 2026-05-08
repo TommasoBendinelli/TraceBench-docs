@@ -1,0 +1,59 @@
+\ifdefined\tsenvDocsCombinedAppendixMode
+\def\tsenvAppendixCalibrationResultsStart{%
+  \docTitle{Appendix: Calibration Results}%
+  \phantomsection\label{docstart:appendix_calibration_results}%
+  \section*{Calibration Results}%
+}
+\def\tsenvAppendixCalibrationResultsEnd{}
+\IfFileExists{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table.tex}{%
+  \def\tsenvCalibrationResultsTablePath{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+}{%
+  \def\tsenvCalibrationResultsTablePath{docs/NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+}
+\else\ifdefined\tsenvCombinedAppendixMode
+\def\tsenvAppendixCalibrationResultsStart{%
+  \section{Calibration Results}%
+  \label{app:calibration-results}%
+}
+\def\tsenvAppendixCalibrationResultsEnd{}
+\def\tsenvCalibrationResultsTablePath{paper_artifacts/experiment_plan_table}
+\else
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\newcolumntype{S}{>{\raggedright\arraybackslash}p{1.9cm}}
+\newcolumntype{M}{>{\raggedright\arraybackslash}p{2.8cm}}
+
+\def\tsenvAppendixCalibrationResultsStart{%
+  \begin{document}%
+  \docTitle{Appendix: Calibration Results}%
+  \phantomsection\label{docstart:appendix_calibration_results}%
+  \section*{Calibration Results}%
+}
+\def\tsenvAppendixCalibrationResultsEnd{\end{document}}
+\IfFileExists{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table.tex}{%
+  \def\tsenvCalibrationResultsTablePath{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+}{%
+  \def\tsenvCalibrationResultsTablePath{docs/NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+}
+\fi\fi
+\ifdefined\tsenvCalibrationResultsTablePath\else
+\def\tsenvCalibrationResultsTablePath{paper_artifacts/experiment_plan_table}
+\fi
+\tsenvAppendixCalibrationResultsStart
+The table reports the calibration configurations and results used to validate the experimental setup.
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\input{\tsenvCalibrationResultsTablePath}
+\endgroup
+
+\tsenvAppendixCalibrationResultsEnd

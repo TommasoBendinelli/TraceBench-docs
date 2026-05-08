@@ -1,0 +1,137 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\externaldocument{build/terminology_shared_utilities}[terminology_shared_utilities.pdf]
+\externaldocument{build/environment_profiles}[environment_profiles.pdf]
+\externaldocument{build/generate_question_stage}[generate_question_stage.pdf]
+
+\begin{document}
+
+\docTitle{Stage: Compute Metrics}
+\phantomsection\label{docstart:compute_metrics_stage}
+
+This stage computes \code{runs/eligibility_metrics.json} from the materialized simulation runs.
+The result is used by \code{workflows/generate/train_test_selection.py} to decide which baselines and children are eligible for downstream question generation.
+This allows us to reject any time series that is not detectable, and thus avoid corrupting the benchmark with impossible questions.
+
+The main driver is \code{workflows/metrics/compute_metrics.py}.
+Each run overwrites the previous \code{runs/eligibility_metrics.json}.
+
+\section*{Invocation}
+
+\begin{DocCode}
+env/bin/python workflows/metrics/compute_metrics.py [--model MODEL] [--jobs N] 
+\end{DocCode}
+
+\begin{itemize}
+\item \code{--model}: optional model ID. If omitted, the script iterates over \hyperref[sec:allowed-tsenv-models]{all allowed \name{} models}.
+\item \code{--jobs}: number of worker processes to run in parallel.
+
+\end{itemize}
+
+\section*{Inputs}
+
+For each model under \code{models/simulink/<MODEL>/}, the script reads:
+
+\begin{itemize}
+\item \code{runs/model_record.json} and \code{model_run_specs.json} for the topology, ground-truth class, and run status.
+\item \code{experiment_config.json}
+\item \code{noise_adder.py}, used for noisy detectability and \code{noise_analysis}. Its interface is documented in \hyperref[def:noise-adder-interface]{the noise-adder definition}.
+\end{itemize}
+
+\section*{Execution Flow}
+
+The stage first evaluates successful runs and then groups the results by baseline UUID in \code{eligibility_metrics.json}.
+
+\begin{enumerate}
+\item For each successful intervention run, compute detectability entries against its \code{baseline} and its \code{time0_baseline}:
+\begin{itemize}
+  \item \code{compute_baseline_detectability(intervention_uuid_path, baseline_uuid_path, min_srd_distance, epsilon_SRD, noise=high)}
+  \item \code{compute_detectability_time0_baseline(intervention_uuid_path, time0_baseline_uuid_path, min_srd_distance, epsilon_SRD, noise=high)}
+\end{itemize}
+Both functions work identically until the last step:
+\begin{enumerate}
+\item It loads the dataframes.
+\item It asserts that the last column for both of them is \code{time} and that \code{intervention_uuid_path} and \code{trg_uuid_path} share the same timestamps.
+\item It generate the noisy and \code{noiseless_intervention} run using model specific \code{noise_adder.py} with \code{noise=noise} and generate the \code{noiseless_baseline} (i.e. reference signal).
+Raw output from each channel is preprocessed as defined for each \termSimulator is \code{appendix_environment.tex} at the paragraph Signal preprocessing.
+\item It computes which timestamps pass the \termSRD threshold for n consecutive timesteps, between \code{noiseless_intervention} and the  \code{noiseless_baseline} for each timestamp for each non-time column.
+The model-specific values for the thresholding and timestamps are at \code{experiment_config.json::detectability}. 
+The first timestamp triggered equal or bigger than \code{interevention_time} for each column is it's \code{first_diff}
+\item compute the \code{detectability_output} 
+\begin{itemize}
+  \item \code{mean_rms_distance_clean_dirty}: List, the mean over 5 seeds of the rms distance between the noiseless intervention run and the noisy intervention run for each channel.
+  \item \code{mean_rms_distance_clean_baseline}: List, the mean over 5 seeds of the rms distance between the noiseless intervention run and the noiseless baseline run for each channel.
+  \item \code{mean_SNR}: List, the mean over 5 seeds SNR as defined at \hyperref[docstart:terminology_common_utilities]{Terminology and Common Utilities},
+  \item \code{first_diff}: List as defined as above
+\end{itemize}
+\item compute \code{detectable}. 
+In case of \code{compute_baseline_detectability}:
+\begin{itemize}
+\item If there is an error during the calculation of above values, it returns "error".
+\item (Only for \code{compute_baseline_detectability}) It calls \code{detectability_specific_environment.py::is_detectable()} and this returns \code{environment_specific_detectability}, if this returns "no" then "detectability" is no.
+\item If the previous conditions don't apply and if the mean SNR ratio db is bigger than \code{experiment_config.json::detectability::signal_to_noise_ratio_db_thresholds::high} for any channel then it returns "yes"
+\begin{DocCode} 
+{
+  "environment_specific_detectability": "yes" | "no" | "error", # Only for compute_baseline_detectability
+  "detectable: 
+  "detectability_output..."
+}
+\end{DocCode}
+Where \code{environment_specific_detectability} is only for the baseline
+\end{itemize}
+\end{enumerate}
+
+\item Compute each intervention child's \code{eligible} attribute.
+It is \code{true} only if all of the following hold:
+\begin{itemize}
+\item \code{detectability.vs_baseline.detectable == "yes"}
+\item \code{detectability.vs_time0_baseline.detectable == "yes"}
+\end{itemize}
+\item For each baseline, compute the \code{family_eligible} attribute.
+It is \code{true} only if the baseline has eligible children for at least three distinct entries in \code{exposed_variables::parameters}.
+
+\end{enumerate}
+
+\section*{Output Schema: \code{eligibility_metrics.json}}
+
+\code{eligibility_metrics.json} is a JSON object with generation metadata and a \code{baselines} object keyed by baseline UUID.
+
+Example shape:
+
+\begin{DocCode}
+{
+  "timestamp": "2026-04-17T14:32:05Z",
+  "noise_adder_md5": "fedcba9876543210fedcba9876543210",
+  "eligible_baselines": 1,
+  "total_baselines": 3,
+  "baselines": {
+    "baseline-uuid-1": {
+      "url": "http://localhost:3001/?model=demo_model&run=baseline-uuid-1&compare=none",
+      "family_eligible": true,
+      "eligible": true,
+      "children": {
+        "child-uuid-1": {
+          "url": "http://localhost:3001/?model=demo_model&run=child-uuid-1&compare=none",
+          "detectability": {
+            "vs_baseline": {
+              "environment_specific_detectability": "yes",
+              "detectable": "yes",
+              "detectability_output": \code{detectability_output}
+            },
+            "vs_time0_baseline": {
+              "detectable": "yes",
+              detectability_output": \code{detectability_output}
+            }
+          },
+          "eligible": true,
+        }
+      }
+    }
+  }
+}
+\end{DocCode}
+
+Where \code{eligible_baselines} is the number of baseline entries whose \code{family_eligible} value is \code{true}.
+Note that \code{url} is a webapp deeplink to open the corresponding run in \code{http://localhost:3001}.
+
+\end{document}

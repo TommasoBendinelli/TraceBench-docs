@@ -1,0 +1,271 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\newcolumntype{S}{>{\raggedright\arraybackslash}p{1.9cm}}
+\newcolumntype{M}{>{\raggedright\arraybackslash}p{2.8cm}}
+
+\begin{document}
+
+\newcommand{\calibrationHeader}{%
+\textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
+\textbf{Test} & \textbf{Row Slug} & \textbf{Mode} & \textbf{Templ.} \\
+}
+\newcommand{\experimentHeader}{%
+\textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
+\textbf{Test} & \textbf{Row Slug} & \textbf{Mode} & \textbf{Templ.} \\
+}
+\newcommand{\calibrationRow}[8]{%
+\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} & \code{#8} \\
+}
+\newcommand{\experimentRow}[8]{%
+\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} & \code{#8} \\
+}
+
+\docTitle{Experiment Plan}
+\phantomsection\label{docstart:experiment_plan}
+
+\begingroup
+\renewcommand{\arraystretch}{1.0}
+\setlength{\tabcolsep}{1pt}
+\tiny
+
+In both cases Train refers to the number of training examples per classes, and Test to the size of the test batch.
+\vspace{0.25em} 
+
+\begin{longtable}{
+  p{2.6cm}
+  p{1.8cm}
+  p{0.9cm}
+  p{1.8cm}
+  p{0.8cm}
+  p{2.7cm}
+  p{1.6cm}
+  p{2.3cm}
+}
+\caption{Calibration: All experiments are done with the model \code{gpt-5.3-codex-spark}}\\
+
+\toprule
+\calibrationHeader
+\midrule
+\endfirsthead
+
+\toprule
+\calibrationHeader
+\midrule
+\endhead
+
+\bottomrule
+\endlastfoot
+
+\calibrationRow{baseline_calibration}{high}{none}{0}{10}{frost_01234-anchor}{direct}{high_desc_direct_0}
+
+\end{longtable}
+
+\vspace{0.8em}
+
+\begin{longtable}{
+  p{2.8cm}
+  p{1.8cm}
+  p{0.9cm}
+  p{1.0cm}
+  p{0.8cm}
+  p{2.9cm}
+  p{1.8cm}
+  p{2.3cm}
+}
+\caption{Main Paper Experiment}\\
+
+\toprule
+\experimentHeader
+\midrule
+\endfirsthead
+
+\toprule
+\experimentHeader
+\midrule
+\endhead
+
+\bottomrule
+\endlastfoot
+
+\experimentRow{baseline}{high}{low}{3}{10}{gentle_01234-cloud}{direct}{high_desc_direct_n}
+\experimentRow{code_baseline}{high}{low}{3}{10}{gentle_01234-flame}{code}{high_desc_code_n}
+\experimentRow{baseline_noise_high}{high}{high}{3}{10}{gentle_01234-pine}{direct}{high_desc_direct_n}
+\experimentRow{code_baseline_noise_high}{high}{high}{3}{10}{gentle_01234-orbit}{code}{high_desc_code_n}
+\experimentRow{direct_context_shot_3}{high}{high}{0}{10}{frost_01234-pine}{direct}{high_desc_direct_0}
+\experimentRow{code_context_shot_3}{high}{high}{0}{10}{frost_01234-orbit}{code}{high_desc_code_0}
+\experimentRow{no_context_shot}{none}{high}{3}{10}{gentle_01234-harbor}{direct}{none_desc_direct_n}
+\experimentRow{code_no_context_shot}{none}{high}{3}{10}{gentle_01234-tide}{code}{none_desc_code_n}
+
+
+\end{longtable}
+\endgroup
+
+\section{Final Results}
+It consists on two drivers, the first that combine the results
+\subsection{Final results}
+The consolidate results comprises two scripts. First
+\begin{DocCode}
+  python consolidate_results.py [TAG]
+\end{DocCode}
+\subsection{Consolidate results}
+It takes as input all \code{run_configurations/*.json}, optionally filter them by tag and creates two files.
+\code{results/consolidated/<row_slug>_summary.json} with the following entries:
+
+\begin{itemize}
+  \item \code{identity_entries}: an object with the structure defined as below.
+  \item \code{score_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_test}. 
+  Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{score_other_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code-rule runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{trajectory_evaluation}: It's list of dict, where each dict has information directly from \code{trajectory_evaluation.json}
+  \begin{itemize}
+    \item \code{cost_usd}: \code{trajectory_evaluation.json::cost_usd}
+    \item \code{tokens}: \code{trajectory_evaluation.json::tokens}
+    \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
+    \item \code{number_of_tool_calls}: It's eqal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
+    \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} (optional)
+    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots} (optional)
+  \end{itemize}
+\end{itemize}
+\code{results/consolidated/{row_slug}.json} with following entries:
+\begin{itemize}
+  \item \code{wrong_uuids}: It's a list of of list, where each element is (\code{question_uuid}, \code{samle_uuid})  of entries that the model gets wrong.
+  \item \code{identity_entries}: see below.  
+  \item \code{sample_results}: it is a list, where each inner list is a \code{sample_results}.
+\end{itemize}
+
+Where in both cases \code{identity_entries} is:
+\begin{itemize}
+  \item \code{timestamp}:  \code{configuration_name.json::timestamp} 
+  \item \code{configuration_name}: name of the configuration file used.
+  \item \code{paths}: Path to the scores 
+  \item \termSimulator
+  \item \code{agent_id}: agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id}.
+  \item \code{question_slug}: question slug
+  \item \code{recipe}: It contains all the configuration for this \code{question_slug}
+\end{itemize}
+Note that in both cases, a an entry is appended only if all the \code{seeds} of the corresponding  \code{(agent_id, model, question_slug)} have:
+\begin{itemize}
+  \item in the \code{.json} file the row states "DONE" for all the  
+  \item \code{scores.json} exists and \code{trajectory_evaluation.json} exists.
+\end{itemize}
+For the combinations where there are not all the seeds (but are at least one), it prints a inside \code{logs/consolidate_logs_{timestamp}} with the missing information \code{<question_slug>} and missing seeds
+
+In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
+If any of these two files would be empty, then it's not created.
+
+\subsection{Generate table}
+This script works with the output from the first one.
+\begin{DocCode}
+  python generate_tables.py [TAG]
+\end{DocCode}
+Where [TAG] if passed only includes results from the previous script with that corresponding tag.
+
+The output of this second script are
+\begin{itemize}
+  \item \code{results/consolidated/tables/per_row_slug/<row_slug>.csv}
+  \item \code{results/consolidated/tables/per_agent/<agent>.csv}
+  \item \code{docs/NIPS_2026_tsENV/tables/<row_slug>.tex}. It creates the tables of the papers. 
+  The templates are defined in \code{docs/NIPS_2026_tsENV/tables/templates}.
+  The tables should be created at \code{docs/NIPS_2026_tsENV/tables/main_tables}.
+  \begin{itemize}
+    \item \code{*_main_experiment_table.tex} gets the data from the following experiments \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high}.
+    \item \code{*_ablation_training_examples.tex} gets the data from the following experiments \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot}.
+  \end{itemize}
+  The exact data depends on the prefix
+\end{itemize}
+
+Each row in \code{results/consolidated/tables/per_row_slug/<row_slug>.csv} contains the following:
+\begin{itemize}
+  \item \code{shared_columns}
+  \item \code{average_top1_accuracy}
+  \item \code{average_shortlist_score}
+  \item \code{std_per_sample}: the standard deviation over per-sample top-1 correctness after concatenating all seeds.
+  \item \code{std_per_batch}: the standard deviation over per-seed top-1 accuracy.
+  \item \code{avg_cost}
+  \item \code{std_cost}
+  \item \code{avg_cumulative_tokens}
+  \item \code{std_cumulative_tokens}
+  \item \code{avg_tool_calls}
+  \item \code{std_tool_calls}
+  \item \code{avg_num_steps}
+  \item \code{std_num_steps}
+\end{itemize}
+
+Each row in \code{results/consolidated/tables/<per_agent>.csv} contains the following:
+\begin{itemize}
+  \item \code{shared_columns}
+  \item \code{average_top1_accuracy}
+  \item \code{average_shortlist_score}
+  \item \code{std_per_sample}: the standard deviation over per-sample top-1 correctness after concatenating all seeds.
+  \item \code{std_per_batch}: the standard deviation over per-seed top-1 accuracy.
+  \item \code{avg_cost}
+  \item \code{std_cost}
+  \item \code{avg_cumulative_tokens}
+  \item \code{std_cumulative_tokens}
+  \item \code{avg_tool_calls}
+  \item \code{std_tool_calls}
+  \item \code{avg_num_steps}
+  \item \code{std_num_steps}
+\end{itemize}
+Where \code{shared_columns} include:
+\begin{itemize}
+  \item \code{row_slug}
+  \item \code{agent}
+  \item \termDescLevel
+  \item \code{task_output}: either "code" or "direct"
+  \item \code{noise_level}
+  \item \code{train_samples}
+  \item \termSimulator
+\end{itemize}
+
+Regarding \code{docs/NIPS_2026_tsENV/tables/main_tables/*.tex}, the style the numbers should match in case of tables that aggreage different enviroments together:
+\begin{itemize}
+  \item for tables that start with \code{acc_} or \code{shortlist_}, including \code{shortlist_number_of_answers_*}; \code{docs/NIPS_2026_tsENV/tables/templates/acc_main.tex} or \code{docs/NIPS_2026_tsENV/tables/templates/acc_ablation.tex} depending on whether it's main or the ablation one
+  \item for tables that do not start with \code{acc_} or \code{shortlist_}: \code{docs/NIPS_2026_tsENV/tables/templates/cost_main.tex} or \code{docs/NIPS_2026_tsENV/tables/templates/ablation_main.tex} depending on whether it's main or the ablation one
+\end{itemize}
+Instead if the table don't aggregate multiple enviroments together but are per row it should be as:
+\begin{itemize}
+  \item \code{docs/NIPS_2026_tsENV/tables/templates/per_row_slug/}
+\end{itemize}
+
+
+the ones in \code{docs/NIPS_2026_tsENV/tables/templates/*.tex}.
+However there should be multiple tables with different prefixes (like \code{acc_main_experiment_table})
+
+\begin{itemize}
+\item \code{acc_} : accuracy 
+\item \code{shortlist_score}: shortlist score as defined in the main paper.
+\item \code{shortlist_number_of_answers}: number of answers per question
+\item \code{cost_}: cost 
+\item \code{cum_}: cumulative tokens (in M) (so numbers must be divided by \code{1_000_000})
+\item \code{num_steps}: num steps
+\item \code{python_calls}: num of python calls
+\item \code{plots_generated}: num of plots generated
+\end{itemize}
+Note that in these \code{*.tex} tables the standard deviation is the \code{standard deviation per batch}
+Note that in each table at most four digits per number should be visible i.e. 0.559 ok, 0.5593 not ok. 123.4 ok, 123.43 not ok.
+The \code{acc_} tables go in the main paper (experiment section .tex).
+The other aggregate tables go to \code{appendix_main_tables.tex}
+Note that in the folder \code{enviroment_specific} we have the \code{<model_name>_acc_*} where the accuracy is reported separetely for each enviroment.
+
+\subsection{Night before submission}
+Create a table with this format template \code{docs/NIPS_2026_tsENV/tables/templates/per_row_slug/2_row_slugs.tex} for both 
+\begin{itemize}
+\item \code{gentle_01234-cloud} and \code{gentle_01234-pine}
+\end{itemize}
+
+For the calibration \code{high_desc_direct_0} the format  \code{docs/NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs.tex} and create the table in \code{docs/NIPS_2026_tsENV/tables/main_tables/appendix/calibration}
+
+Additionally export all the results: \code{results/consolidated/all_runs_CALIBRATION_PAPER_NO_NOISE_NO_CONTEXT.csv} and \code{results/consolidated/all_samples_CALIBRATION_PAPER_NO_NOISE_NO_CONTEXT.csv}.
+Export ATIF trajectories by copying all generated ATIF trajectories into a folder called \code{paper_trajectories} with names following \code{<agent>_<model>_<context>_<shots>_<noise>}.
+\end{document}

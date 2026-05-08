@@ -1,0 +1,96 @@
+\def\tsenvCombinedAppendixMode{1}
+\urlstyle{same}
+
+\providecommand{\code}[1]{%
+  \begingroup
+  \def\UrlFont{\ttfamily}%
+  \nolinkurl{#1}%
+  \endgroup
+}
+\providecommand{\titlecode}[1]{\code{#1}}
+\providecommand{\termSRD}{\code{SRD}\xspace}
+\providecommand{\termMinSRDDistance}{\code{min_srd_distance}\xspace}
+\providecommand{\termMinAbsDist}{\code{min_abs_dist}\xspace}
+
+\DefineVerbatimEnvironment{DocCode}{Verbatim}{
+  fontsize=\small,
+  breaklines=true,
+  breakanywhere=true,
+  breaksymbolleft={},
+  breaksymbolright={}
+}
+
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\newenvironment{EnvironmentConfigTableNoMod}{
+  \begingroup
+  \footnotesize
+  \renewcommand{\arraystretch}{1.12}
+  \setlength{\tabcolsep}{5pt}
+  \begin{longtable}{|P{0.35\textwidth}|P{0.27\textwidth}|P{0.24\textwidth}|}
+  \caption{Initial states and parameters.}\\
+  \hline
+  \textbf{Agent-facing parameter} & \textbf{Internal naming} & \textbf{Sampling details} \\
+  \hline
+  \endfirsthead
+  \hline
+  \textbf{Agent-facing parameter} & \textbf{Internal naming} & \textbf{Sampling details} \\
+  \hline
+  \endhead
+}{
+  \hline
+  \end{longtable}
+  \endgroup
+}
+
+\newenvironment{MappingTable}[1]{
+  \small
+  \begin{longtable}{|P{0.42\textwidth}|P{0.46\textwidth}|}
+  \caption{#1}\\
+  \hline
+  \textbf{Agent-facing} & \textbf{Internal naming} \\
+  \hline
+  \endfirsthead
+  \hline
+  \textbf{Agent-facing} & \textbf{Internal naming} \\
+  \hline
+  \endhead
+}{
+  \hline
+  \end{longtable}
+}
+
+\newenvironment{SimulationPropertiesTable}[1]{
+  \begingroup
+  \footnotesize
+  \let\ident\code
+  \begin{longtable}{|P{0.43\textwidth}|P{0.41\textwidth}|}
+  \caption{#1}\\
+  \hline
+  \textbf{Property} & \textbf{Example baseline value} \\
+  \hline
+  \endfirsthead
+  \hline
+  \textbf{Property} & \textbf{Example baseline value} \\
+  \hline
+  \endhead
+}{
+  \hline
+  \end{longtable}
+  \endgroup
+}
+
+\phantomsection\label{docstart:nips_appendix}
+\input{appendix_sampling_children_tree}
+\clearpage
+\input{appendix_calibration_tables}
+\clearpage
+\input{../appendix_calibration_results}
+\clearpage
+\input{../appendix_environment}
+\clearpage
+\input{appendix_additional_specification}
+\clearpage
+\input{../appendix_prompt_example_combinations}
+\clearpage
+\input{appendix_main_tables}

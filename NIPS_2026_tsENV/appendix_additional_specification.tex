@@ -1,0 +1,32 @@
+\section{Additional Specification}
+\label{app:additional-specification}
+
+\subsection{Task Output Format}
+\label{app:task-output-format}
+
+In \name{}, we define two possible task-instruction types, namely \(\mathcal{I}_{\mathrm{direct}}\) and \(\mathcal{I}_{\mathrm{code}}\), with two corresponding evaluation methods.
+In the case of \(\mathcal{I}_{\mathrm{direct}}\), we instruct the agent to return the correct predictions directly; namely, the agent writes a file \texttt{results.json} of the form
+\[
+\begin{array}{l}
+\{ \\
+\quad \texttt{"<filename>.parquet"}: [ \\
+\quad\quad \texttt{"<top-1 label>"}, \\
+\quad\quad \texttt{"<optional lower-confidence label>"} \\
+\quad ] \\
+\}.
+\end{array}
+\]
+We use this solution to evaluate test samples.
+In the case of \(\mathcal{I}_{\mathrm{code}}\), the agent writes a self-contained Python file \texttt{rule.py} defining
+\[
+\texttt{predict(df) -> list[str]}.
+\]
+
+The input \texttt{df} is a single sample represented as a pandas DataFrame.
+The returned list follows the same ranked-label convention: the first element is the top-1 prediction, and any later elements are lower-confidence alternatives.
+All returned labels must exactly match one of the allowed agent-facing label strings for the corresponding environment.
+
+\subsection{Agentic Prompt Template}
+\label{app:agentic-prompt}
+
+The agentic prompt template is provided in the Prompt Example Combinations appendix.

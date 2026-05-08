@@ -1,0 +1,628 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="${SCRIPT_DIR}/build"
+WRAPPER_DIR="${SCRIPT_DIR}/.render_wrappers"
+OUTPUT_DIR="${SCRIPT_DIR}/pdf"
+NUMBERED_SUFFIX="_numbered"
+COMBINED_OUTPUT_FILE="${OUTPUT_DIR}/docs_combined_compact.pdf"
+COMBINED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only.pdf"
+COMBINED_NUMBERED_OUTPUT_FILE="${OUTPUT_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf"
+COMBINED_NUMBERED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only${NUMBERED_SUFFIX}.pdf"
+INDEX_SOURCE_FILE="${SCRIPT_DIR}/documentation_index.tex"
+INDEX_OVERRIDES_FILE="${BUILD_DIR}/documentation_index_page_overrides.tex"
+DOC_ORDER_MANIFEST="${SCRIPT_DIR}/docs_order_manifest.txt"
+COMBINED_INCLUDE_FILE="${BUILD_DIR}/docs_combined_manifest_inputs.tex"
+LAYOUT_CONFIG_FILE="${SCRIPT_DIR}/manual_docs_layout_config.tex"
+LEFT_PADDING_DELTA="0pt"
+RIGHT_PADDING_DELTA="0pt"
+NIPS_LEFT_PADDING_DELTA="0pt"
+NIPS_RIGHT_PADDING_DELTA="0pt"
+NIPS_BUILD_SCRIPT="${SCRIPT_DIR}/NIPS_2026_tsENV/build.sh"
+NIPS_MAIN_PDF="${SCRIPT_DIR}/NIPS_2026_tsENV/main.pdf"
+BUILD_COMBINED=false
+FORCE_REBUILD=false
+
+usage() {
+  cat <<EOF
+Usage: bash docs/render_all_pdf.sh [options]
+
+Incrementally build standalone docs PDFs and the NIPS manuscript. Combined PDFs are only rebuilt when requested.
+
+Options:
+  --left-padding <delta>   Relative adjustment from the default 1in left margin.
+  --right-padding <delta>  Relative adjustment from the default 1in right margin.
+  --nips-left-padding <delta>   Relative adjustment for the NIPS manuscript left margin.
+  --nips-right-padding <delta>  Relative adjustment for the NIPS manuscript right margin.
+  --combined               Rebuild and merge the combined manual PDFs.
+  --force                  Delete target build artifacts before compiling.
+  --all                    Shortcut for --combined --force.
+  --help                   Show this help message.
+
+Examples:
+  bash docs/render_all_pdf.sh
+  bash docs/render_all_pdf.sh --combined
+  bash docs/render_all_pdf.sh --all
+  bash docs/render_all_pdf.sh --left-padding +0.2in --right-padding 0pt
+  bash docs/render_all_pdf.sh --left-padding -6pt --right-padding +12pt
+  bash docs/render_all_pdf.sh --combined --left-padding -25mm --right-padding +25mm --nips-left-padding 0pt --nips-right-padding +10mm
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --left-padding)
+      if [ "$#" -lt 2 ] || [[ "$2" == --* ]]; then
+        echo "Error: --left-padding requires a value." >&2
+        usage >&2
+        exit 1
+      fi
+      LEFT_PADDING_DELTA="$2"
+      shift 2
+      ;;
+    --right-padding)
+      if [ "$#" -lt 2 ] || [[ "$2" == --* ]]; then
+        echo "Error: --right-padding requires a value." >&2
+        usage >&2
+        exit 1
+      fi
+      RIGHT_PADDING_DELTA="$2"
+      shift 2
+      ;;
+    --nips-left-padding)
+      if [ "$#" -lt 2 ] || [[ "$2" == --* ]]; then
+        echo "Error: --nips-left-padding requires a value." >&2
+        usage >&2
+        exit 1
+      fi
+      NIPS_LEFT_PADDING_DELTA="$2"
+      shift 2
+      ;;
+    --nips-right-padding)
+      if [ "$#" -lt 2 ] || [[ "$2" == --* ]]; then
+        echo "Error: --nips-right-padding requires a value." >&2
+        usage >&2
+        exit 1
+      fi
+      NIPS_RIGHT_PADDING_DELTA="$2"
+      shift 2
+      ;;
+    --combined)
+      BUILD_COMBINED=true
+      shift
+      ;;
+    --force)
+      FORCE_REBUILD=true
+      shift
+      ;;
+    --all)
+      BUILD_COMBINED=true
+      FORCE_REBUILD=true
+      shift
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Error: unknown argument '$1'." >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if ! command -v latexmk >/dev/null 2>&1; then
+  echo "Error: latexmk command not found." >&2
+  exit 1
+fi
+
+if ! command -v pdflatex >/dev/null 2>&1; then
+  echo "Error: pdflatex command not found." >&2
+  exit 1
+fi
+
+if [ "${BUILD_COMBINED}" = "true" ] && ! command -v gs >/dev/null 2>&1; then
+  echo "Error: gs command not found." >&2
+  exit 1
+fi
+
+if [ ! -f "${INDEX_SOURCE_FILE}" ]; then
+  echo "Error: index source file not found at ${INDEX_SOURCE_FILE}" >&2
+  exit 1
+fi
+
+if [ ! -f "${DOC_ORDER_MANIFEST}" ]; then
+  echo "Error: docs order manifest not found at ${DOC_ORDER_MANIFEST}" >&2
+  exit 1
+fi
+
+if [ ! -x "${NIPS_BUILD_SCRIPT}" ]; then
+  echo "Error: NIPS build script not found or not executable at ${NIPS_BUILD_SCRIPT}" >&2
+  exit 1
+fi
+
+shopt -s nullglob
+tex_files=("${SCRIPT_DIR}"/*.tex)
+shopt -u nullglob
+
+if [ "${#tex_files[@]}" -eq 0 ]; then
+  echo "Error: no LaTeX files found in ${SCRIPT_DIR}" >&2
+  exit 1
+fi
+
+indexed_tex_files=()
+while IFS= read -r tex_name || [ -n "${tex_name}" ]; do
+  if [[ "${tex_name}" =~ ^[[:space:]]*$ ]] || [[ "${tex_name}" =~ ^[[:space:]]*# ]]; then
+    continue
+  fi
+  indexed_tex_files+=("${tex_name}")
+done < "${DOC_ORDER_MANIFEST}"
+
+if [ "${#indexed_tex_files[@]}" -eq 0 ]; then
+  echo "Error: no ordered document entries found in ${DOC_ORDER_MANIFEST}" >&2
+  exit 1
+fi
+
+indexed_tex_registry=$'\n'
+for tex_name in "${indexed_tex_files[@]}"; do
+  if [[ "${indexed_tex_registry}" == *$'\n'"${tex_name}"$'\n'* ]]; then
+    echo "Error: duplicate ordered document ${tex_name} in ${DOC_ORDER_MANIFEST}" >&2
+    exit 1
+  fi
+  indexed_tex_registry+="${tex_name}"$'\n'
+
+  if [ ! -f "${SCRIPT_DIR}/${tex_name}" ]; then
+    echo "Error: indexed document ${tex_name} does not exist in ${SCRIPT_DIR}" >&2
+    exit 1
+  fi
+done
+
+unindexed_tex_files=()
+for tex_file in "${tex_files[@]}"; do
+  tex_name="$(basename "${tex_file}")"
+  if [ "${tex_name}" = "documentation_index.tex" ] || [ "${tex_name}" = "docs_combined_compact.tex" ] || [ "${tex_name}" = "$(basename "${LAYOUT_CONFIG_FILE}")" ]; then
+    continue
+  fi
+  if [[ "${indexed_tex_registry}" != *$'\n'"${tex_name}"$'\n'* ]]; then
+    unindexed_tex_files+=("${tex_name}")
+  fi
+done
+
+if [ "${#unindexed_tex_files[@]}" -gt 0 ]; then
+  echo "Warning: unindexed LaTeX files will not be included in ${COMBINED_OUTPUT_FILE}:" >&2
+  printf '  %s\n' "${unindexed_tex_files[@]}" >&2
+fi
+
+mkdir -p "${OUTPUT_DIR}"
+mkdir -p "${BUILD_DIR}"
+mkdir -p "${WRAPPER_DIR}"
+
+write_file_if_changed() {
+  local target="$1"
+  local temp_file
+
+  temp_file="$(mktemp "${target}.tmp.XXXXXX")"
+  cat > "${temp_file}"
+  if [ -f "${target}" ] && cmp -s "${temp_file}" "${target}"; then
+    rm -f "${temp_file}"
+    return 0
+  fi
+  mv "${temp_file}" "${target}"
+  return 0
+}
+
+cleanup_latexmk_target() {
+  local stem="$1"
+  local base="${BUILD_DIR}/${stem}"
+
+  rm -f \
+    "${base}.aux" \
+    "${base}.bbl" \
+    "${base}.blg" \
+    "${base}.fdb_latexmk" \
+    "${base}.fls" \
+    "${base}.lof" \
+    "${base}.log" \
+    "${base}.lot" \
+    "${base}.nav" \
+    "${base}.out" \
+    "${base}.pdf" \
+    "${base}.run.xml" \
+    "${base}.snm" \
+    "${base}.synctex.gz" \
+    "${base}.tex" \
+    "${base}.toc" \
+    "${base}.vrb"
+}
+
+write_layout_config() {
+  write_file_if_changed "${LAYOUT_CONFIG_FILE}" <<EOF
+% Generated by docs/render_all_pdf.sh. Direct docs builds inherit the last configured padding.
+\providecommand{\manualDocLeftPaddingDelta}{${LEFT_PADDING_DELTA}}
+\providecommand{\manualDocRightPaddingDelta}{${RIGHT_PADDING_DELTA}}
+EOF
+}
+
+write_layout_config
+
+generate_combined_include_file() {
+  local tex_name=""
+  local index=0
+  local combined_tex_files=()
+  local last_index
+  local temp_file
+
+  for tex_name in "${indexed_tex_files[@]}"; do
+    case "${tex_name}" in
+      appendix_*.tex)
+        continue
+        ;;
+      *)
+        combined_tex_files+=("${tex_name}")
+        ;;
+    esac
+  done
+
+  temp_file="$(mktemp "${COMBINED_INCLUDE_FILE}.tmp.XXXXXX")"
+  {
+    last_index=$((${#combined_tex_files[@]} - 1))
+    for tex_name in "${combined_tex_files[@]}"; do
+      printf '\\setManualDocSourceName{%s}\n' "${tex_name}"
+      printf '\\input{../%s}\n' "${tex_name}"
+      if [ "${index}" -lt "${last_index}" ]; then
+        printf '\\clearpage\n'
+      fi
+      index=$((index + 1))
+    done
+  } > "${temp_file}"
+  if [ -f "${COMBINED_INCLUDE_FILE}" ] && cmp -s "${temp_file}" "${COMBINED_INCLUDE_FILE}"; then
+    rm -f "${temp_file}"
+  else
+    mv "${temp_file}" "${COMBINED_INCLUDE_FILE}"
+  fi
+}
+
+compile_tex() {
+  local tex_name="$1"
+  local output_stem="${2:-${tex_name%.tex}}"
+  local source_file="${3:-${tex_name}}"
+  local stem="${source_file##*/}"
+  local display_source="${source_file}"
+  stem="${stem%.tex}"
+  local output_file="${OUTPUT_DIR}/${output_stem}.pdf"
+  if [[ "${display_source}" == "${SCRIPT_DIR}/"* ]]; then
+    display_source="${display_source#${SCRIPT_DIR}/}"
+  fi
+  echo "Compiling ${SCRIPT_DIR}/${display_source} -> ${output_file}"
+  if [ "${FORCE_REBUILD}" = "true" ]; then
+    cleanup_latexmk_target "${stem}"
+  fi
+  (
+    cd "${SCRIPT_DIR}"
+    latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+      -output-directory="${BUILD_DIR}" "${source_file}"
+  )
+  if [ ! -f "${BUILD_DIR}/${stem}.pdf" ]; then
+    echo "Error: expected rendered PDF at ${BUILD_DIR}/${stem}.pdf" >&2
+    exit 1
+  fi
+  copy_pdf_if_needed "${BUILD_DIR}/${stem}.pdf" "${output_file}"
+}
+
+create_build_wrapper() {
+  local tex_name="$1"
+  local output_var_name="$2"
+  local wrapper_suffix="${3:-}"
+  local enable_line_numbers="${4:-false}"
+  local stem="${tex_name%.tex}"
+  local wrapper_path="${WRAPPER_DIR}/${stem}${wrapper_suffix}.tex"
+
+  {
+    printf '\\def\\manualDocDefaultSourceBaseName{%s}\n' "${tex_name}"
+    printf '\\def\\manualDocLeftPaddingDelta{%s}\n' "${LEFT_PADDING_DELTA}"
+    printf '\\def\\manualDocRightPaddingDelta{%s}\n' "${RIGHT_PADDING_DELTA}"
+    if [ "${enable_line_numbers}" = "true" ]; then
+      printf '\\def\\manualDocEnableLineNumbers{1}\n'
+    fi
+    cat "${SCRIPT_DIR}/${tex_name}"
+  } | write_file_if_changed "${wrapper_path}"
+  printf -v "${output_var_name}" '%s' "${wrapper_path}"
+}
+
+compile_tex_variants() {
+  local tex_name="$1"
+  local stem="${tex_name%.tex}"
+  local normal_wrapper
+  local numbered_wrapper
+
+  create_build_wrapper "${tex_name}" normal_wrapper "" "false"
+  compile_tex "${tex_name}" "${stem}" "${normal_wrapper}"
+
+  create_build_wrapper "${tex_name}" numbered_wrapper "${NUMBERED_SUFFIX}" "true"
+  compile_tex "${tex_name}" "${stem}${NUMBERED_SUFFIX}" "${numbered_wrapper}"
+}
+
+copy_rendered_pdf() {
+  local rendered_stem="$1"
+  local destination="$2"
+  local rendered_pdf="${BUILD_DIR}/${rendered_stem}.pdf"
+
+  if [ ! -f "${rendered_pdf}" ]; then
+    echo "Error: expected rendered PDF at ${rendered_pdf}" >&2
+    exit 1
+  fi
+
+  copy_pdf_if_needed "${rendered_pdf}" "${destination}"
+}
+
+copy_pdf_if_needed() {
+  local source_pdf="$1"
+  local destination="$2"
+
+  if [ ! -f "${destination}" ] || ! cmp -s "${source_pdf}" "${destination}"; then
+    cp "${source_pdf}" "${destination}"
+  fi
+}
+
+build_nips_main() {
+  echo "Building NIPS manuscript -> ${NIPS_MAIN_PDF}"
+  local nips_args=(
+    --left-padding "${NIPS_LEFT_PADDING_DELTA}"
+    --right-padding "${NIPS_RIGHT_PADDING_DELTA}"
+  )
+  if [ "${FORCE_REBUILD}" = "true" ]; then
+    nips_args+=(--force)
+  fi
+  bash "${NIPS_BUILD_SCRIPT}" \
+    "${nips_args[@]}"
+
+  if [ ! -f "${NIPS_MAIN_PDF}" ]; then
+    echo "Error: expected NIPS manuscript PDF at ${NIPS_MAIN_PDF}" >&2
+    exit 1
+  fi
+}
+
+merge_pdfs() {
+  local output_file="$1"
+  shift
+
+  echo "Merging PDFs -> ${output_file}"
+  gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile="${output_file}" "$@"
+}
+
+add_combined_index_paper_links() {
+  local combined_pdf="$1"
+
+  echo "Adding paper index links -> ${combined_pdf}"
+  python3 - <<'PY' "${combined_pdf}" "${INDEX_OVERRIDES_FILE}" "${COMBINED_DOCS_ONLY_FILE}" "${SCRIPT_DIR}/NIPS_2026_tsENV/build/main.aux"
+from pathlib import Path
+import re
+import sys
+from tempfile import NamedTemporaryFile
+
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import ArrayObject, DictionaryObject, FloatObject, NameObject, NullObject
+
+pdf_path = Path(sys.argv[1])
+overrides_path = Path(sys.argv[2])
+docs_only_pdf = Path(sys.argv[3])
+nips_aux = Path(sys.argv[4])
+
+overrides = overrides_path.read_text()
+page_values = {}
+for name in ("manualDocPaperStartPage", "manualDocPaperAppendixStartPage"):
+    match = re.search(rf"\\renewcommand\{{\\{name}\}}\{{([0-9]+)\}}", overrides)
+    if match is not None:
+        page_values[name] = int(match.group(1))
+
+if len(page_values) != 2:
+    docs_only_pages = len(PdfReader(str(docs_only_pdf)).pages)
+    aux_text = nips_aux.read_text()
+    appendix_match = re.search(r'\\newlabel\{docstart:nips_appendix\}\{\{[^}]*\}\{([^}]*)\}', aux_text)
+    if appendix_match is None:
+        raise SystemExit("Error: could not find docstart:nips_appendix in NIPS aux file.")
+    page_values["manualDocPaperStartPage"] = docs_only_pages + 1
+    page_values["manualDocPaperAppendixStartPage"] = docs_only_pages + int(appendix_match.group(1))
+
+reader = PdfReader(str(pdf_path))
+writer = PdfWriter()
+writer.append(reader)
+
+if len(writer.pages) < max(page_values.values()):
+    raise SystemExit(
+        f"Error: {pdf_path} has {len(writer.pages)} pages, "
+        f"but index links target page {max(page_values.values())}"
+    )
+
+index_page_number = None
+index_links = []
+for page_number, page in enumerate(reader.pages):
+    page_links = []
+    for annotation_ref in page.get("/Annots") or []:
+        annotation = annotation_ref.get_object()
+        if annotation.get("/Subtype") == "/Link" and annotation.get("/Rect") is not None:
+            page_links.append((annotation, [float(value) for value in annotation["/Rect"]]))
+    if len(page_links) >= 2:
+        index_page_number = page_number
+        index_links = page_links
+        break
+
+if len(index_links) < 2:
+    raise SystemExit(f"Error: could not infer index-row link rectangles in {pdf_path}")
+
+index_links.sort(key=lambda item: item[1][1], reverse=True)
+last_normal_link, last_rect = index_links[-1]
+_, second_last_rect = index_links[-2]
+row_delta = last_rect[1] - second_last_rect[1]
+if row_delta >= 0:
+    raise SystemExit(f"Error: invalid inferred index-row spacing in {pdf_path}")
+
+paper_rect = [
+    last_rect[0],
+    last_rect[1] + row_delta,
+    last_rect[2],
+    last_rect[3] + row_delta,
+]
+appendix_rect = [
+    paper_rect[0],
+    paper_rect[1] + row_delta,
+    paper_rect[2],
+    paper_rect[3] + row_delta,
+]
+
+for rect, page_number in (
+    (paper_rect, page_values["manualDocPaperStartPage"]),
+    (appendix_rect, page_values["manualDocPaperAppendixStartPage"]),
+):
+    target_page = writer.pages[page_number - 1]
+    target_top = float(target_page.mediabox.top)
+    annotation = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Annot"),
+            NameObject("/Subtype"): NameObject("/Link"),
+            NameObject("/Rect"): ArrayObject([FloatObject(value) for value in rect]),
+            NameObject("/Dest"): ArrayObject(
+                [
+                    target_page.indirect_reference,
+                    NameObject("/XYZ"),
+                    FloatObject(0),
+                    FloatObject(target_top),
+                    NullObject(),
+                ]
+            ),
+        }
+    )
+    for visual_key in ("/Border", "/C", "/H"):
+        if visual_key in last_normal_link:
+            annotation[NameObject(visual_key)] = last_normal_link[visual_key]
+    annotation[NameObject("/P")] = writer.pages[index_page_number].indirect_reference
+    if writer.pages[index_page_number].annotations is None:
+        writer.pages[index_page_number][NameObject("/Annots")] = ArrayObject()
+    writer.pages[index_page_number].annotations.append(writer._add_object(annotation))
+
+with NamedTemporaryFile(dir=pdf_path.parent, suffix=".pdf", delete=False) as temp_file:
+    temp_path = Path(temp_file.name)
+    writer.write(temp_file)
+
+temp_path.replace(pdf_path)
+PY
+}
+
+write_index_override_placeholders() {
+  write_file_if_changed "${INDEX_OVERRIDES_FILE}" <<EOF
+\providecommand{\manualDocPaperStartPage}{--}
+\providecommand{\manualDocPaperAppendixStartPage}{--}
+EOF
+}
+
+if [ "${BUILD_COMBINED}" = "true" ] || [ ! -f "${INDEX_OVERRIDES_FILE}" ]; then
+  write_index_override_placeholders
+fi
+
+update_index_overrides() {
+  python3 - <<'PY' "${COMBINED_DOCS_ONLY_FILE}" "${SCRIPT_DIR}/NIPS_2026_tsENV/build/main.aux" "${INDEX_OVERRIDES_FILE}"
+from pathlib import Path
+import re
+import sys
+
+from pypdf import PdfReader
+
+docs_only_pdf = Path(sys.argv[1])
+nips_aux = Path(sys.argv[2])
+output = Path(sys.argv[3])
+
+docs_only_pages = len(PdfReader(str(docs_only_pdf)).pages)
+aux_text = nips_aux.read_text()
+appendix_match = re.search(r'\\newlabel\{docstart:nips_appendix\}\{\{[^}]*\}\{([^}]*)\}', aux_text)
+if appendix_match is None:
+    raise SystemExit("Error: could not find docstart:nips_appendix in NIPS aux file.")
+
+paper_start_page = docs_only_pages + 1
+paper_appendix_page = docs_only_pages + int(appendix_match.group(1))
+
+text = (
+    f"\\renewcommand{{\\manualDocPaperStartPage}}{{{paper_start_page}}}\n"
+    f"\\renewcommand{{\\manualDocPaperAppendixStartPage}}{{{paper_appendix_page}}}\n"
+)
+if not output.exists() or output.read_text() != text:
+    output.write_text(text)
+PY
+}
+
+build_nips_main
+
+for tex_name in "${indexed_tex_files[@]}"; do
+  compile_tex_variants "${tex_name}"
+done
+if [ "${#unindexed_tex_files[@]}" -gt 0 ]; then
+  for tex_name in "${unindexed_tex_files[@]}"; do
+    compile_tex_variants "${tex_name}"
+  done
+fi
+compile_tex_variants "documentation_index.tex"
+
+if [ "${BUILD_COMBINED}" != "true" ]; then
+  echo "Skipping combined manual PDFs. Pass --combined to rebuild merged outputs."
+  exit 0
+fi
+
+generate_combined_include_file
+echo "Compiling docs-only combined manual -> ${COMBINED_DOCS_ONLY_FILE}"
+create_build_wrapper "docs_combined_compact.tex" combined_wrapper "" "false"
+if [ "${FORCE_REBUILD}" = "true" ]; then
+  cleanup_latexmk_target "docs_combined_compact"
+fi
+(
+  cd "${SCRIPT_DIR}"
+  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+    -output-directory="${BUILD_DIR}" "${combined_wrapper}"
+)
+copy_rendered_pdf "docs_combined_compact" "${COMBINED_DOCS_ONLY_FILE}"
+
+create_build_wrapper "docs_combined_compact.tex" combined_numbered_wrapper "${NUMBERED_SUFFIX}" "true"
+echo "Compiling docs-only combined manual numbered variant -> ${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
+if [ "${FORCE_REBUILD}" = "true" ]; then
+  cleanup_latexmk_target "docs_combined_compact${NUMBERED_SUFFIX}"
+fi
+(
+  cd "${SCRIPT_DIR}"
+  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+    -output-directory="${BUILD_DIR}" "${combined_numbered_wrapper}"
+)
+if [ ! -f "${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" ]; then
+  echo "Error: expected rendered combined numbered PDF at ${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" >&2
+  exit 1
+fi
+copy_rendered_pdf "docs_combined_compact${NUMBERED_SUFFIX}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
+
+update_index_overrides
+compile_tex_variants "documentation_index.tex"
+
+echo "Recompiling docs-only combined manual with merged index page numbers -> ${COMBINED_DOCS_ONLY_FILE}"
+if [ "${FORCE_REBUILD}" = "true" ]; then
+  cleanup_latexmk_target "docs_combined_compact"
+fi
+(
+  cd "${SCRIPT_DIR}"
+  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+    -output-directory="${BUILD_DIR}" "${combined_wrapper}"
+)
+copy_rendered_pdf "docs_combined_compact" "${COMBINED_DOCS_ONLY_FILE}"
+
+echo "Recompiling docs-only combined manual numbered variant with merged index page numbers -> ${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
+if [ "${FORCE_REBUILD}" = "true" ]; then
+  cleanup_latexmk_target "docs_combined_compact${NUMBERED_SUFFIX}"
+fi
+(
+  cd "${SCRIPT_DIR}"
+  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+    -output-directory="${BUILD_DIR}" "${combined_numbered_wrapper}"
+)
+copy_rendered_pdf "docs_combined_compact${NUMBERED_SUFFIX}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
+
+merge_pdfs "${COMBINED_OUTPUT_FILE}" "${COMBINED_DOCS_ONLY_FILE}" "${NIPS_MAIN_PDF}"
+merge_pdfs "${COMBINED_NUMBERED_OUTPUT_FILE}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}" "${NIPS_MAIN_PDF}"
+add_combined_index_paper_links "${COMBINED_OUTPUT_FILE}"
+add_combined_index_paper_links "${COMBINED_NUMBERED_OUTPUT_FILE}"

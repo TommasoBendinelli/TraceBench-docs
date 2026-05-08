@@ -1,0 +1,28 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{\texttt{Noise:} \texttt{low}}}
+& \multicolumn{2}{c}{\textbf{\texttt{Noise:} \texttt{high}}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+& \texttt{Direct}
+& \texttt{Code}
+& \texttt{Direct}
+& \texttt{Code} \\
+\midrule
+\texttt{gpt-5.5 (high)} & \scorepm{27.67}{6.726} & \scorepm{28.73}{3.955} & \scorepm{28.6}{5.082} & \scorepm{34.73}{4.949} \\
+\texttt{gemini-3.1-pro-preview (high)} & \scorepm{42.73}{13.13} & \scorepm{49.2}{11.98} & \scorepm{48.6}{12.08} & \scorepm{52.33}{14.97} \\
+\texttt{claude-opus-4-6 (high)} & \scorepm{15.53}{12.05} & \scorepm{27.73}{20.51} & \scorepm{17.64}{12.06} & \scorepm{21.8}{18.21} \\
+\texttt{minimax-m2.7} & \scorepm{59.53}{24.19} & \scorepm{152.6}{32.63} & \scorepm{50.64}{18.6} & \scorepm{130.4}{29.35} \\
+\bottomrule
+\end{tabular}%
+}
+\endgroup

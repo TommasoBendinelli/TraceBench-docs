@@ -1,0 +1,28 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{\texttt{Noise:} \texttt{low}}}
+& \multicolumn{2}{c}{\textbf{\texttt{Noise:} \texttt{high}}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+& \texttt{Direct}
+& \texttt{Code}
+& \texttt{Direct}
+& \texttt{Code} \\
+\midrule
+\texttt{gpt-5.5 (high)} & \scorepm{2.067}{6.933} & \scorepm{0.0}{0.0} & \scorepm{2.333}{6.925} & \scorepm{0.0}{0.0} \\
+\texttt{gemini-3.1-pro-preview (high)} & \scorepm{3.933}{9.46} & \scorepm{2.4}{6.092} & \scorepm{5.133}{7.19} & \scorepm{1.667}{3.976} \\
+\texttt{claude-opus-4-6 (high)} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} \\
+\texttt{minimax-m2.7} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} \\
+\bottomrule
+\end{tabular}%
+}
+\endgroup

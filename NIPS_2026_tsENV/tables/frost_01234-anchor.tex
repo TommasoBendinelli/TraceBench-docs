@@ -1,0 +1,15 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\begin{tabularx}{\textwidth}{M*{3}{Y}}
+\toprule
+Model & \makecell{\texttt{Ball}\\\texttt{Drop}} & \makecell{\texttt{Bounce}\\\texttt{Ball}} & \makecell{\texttt{Mass}\\\texttt{Slide}} \\
+\midrule
+\texttt{gpt-5.5 (high)} & \scorepm{1.0}{0.0} & \scorepm{1.0}{0.0} & \scorepm{0.98}{0.045} \\
+\texttt{gemini-3.1-pro-preview (high)} & \scorepm{1.0}{0.0} & \scorepm{0.98}{0.045} & \scorepm{0.86}{0.114} \\
+\texttt{claude-opus-4-6 (high)} & \scorepm{0.98}{0.045} & \scorepm{1.0}{0.0} & \scorepm{0.94}{0.055} \\
+\texttt{minimax-m2.7} & \scorepm{0.36}{0.089} & \scorepm{0.2}{0.071} & \scorepm{0.58}{0.045} \\
+\bottomrule
+\end{tabularx}
+\endgroup

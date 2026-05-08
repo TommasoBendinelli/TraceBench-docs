@@ -1,0 +1,26 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{Zero-example, high context}
+& \multicolumn{2}{c}{Three-example, no context} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+& \texttt{Direct}
+& \texttt{Code}
+& \texttt{Direct}
+& \texttt{Code} \\
+\midrule
+\texttt{gpt-5.5 (high)} & \scorepm{29.93}{5.637} & \scorepm{31.27}{4.621} & \scorepm{45.47}{14.51} & \scorepm{51.67}{16.52} \\
+\texttt{gemini-3.1-pro-preview (high)} & \scorepm{37.33}{13.44} & \scorepm{46.0}{13.66} & \scorepm{42.8}{21.91} & \scorepm{62.2}{24.73} \\
+\bottomrule
+\end{tabular}%
+}
+\endgroup

@@ -1,0 +1,64 @@
+\begingroup
+\small
+\newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
+
+\setlength{\tabcolsep}{5pt}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{3}{c}{Zero-example, high context}
+& \multicolumn{3}{c}{Three-example, no context} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+& \multicolumn{1}{c}{\texttt{Direct}}
+& \multicolumn{2}{c}{\texttt{Code}}
+& \multicolumn{1}{c}{\texttt{Direct}}
+& \multicolumn{2}{c}{\texttt{Code}} \\
+\cmidrule(lr){2-2}\cmidrule(lr){3-4}
+\cmidrule(lr){5-5}\cmidrule(lr){6-7}
+& \texttt{Episode}
+& \texttt{Episode}
+& \texttt{Held-out}
+& \texttt{Episode}
+& \texttt{Episode}
+& \texttt{Held-out} \\
+\midrule
+\texttt{gpt-5.5}
+& \scorepm{.97}{0.100}
+& \scorepm{.93}{0.100}
+& \scorepm{.88}{0.100}
+& \scorepm{.97}{0.100}
+& \scorepm{.93}{0.100}
+& \scorepm{.88}{0.100} \\
+
+\texttt{gpt-5.3-codex-spark}
+& \scorepm{.85}{0.100}
+& \scorepm{.91}{0.100}
+& \scorepm{.82}{0.100}
+& \scorepm{.85}{0.100}
+& \scorepm{.91}{0.100}
+& \scorepm{.82}{0.100} \\
+
+\texttt{gemini-3.1-pro-preview}
+& \scorepm{.87}{0.100}
+& \scorepm{.79}{0.100}
+& \scorepm{.94}{0.100}
+& \scorepm{.87}{0.100}
+& \scorepm{.79}{0.100}
+& \scorepm{.94}{0.100} \\
+
+\texttt{claude-opus-4-6}
+& \scorepm{.86}{0.100}
+& \scorepm{.89}{0.100}
+& \scorepm{.83}{0.100}
+& \scorepm{.86}{0.100}
+& \scorepm{.89}{0.100}
+& \scorepm{.83}{0.100} \\
+
+\bottomrule
+\end{tabular}%
+}
+\endgroup

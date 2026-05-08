@@ -1,0 +1,108 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\begin{document}
+
+\docTitle{Stage: Final Artifact Scoring}
+\phantomsection\label{docstart:final_artifact_scoring_stage}
+
+The responsibility of this stage is to score the final artifacts produced by an agentic rollout.
+It reads the persisted terminal-bench run, evaluates each trial's final answer or rule artifact, and writes per-trial and run-level scoring summaries.
+We are using the metrics top-1 accuracy and shortlist score, following the ranked-label convention used in the main paper.
+
+\section*{Main Driver}
+\begin{DocCode}
+python workflows/rollout/evaluate_artifact.py [<agentic_run_id>] [--path PATH]
+\end{DocCode}
+Note that only one of \code{<agentic_run_id>} or \code{--path} may be passed.
+The \code{agentic_run_id} resolves to:
+\begin{DocCode}
+terminal-bench/runs/<agentic_run_id>
+\end{DocCode}
+
+\section*{Inputs}
+The stage consumes the rollout output directory and its run-local metadata:
+\begin{itemize}
+  \item \code{run_metadata.json}, including the dataset path and run identifiers
+  \item \code{results.json}, including the terminal-bench trial entries
+  \item each trial's \code{scenario_info.json}
+  \item each trial's final artifact, either \code{results.json} for direct prediction or \code{rule.py} for code-rule prediction
+  \item persisted artifacts such as \code{rule.py}, when the evaluation mode is code-based
+\end{itemize}
+can you
+\section*{Internal Steps}
+\begin{enumerate}
+  \item Resolve and validate \code{terminal-bench/runs/<agentic_run_id>}.
+  \item Load \code{run_metadata.json} and \code{results.json}.
+  \item Build a question index from the run-local metadata and aliases in \code{results.json}.
+  \item Iterate through each trial entry and load its \code{scenario_info.json}.
+  \item Score according to \code{scenario_info.json::eval_mode}:
+  \begin{itemize}
+    \item \code{direct}: require \code{results.json}, validate that it maps each \code{<filename>.parquet} path to a ranked list of labels, and compare each list with the test label.
+    It case \code{results.json} does not follow the convention, then try to allow for flexible parsing. By
+    \begin{itemize}
+      \item Trying to check whether the format is \code{<filename>.parquet} instead of \code{<filename>.parquet}
+    \end{itemize}
+    \item \code{code}: require \code{rule.py}, call \code{predict(df) -> list[str]} on each test sample and any held-out \code{other} samples, and compare each returned ranked list with test label.
+    Internally \code{evaluate_rule} works as follows:
+    \begin{itemize}
+      \item For each uuid in \code{sample_manifest.json::<shot_slug>::test_samples} and then after for item in \code{sample_manifest.json::<shot_slug>::others}, create \code{uuid_path}
+      \item Call:
+      \begin{DocCode}
+evaluate_rule(
+    uuid_path,
+    rule.py,
+    model_record_path,
+    desc_level=scenario_info.json::desc_level,
+    noise_level=scenario_info.json::noise_level,
+    evaluation_type="shortlist_score",
+)
+      \end{DocCode}
+      Note that in case of any error the \code{error} field is recorded.
+    \end{itemize}
+  \end{itemize}
+  \item Write each evaluated trial's \code{scores.json}.
+\end{enumerate}
+If the required artifact is missing or invalid, we are skipping it (not including in the results)
+
+\section*{Materialized Output}
+Per-trial scores are stored under each trial directory:
+\begin{DocCode}
+terminal-bench/runs/<agentic_run_id>/<task_id>/<trial_name>/scores.json
+\end{DocCode}
+
+\section*{Paper Metric Convention}
+For each sample, predictions are interpreted as a ranked list of unique labels.
+The first label is the top-1 prediction.
+Top-1 accuracy is 1 when the first returned label equals the hidden ground-truth label and 0 otherwise.
+
+The secondary shortlist score rewards including the correct answer while penalizing hedging.
+If the returned list has length \code{m}, the sample receives \code{1/m} when the hidden label appears anywhere in the list, and \code{0} otherwise.
+Returning all labels therefore gives only chance-level shortlist credit, while a correct single-label prediction receives full credit.
+
+\section*{\code{scores.json} Schema}
+Each \code{scores.json} payload is validated by \code{shared/scores_schema.py}.
+The required top-level keys are:
+\begin{itemize}
+  \item \code{agent_run_id}: non-empty run identifier
+  \item \code{is_correct_format}: bool, present when \code{scenario_info.json::eval_mode=="direct"}. 
+  True if \code{results.json} includes all samples, and if its format matches the \code{<filename>} structure.
+  \item \code{final_metric_test}: 
+  \begin{itemize}
+  \item \code{average_top1_accuracy}: mean top-1 accuracy over test samples, float between 0 and 1.
+  \item \code{average_shortlist_score}: mean shortlist score over test samples, float between 0 and 1.
+  \item \code{average_num_answers}: mean number of unique labels returned per test sample.
+  \end{itemize}
+  \item \code{sample_results}: dict with \code{predictions}, \code{top1_correct}, \code{shortlist_score}, \code{num_answers}, \code{sample_type}, \code{error}.
+  Here \code{predictions} is the returned ranked-label list, \code{top1_correct} records whether the top-1 prediction is correct, \code{shortlist_score} is the per-sample shortlist score, and \code{num_answers} is the number of unique labels returned.
+  \code{sample_type} can be either \code{test} or \code{other}; \code{error} is a string only when scoring that sample raised an error.
+  \item \code{final_metric_other}: present when \code{scenario_info.json::eval_mode=="code"}.
+  \begin{itemize}
+    \item \code{average_top1_accuracy}: mean top-1 accuracy over held-out \code{other} samples, float between 0 and 1.
+    \item \code{average_shortlist_score}: mean shortlist score over held-out \code{other} samples, float between 0 and 1.
+    \item \code{average_num_answers}: mean number of unique labels returned per held-out sample.
+  \end{itemize}
+\end{itemize}
+For averaging, \code{error} values are considered as top-1 accuracy \code{0}, shortlist score \code{0}, and \code{num_answers=null}, so they are skipped in the \code{average_num_answers} calculation.
+
+\end{document}
