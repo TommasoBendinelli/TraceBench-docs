@@ -61,6 +61,15 @@
   top=1in,
   bottom=1in
 }
+\setlength{\LTcapwidth}{\textwidth}
+\makeatletter
+\def\LT@makecaption#1#2#3{%
+  \LT@mcol\LT@cols c{\hbox to\z@{\hss\parbox[t]\LTcapwidth{%
+    \reset@font
+    #1{#2: }#3%
+    \endgraf\vskip\baselineskip}%
+  \hss}}}
+\makeatother
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.5em}
@@ -101,7 +110,7 @@
 \newcommand{\termSimulator}{\code{simulator}\xspace}
 \newcommand{\termTaskMode}{\code{task_mode}\xspace}
 \newcommand{\termNoiseLevel}{\code{noise_level}\xspace}
-\newcommand{\termNoParameterChangeClass}{\ensuremath{\mathrm{NC} }\xspace}
+\newcommand{\termNoParameterChangeClass}{\ensuremath{\mathrm{NI} }\xspace}
 \providecommand{\name}{TS\texttt{ENV}\xspace}
 \newcommand{\changetick}{\ensuremath{\checkmark}}
 \newcommand{\manualDocMaybeEnableLineNumbers}{%

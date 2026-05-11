@@ -1,6 +1,6 @@
 \begin{abstract}
-Agents can build complex data processing pipelines when prompted by clear instructions.
-However, their capacity to autonomously derive insights by integrating textual information with observational evidence has not been systematically evaluated.
+Agents can build complex data pipelines for processing time-series data when prompted by clear instructions.
+However, their capacity to autonomously derive insights by integrating textual information with time-series observations has not been systematically evaluated.
 In this paper, we introduce \name{}, a benchmark framework for generating root-cause analysis tasks from physical simulators.
 Successful completion of these tasks requires combining textual information with analysis of time-series observations.
 We instantiate \name{} with simulators of simple mechanical systems to construct a suite of benchmark tasks.
@@ -16,23 +16,23 @@ Analysts rarely succeed by running a single, generic pipeline; instead, they for
 
 A growing body of work evaluates LLM agents on end-to-end data analysis and ML engineering workflows \citep{hu2024infidabench,sahu2024insightbench,jing2024dsbench,wu2024daco,chan2024mle}.
 These benchmarks are valuable but often the skill being measured is coding proficiency rather than data analysis, especially when task instructions are explicit or when the dataset is sufficiently large that generic machine-learning models perform well out of the box.
-Moreover, many existing time-series datasets are poorly suited for evaluating agents' ability to combine textual context with direct inspection of time-series observations, since they provide limited task-relevant context and often require substantial domain knowledge to interpret the raw signals.
+Moreover, many existing time-series datasets are poorly suited for evaluating agents' ability to combine textual context with direct inspection of time-series observations, since they provide limited task-relevant context and often require substantial domain knowledge to interpret the individual signals.
 It thus remains unclear whether current tool-using agents can autonomously perform data analysis by combining textual descriptions with time-series observations.
 In this paper, we introduce \name{}, a diagnostic framework designed to generate tasks that isolate and benchmark this capability. 
 The following example illustrates the kind of tasks \name{} generates.
 
 Consider dropping a ball from a given height with a given initial velocity.
-Suppose we have noisy observations of the ball's position, velocity, and contact force.
+Suppose we have noisy time-series observations of the ball's height, velocity, and contact force.
 The ball follows a familiar trajectory governed by parameters such as the coefficient of restitution, the ball's mass, the drag coefficient, and gravitational acceleration.
 Now suppose we modify one of these parameters while the ball is still bouncing.
 The ball is affected by this update, and the corresponding time-series observations reflect the change.
-We ask the agent to determine which parameter, if any, caused the observed change in trajectory.
-The agent has access only to noisy observations, a description of the physical process, and a few additional labeled observations.
+We ask the agent to determine which parameter, if any, caused the observed trajectory change.
+The agent has access only to noisy time-series observations, a description of the physical process, and a few additional labeled time-series observations.
 
 The agent must necessarily inspect the time-series to obtain the answer, yet their semantic meaning is grounded in the textual description of the physical process. 
 
 \name{} is a data generation pipeline that makes use of existing physical simulators to generate such diagnostic root-cause analysis tasks and provides reliable ground truth.
-\name{} is designed to diagnose whether agents ground their conclusions in time-series evidence rather relying on generic machine learning pipelines or textual shortcuts.
+\name{} is designed to diagnose whether agents ground their conclusions in evidence from time-series observations rather than relying on generic machine learning pipelines or textual shortcuts.
 
 We instantiate \name{} with three simple intuitive simulators of mechanical systems: a ball drop, a mass bouncing between two damped walls and a mass on a tilted plane.
 We generate tasks for each environment and evaluate a range of closed- and open-weight agents across context and shot regimes, analyze qualitative failure modes and exploration behavior.

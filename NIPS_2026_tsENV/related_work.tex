@@ -11,7 +11,7 @@ We situate \name among \textit{(i)} data-analysis and ML-agent benchmarks, \text
     \setlength{\tabcolsep}{6pt}
     \renewcommand{\arraystretch}{1.12}
     \caption{Comparison with the most relevant benchmarks.
-    ``Controlled text context'' indicates whether the benchmark provides multiple versions of the same task with systematically varied levels of natural-language context.
+    ``Controlled textual context'' indicates whether the benchmark provides multiple versions of the same task with systematically varied levels of natural-language context.
     ``Controlled numerical context'' indicates whether the benchmark provides multiple versions of the same task with systematically varied exemplars or levels of access to the time series.
     ``uni'' stands for univariate, ``multi'' for multivariate.}
     \label{tab:benchmark_comparison}
@@ -21,7 +21,7 @@ We situate \name among \textit{(i)} data-analysis and ML-agent benchmarks, \text
     \toprule
     \textbf{Benchmark} &
     \makecell{\textbf{Synthetic}\\\textbf{xata}} &
-    \makecell{\textbf{Controlled}\\\textbf{text context}} &
+    \makecell{\textbf{Controlled}\\\textbf{textual context}} &
     \makecell{\textbf{Controlled}\\\textbf{numeric context}} &
     \makecell{\textbf{Time Series}\\\textbf{type}} &
     \makecell{\textbf{Agentic}\\\textbf{execution}} &
@@ -76,7 +76,7 @@ These datasets helped establish evaluation protocols for \emph{text + numbers} r
 More recent work evaluates data-analysis workflows with code execution.
 InfiAgent-DABench~\citep{hu2024infidabench} benchmarks tool-using agents in an execution environment, while InsightBench~\citep{sahu2024insightbench} evaluates multi-step business analytics scenarios.
 DSBench~\citep{jing2024dsbench} and DACO~\citep{wu2024daco} further stress end-to-end data-science pipelines and code generation, and systems such as DS-Agent~\citep{guo2024ds} explore case-based reasoning for automated data science.
-While these benchmarks probe workflow completion, the relevant ``context'' is often sparse or directly encoded in schemas and dataset descriptions, and tasks can frequently be solved by applying generic procedures without validating assumptions against raw values.
+While these benchmarks probe workflow completion, the relevant textual context is often sparse or directly encoded in schemas and dataset descriptions, and tasks can frequently be solved by applying generic procedures without validating assumptions against the time-series observations.
 
 \subsection{Time-series reasoning, forecasting, and temporal-textual QA}
 Several benchmarks probe whether LLMs understand core time-series concepts.
@@ -88,15 +88,15 @@ Gruver et al.~\citep{gruver2024large} demonstrate that LLMs can act as zero-shot
 SciTS~\citep{anonymous2025scits} studies scientific time-series understanding and generation with LLMs.
 These settings typically expose the time series through a fixed representation and evaluate single-pass answers, rather than testing whether an \emph{agent} can iteratively choose which segment, statistic, or diagnostic to inspect to ground its decision.
 
-Temporal-textual QA resources couple time-series signals with language.
+Temporal-textual QA resources couple time-series observations with language.
 MTBench~\citep{chen2025mtbench} evaluates models on joint reasoning over paired time-series and text, and ITFormer~\citep{wang2025itformer} proposes datasets and model interfaces for temporal-textual QA.
 ChatTS~\citep{xie2024chatts} demonstrates that synthetic alignment data can substantially improve multimodal understanding and reasoning about time series.
-However, these benchmarks do not isolate whether decisions are grounded in evidence gathered through targeted, multi-step exploration of raw values.
+However, these benchmarks do not isolate whether decisions are grounded in evidence gathered through targeted, multi-step exploration of time-series observations.
 
 \subsection{From code-centric agents to evidence-grounded time-series agents}
 Agent benchmarks such as MLE-bench~\citep{chan2024mle} evaluate end-to-end ML engineering skills in realistic workflows, emphasizing the ability to write and execute code.
 Recent evidence suggests that time-series domains remain challenging even for capable agents: Cai et al.~\citep{cai2025llmAgents} find that agents often fail to produce reliable time-series solutions despite competent tool use.
-Such benchmarks are valuable for measuring pipeline completion, but aggregate outcome metrics can obscure if the agent's decisions are supported by the observed temporal dynamics.
+Such benchmarks are valuable for measuring pipeline completion, but aggregate outcome metrics can obscure if the agent's decisions are supported by patterns in the time-series observations.
 
-\name complements this line of work by targeting a narrower, reasoning-centric regime: tasks are constructed so that \textit{(i)} natural-language context is necessary but not sufficient, and \textit{(ii)} correct solutions require targeted inspection of the raw signal under potentially misleading priors.
-By combining simulation episodes with known ground-truth interventions and controlled context ablations, \name is designed to diagnose whether agents \emph{ground} their conclusions in time-series evidence rather than relying on default pipelines or textual shortcuts.
+\name complements this line of work by targeting a narrower, reasoning-centric regime: tasks are constructed so that \textit{(i)} textual context is necessary but not sufficient, and \textit{(ii)} correct solutions require targeted inspection of the time-series observation under potentially misleading priors.
+By combining simulation episodes with known ground-truth interventions and controlled textual-context ablations, \name is designed to diagnose whether agents \emph{ground} their conclusions in evidence from time-series observations rather than relying on default pipelines or textual shortcuts.

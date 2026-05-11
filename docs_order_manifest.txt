@@ -8,7 +8,6 @@ simulink_generated_metadata_schema.tex
 model_run_specs_schema.tex
 simulation_stage.tex
 compute_metrics_stage.tex
-rf_stage.tex
 oracle_solution_stage.tex
 generate_question_stage.tex
 agentic_rollout.tex

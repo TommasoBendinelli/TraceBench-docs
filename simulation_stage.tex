@@ -66,8 +66,8 @@ Schema:
 \begin{DocCode}
 {
   "<baseline_uuid>": {
-    "class_internal": "no_parameter_change",
-    "class_agent_facing_name": "no parameter change",
+    "class_internal": "no_interevention",
+    "class_agent_facing_name": "no intervention",
     "run_type": "baseline",
     "parameters_hash": "<32-hex-hash>",
     "status": "not_run|success|failed",
@@ -198,7 +198,7 @@ No casting to \code{float32} must be done anywhere else outside this function, i
   \begin{itemize}
   \item the first timestamp available is \code{dt}
   \item columns are stored as \code{float32}
-  \item the columns are named according to \code{experiment_config.json::observable_signals::observable_signals}, in the same order
+  \item the columns are named according to \code{experiment_config.json::observable_signals::observable_signals}, in the same order and the last column is time.
   \item the samples are regularly spaced according to \code{sampling_rate_hz}
   \item there are at least \code{50} points.
   \item there must be \code{floor(end_time_input_s * sampling_rate_hz)} -1 points

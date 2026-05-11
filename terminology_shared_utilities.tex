@@ -12,8 +12,8 @@
 When epsilon is omitted, assume \code{epsilon = 0}.
 The minimum \termSRD distance required is denoted by \termMinSRDDistance
 \item (\termMinAbsDist): minimum absolute distance/change required between values.
-\item (\termNoParameterChangeClass): No parameter change (i.e. no intervention) class. Class indicating that none of the exposed intervention parameters changes during the observed simulation interval. In the text we will use the symbol \termNoParameterChangeClass excepts in prompts.
-In this case we use the corresponding agent-facing class is "no parameter change".
+\item (\termNoParameterChangeClass): No intervention class (i.e. no parameter is changed during the simulation). Class indicating that none of the exposed intervention parameters changes during the observed simulation interval. In the text we will use the symbol \termNoParameterChangeClass excepts in prompts.
+In this case we use the corresponding agent-facing class is "no intervention". However in the paper we submitted to NeuroNIPS we used "no parameter change"
 \item (\termDescLevel): It describes the amount of natural-language model information provided to the agent. Its allowed values are \code{none}, \code{low}, and \code{high}.
 \item (\termSimulator): The physical simulator from which we generate data. It allows values are the ones allowed in \code{ALLOWED_TSENV_MODELS}.
 \item (\termTaskMode): The required form of the agent's final answer. 

@@ -202,7 +202,7 @@ At a semantic level, the three hash fields mean:
 
 \begin{itemize}
 \item \code{baseline_parameters_hash} is the identity of the baseline run defined by \code{baseline_parameters}
-\item \code{parameter_hash} is the identity of the child run defined by the parent baseline together with the single-field child \code{parameters} object and \code{intervention_time}
+\item \code{parameter_hash} is the identity of the child run defined by the parent baseline together with the child \code{parameters} and \code{intervention_time} attributes.
 \item \code{time0_baseline_hash} is the identity of the synthetic time-zero baseline associated with that child run
 \end{itemize}
 
@@ -246,6 +246,7 @@ The three hash payloads are:
 \item \code{parameter_hash}: SHA-256 over
 \begin{DocCode}
 {
+  "intervention_time": 12.34,
   "parent_parameters_hash": "<baseline_parameters_hash>",
   "parameters": { ...single child parameter... }
 }

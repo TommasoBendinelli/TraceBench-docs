@@ -1,20 +1,27 @@
 % !TeX root = main.tex
-\section{TSENV Framework}
+\section{\name{} Framework}
 \label{sec:overview}
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{pictures/Overviewfigure_v8.pdf}
+\begingroup
+\setlength{\unitlength}{\textwidth}
+\begin{picture}(1,0.286)
+  \put(0,0){\includegraphics[width=\textwidth]{pictures/Overviewfigure_v8.pdf}}
+  \put(0.338,0.222){\textcolor{white}{\rule{0.345\textwidth}{0.020\textwidth}}}
+  \put(0.338,0.226){\fontsize{6}{6}\selectfont\textbf{Observed channels} (e.g., velocity, force, height)}
+\end{picture}
+\endgroup
 \caption{Overview of the \name{} pipeline using the BallDrop simulator. In this example, \name{} samples an intervention at time $t_{\mathrm{int}}=5$ that increases gravity.
-At evaluation time, the agent is tasked with determining, from the observed signals, whether an intervention occurred and, if so, which one.
+At evaluation time, the agent is tasked with determining, from the observed channels, whether an intervention occurred and, if so, which one.
 }
 \label{fig:data_generation}
 \end{figure*}
 
-\name{} is a benchmark framework for evaluating multi-step analysis of time-series data. 
-In each task, an agent receives a textual description of a simulated physical process and a batch of multivariate time-series observations. 
+\name{} is a benchmark framework for evaluating multi-step analysis of time-series observations. 
+In each task, an agent receives a textual description $D$ of the simulated physical process and a batch of multivariate time-series observations. 
 The goal is to identify which simulator parameter, if any, changed for each time-series observation.
-The textual description provides information about the process, signals, and parameters, but does not reveal the intervention.
-Thus, agents must inspect the observed trajectories to infer the correct answer.
+The textual description provides information about the process, observed channels, and parameters, but does not reveal the intervention.
+Thus, agents must inspect the time-series observations to infer the correct answer.
 
 In the following sections, we first introduce the physical simulator interface used by \name{} and the time-series generation process, then define the structure of the agentic task, and describe how we ensure reliable ground truth.
 Finally, we will describe the controllable difficulty axes, including textual context, noise level, labeled examples, and task output formats.
@@ -32,7 +39,7 @@ Here, \(\boldsymbol{\theta}\) denotes the simulator parameter vector, \(\mathbf{
 Both \(\mathbf{y}\in\mathbb{R}^{T\times C}\) and \(\tilde{\mathbf{y}}\in\mathbb{R}^{T\times C}\) are sampled at a regular rate over a finite horizon and comprise \(C\) channels. 
 
 The observation noise model \(p_\kappa\) is parametrized by a scalar tuning factor that controls the intensity of the measurement corruption.
-For each simulator, we specify the set of root-cause parameters \(\Theta^\star \subseteq \Theta\), observed signals, sampling rate, horizon, and simulator-specific sampling ranges for initial states and parameters.
+For each simulator, we specify the set of root-cause parameters \(\Theta^\star \subseteq \Theta\), observed channels, sampling rate, horizon, and simulator-specific sampling ranges for initial states and parameters.
 See \Cref{fig:data_generation} for an example.
 
 \subsection{Intervention-based time-series generation}
@@ -53,7 +60,7 @@ The resulting intervention trajectory is generated as \(\mathbf{y}^{(i)} = \math
 \subsection{Root-cause task definition}
 A generated task by \name{} consists of three components:
 \begin{itemize}
-    \item The initial prompt, which is provided to the agent at the beginning of an episode and includes (i) the task instruction $\mathcal{I}$ and (ii) a textual description of the simulated process $D$.
+    \item The initial prompt, which is provided to the agent at the beginning of an episode and includes (i) the task instruction $\mathcal{I}$ and (ii) a textual description $D$ of the simulated process.
     \item A class-balanced set of unlabeled test samples $Y_{\text{test}}=\{\tilde{\mathbf{y}}_b\}_{b=1}^{B}$.
     \item A class-balanced set of labeled time-series examples $Y_{\text{labeled}}=\{\tilde{\mathbf{y}}_{\text{labeled}}^{(n)}\}_{n=1}^{N}$ with corresponding ground-truth labels $A_{\text{labeled}}=\{a_{\text{labeled}}^{(n)}\}_{n=1}^{N}$.
     Each ground-truth label belongs to $\mathcal{A}$,  where \(\mathcal{A}=\Theta^\star\cup\{\mathrm{NI}\}\) and $\mathrm{NI}$ denotes the no-intervention class, i.e. no parameter is updated during the simulation.
@@ -63,38 +70,35 @@ At evaluation time the agent is provided with the initial prompt and the time-se
 We provide examples of initial prompts in Appendix~\ref{app:prompt-example-combinations}.
 
 \subsection{Validity filtering: detectability and distinguishability}
-\label{sec:detectability} 
-After generating a time-series sample \(\mathbf{y}^{(i)}\) with an intervention, we proceed with a series of counterfactual checks to validate that (i) the intervention produces a detectable effect in \(\mathbf{y}^{(i)}\) and (ii) \(\mathbf{y}^{(i)}\) is distinguishable from alternative explanations.
-To do so, we use a finite set of matched counterfactual probes targeting the most common ambiguities induced by the intervention sampling process.
-To test intervention detectability, specifically we compared \(\mathbf{y}^{(i)}\) against three matched reference trajectories:
+\label{sec:detectability}
+While the ground truth is defined by construction, detectability and distinguishability cannot be verified a priori due to the non-linear nature of the environments. 
+In particular, an intervention must produce a detectable effect in \(\mathbf{y}^{(i)}\), and its effect must be distinguishable from changes to other root-cause parameters.
+Thus, \name{} comprises the following rejection pipeline.
+After generating a time series with an intervention \(\mathbf{y}^{(i)}\), we measure the per-channel root-mean-square distance between \(\mathbf{y}^{(i)}\) and three additional probe trajectories:
 \begin{enumerate}[leftmargin=*,topsep=3pt,nosep]
-    \item the no-intervention probe generated from the same initial condition and parameters, but without any intervention.
-    \item the static-change probe generated by setting parameter \(i\) to the post-intervention value \(\theta'_i\) from the beginning of the simulation.
-    \item the optimized alternative-root-cause probe generated by optimising the post-intervention value of each alternative root-cause parameter \(\theta_j \in \Theta^\star \setminus \{\theta_i\}\) over \(\mathbf{y}^{(i)}\) and keeping the best fitting one.
+    \item the no-intervention probe, generated from the same initial condition and parameters but without any intervention;
+    \item the static-change probe, generated by setting parameter \(i\) to the post-intervention value \(\theta'_i\) from the beginning of the simulation;
+    \item the optimized alternative-root-cause probe, generated by optimizing the post-intervention value of each alternative root-cause parameter \(\theta_j \in \Theta^\star \setminus \{\theta_i\}\) over \(\mathbf{y}^{(i)}\) and keeping the best-fitting one.
 \end{enumerate}
-Intuitively the first two probes check for (i) while the latter checks for (ii).
-If there exists a probe such that, for every channel \(c\), the root-mean-square distance between \(\mathbf{y}^{(i)}\) and that probe on channel \(c\) is below the corresponding threshold \(\tau_c\), the sample is rejected.
-
-For each physical simulator, we define channel-specific thresholds \(\tau_c\).
-We empirically validated \(\tau\) by testing agents on accepted samples \(\mathbf{y}^{(i)}\) and manually auditing any misclassifications, ensuring that errors were not due to label ambiguity.
-
+Intuitively, the first two probes check for intervention detectability, while the third checks that \(\mathbf{y}^{(i)}\) is distinguishable from other classes. Together, they target the most common ambiguities induced by the \name{} intervention process.
+If one of these probes has, for every channel \(c\), a root-mean-square distance from \(\mathbf{y}^{(i)}\) below a channel- and environment-specific threshold \(\tau_c\), then the sample is rejected.
+The thresholds \(\tau\) are set manually for each environment.
+This pipeline removes ambiguous cases, yielding an accepted set with no manually identifiable label ambiguities for noiseless trajectories \(\mathbf{y}^{(i)}\).
+We empirically validated the pipeline by testing agents on accepted samples \(\mathbf{y}^{(i)}\) and manually auditing any misclassifications, verifying that errors were not due to label ambiguity.
 
 \subsection{Controllable task axes}
-Each task in \name{} can be instantiated by varying different axes.
-These axes determine what information the agent receives, how noisy the observations are, and what form of answer the agent must produce.
+Each task in \name{} can be instantiated by varying different axis.
+These axes determine what information the agent receives, how noisy the time-series observations are, and what form of answer the agent must produce.
 \paragraph{Textual context}
-The description \(D\) controls how much semantic information the agent receives about the simulated process. 
-In high-context settings, the prompt describes the physical system, observed signals, and candidate root-cause parameters. 
-In no-context settings, the agent receives only an abstract description of the task and anonymized labels. 
-This axis tests whether agents can use domain context to guide time-series exploration.
-The examples of the prompts in two scenarios are provided in \Cref{app:prompt-example-combinations}.
+The textual description \(D\) defines the textual context provided to the agent.
+This axis tests whether agents can use textual context to guide time-series exploration.
 
 \paragraph{Observation noise}
 The noise scale \(\kappa\) controls the corruption model \(p_\kappa(\tilde{y} \mid y)\). 
-Increasing \(\kappa\) makes the same underlying root-cause intervention harder to identify from the observed trajectory.
+Increasing \(\kappa\) makes the same underlying root-cause intervention harder to identify from the time-series observation.
 
 \paragraph{Labeled examples}
-The example budget \(N\) controls whether the agent receives additional labeled trajectories from the same environment and label space. 
+The example budget \(N\) controls whether the agent receives additional labeled time-series observations from the same environment and label space. 
 This axis tests whether agents can abstract useful diagnostic patterns from examples.
 
 \paragraph{Task-output interface}

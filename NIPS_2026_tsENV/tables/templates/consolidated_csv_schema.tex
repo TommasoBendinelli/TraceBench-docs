@@ -1,0 +1,52 @@
+\newcommand{\identityFieldRows}{%
+\code{row_slug} & Question row slug \\
+\code{agent} & Agent profile identifier \\
+\code{desc_level} & Textual-description level \\
+\code{task_output} & Task-output interface: code or direct \\
+\code{noise_level} & Noise regime \\
+\code{train_samples} & Number of labeled training examples \\
+\code{simulator} & Simulator or environment name \\
+}
+
+\newcommand{\metricFamilyRows}{%
+Top-1 accuracy & \code{average_top1_accuracy} & \code{std_per_sample}, \code{std_per_batch} & Mean top-1 accuracy; standard deviations over per-sample correctness and per-seed batch accuracy \\
+Shortlist score & \code{average_shortlist_score} & none & Mean shortlist score \\
+Cost & \code{avg_cost} & \code{std_cost} & Estimated cost \\
+Cumulative tokens & \code{avg_cumulative_tokens} & \code{std_cumulative_tokens} & Cumulative token usage \\
+Tool calls & \code{avg_tool_calls} & \code{std_tool_calls} & Tool-call count \\
+Agent steps & \code{avg_num_steps} & \code{std_num_steps} & Agent step count \\
+}
+
+\newcommand{\consolidatedCsvSchemaTable}[1]{%
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+\toprule
+\textbf{Field} & \textbf{Description} \\
+\midrule
+#1
+\bottomrule
+\end{tabular}
+\endgroup
+}
+
+\newcommand{\metricFamilyTable}[1]{%
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.14\textwidth}>{\raggedright\arraybackslash}p{0.26\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.23\textwidth}@{}}
+\toprule
+\textbf{Metric} & \textbf{Mean/value field} & \textbf{Std field(s)} & \textbf{Description} \\
+\midrule
+#1
+\bottomrule
+\end{tabular}
+\endgroup
+}
+
+\newcommand{\identityFieldsTable}{\consolidatedCsvSchemaTable{\identityFieldRows}}
+\newcommand{\perRowSlugCsvMetricTable}{\metricFamilyTable{\metricFamilyRows}}
+\newcommand{\perAgentCsvMetricTable}{\metricFamilyTable{\metricFamilyRows}}

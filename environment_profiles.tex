@@ -85,13 +85,12 @@ The files are located in \code{models/simulink/<MODEL>/} and include:
             \item \termMinSRDDistance: float, minimum \termSRD distance for impulse-like signals. Default to 0.3
             \item \code{epsilon_SRD}: float, epsilon term used in the \termSRD formula denominator when computing detectability between baseline and intervention. Default to 1
         \end{itemize}
-        \item \code{signal_to_noise_ratio_db_thresholds}: Dict of Dict. The outside dict is the signal name, the inner dict is the noise level. 
-        Either "high" or "low". low and high denotes minim signal to noise ratio DB required for that channale
+        \item \code{RMS_thresholds}: Dict it defines for each signal what RMS threshold we are using to consider whether a pair of signals is ambiguos or not
         \begin{DocCode}
-            "signal_to_noise_ratio_db_thresholds": {
-                "Position": "high": {8.0,15.0}, "low":{20.0, 30.0}
-                "Velocity": "high": {8.0,15.0}, "low":{20.0, 30.0}
-                "Hard_Stop_f": "high": {8.0,15.0}, "low":{20.0, 30.0}
+            "RMS_thresholds": {
+                "Position": 0.012
+                "Velocity": 0.0432
+                "Hard_Stop_f": 0.054
             }
         \end{DocCode}
     \end{itemize}
@@ -106,9 +105,8 @@ The files are located in \code{models/simulink/<MODEL>/} and include:
     def quantify_noise(clean: pd.DataFrame, noisy: pd.DataFrame, reference: pd.DataFrame) -> dict
     \end{DocCode}
     \begin{DocCode}
-    def add_noise(clean: pd.DataFrame, reference: pd.Dataframe, seed: int = 0, noise_level: Literal["low","high"] = "low") -> tuple[pd.DataFrame, dict]
+    def add_noise(src: pd.DataFrame, seed: int, noise_level: Literal["low","high"], ref: pd.DataFrame | None = None) -> tuple[pd.DataFrame, dict]
     \end{DocCode}
-    Runtime callers use this as \code{add_noise(clean_df, reference_df, seed, noise_level)}; see \hyperref[def:add-noise-utility]{the shared \code{add_noise(...)} utility definition} for the retry loop and threshold behavior.
     \end{itemize}
     \item \code{detectability_specific_environment.py}: A self-contained script that has a function \code{is_detectable(intervention: pd.Dataframe, baseline: pd.Dataframe, run_parameters, intervention_time, min_first_diff)}.
     where \code{min_first_diff} is the smallest number in the list \code{first_diff} defined as \code{compute_metrics_stage.tex} and \code{run_parameters} is a dict with all the \code{baseline_parameters} plus the parameter changed and its new value

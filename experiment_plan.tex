@@ -5,6 +5,7 @@
 \usepackage{longtable}
 \usepackage{array}
 \usepackage{geometry}
+\usepackage{graphicx}
 \usepackage{makecell}
 \usepackage{multirow}
 \usepackage{tabularx}
@@ -15,43 +16,45 @@
 
 \begin{document}
 
+\input{NIPS_2026_tsENV/tables/templates/consolidated_csv_schema}
+
 \newcommand{\calibrationHeader}{%
 \textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
-\textbf{Test} & \textbf{Row Slug} & \textbf{Mode} & \textbf{Templ.} \\
+\textbf{Test} & \textbf{Row Slug} & \textbf{Mode} \\
 }
 \newcommand{\experimentHeader}{%
 \textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
-\textbf{Test} & \textbf{Row Slug} & \textbf{Mode} & \textbf{Templ.} \\
+\textbf{Test} & \textbf{Row Slug} & \textbf{Mode} \\
 }
-\newcommand{\calibrationRow}[8]{%
-\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} & \code{#8} \\
+\newcommand{\calibrationRow}[7]{%
+\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} \\
 }
-\newcommand{\experimentRow}[8]{%
-\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} & \code{#8} \\
+\newcommand{\experimentRow}[7]{%
+\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} \\
 }
 
 \docTitle{Experiment Plan}
+It describes how to use the previous stages and it creates the final artifacts for the paper: table and plots.
+
 \phantomsection\label{docstart:experiment_plan}
 
 \begingroup
 \renewcommand{\arraystretch}{1.0}
-\setlength{\tabcolsep}{1pt}
+\setlength{\tabcolsep}{2pt}
 \tiny
 
-In both cases Train refers to the number of training examples per classes, and Test to the size of the test batch.
 \vspace{0.25em} 
 
 \begin{longtable}{
-  p{2.6cm}
-  p{1.8cm}
-  p{0.9cm}
-  p{1.8cm}
-  p{0.8cm}
-  p{2.7cm}
+  p{3.2cm}
+  p{2.1cm}
+  p{1.2cm}
   p{1.6cm}
-  p{2.3cm}
+  p{0.9cm}
+  p{3.7cm}
+  p{2.23cm}
 }
-\caption{Calibration: All experiments are done with the model \code{gpt-5.3-codex-spark}}\\
+\caption{Calibration experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\\
 
 \toprule
 \calibrationHeader
@@ -66,23 +69,22 @@ In both cases Train refers to the number of training examples per classes, and T
 \bottomrule
 \endlastfoot
 
-\calibrationRow{baseline_calibration}{high}{none}{0}{10}{frost_01234-anchor}{direct}{high_desc_direct_0}
+\calibrationRow{baseline_calibration}{high}{none}{0}{10}{frost_01234-anchor}{direct}
 
 \end{longtable}
 
 \vspace{0.8em}
 
 \begin{longtable}{
-  p{2.8cm}
-  p{1.8cm}
+  p{3.2cm}
+  p{2.1cm}
+  p{1.2cm}
+  p{1.6cm}
   p{0.9cm}
-  p{1.0cm}
-  p{0.8cm}
-  p{2.9cm}
-  p{1.8cm}
-  p{2.3cm}
+  p{3.7cm}
+  p{2.23cm}
 }
-\caption{Main Paper Experiment}\\
+\caption{Main paper experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\\
 
 \toprule
 \experimentHeader
@@ -97,26 +99,55 @@ In both cases Train refers to the number of training examples per classes, and T
 \bottomrule
 \endlastfoot
 
-\experimentRow{baseline}{high}{low}{3}{10}{gentle_01234-cloud}{direct}{high_desc_direct_n}
-\experimentRow{code_baseline}{high}{low}{3}{10}{gentle_01234-flame}{code}{high_desc_code_n}
-\experimentRow{baseline_noise_high}{high}{high}{3}{10}{gentle_01234-pine}{direct}{high_desc_direct_n}
-\experimentRow{code_baseline_noise_high}{high}{high}{3}{10}{gentle_01234-orbit}{code}{high_desc_code_n}
-\experimentRow{direct_context_shot_3}{high}{high}{0}{10}{frost_01234-pine}{direct}{high_desc_direct_0}
-\experimentRow{code_context_shot_3}{high}{high}{0}{10}{frost_01234-orbit}{code}{high_desc_code_0}
-\experimentRow{no_context_shot}{none}{high}{3}{10}{gentle_01234-harbor}{direct}{none_desc_direct_n}
-\experimentRow{code_no_context_shot}{none}{high}{3}{10}{gentle_01234-tide}{code}{none_desc_code_n}
+\experimentRow{baseline}{high}{low}{3}{10}{gentle_01234-cloud}{direct}
+\experimentRow{code_baseline}{high}{low}{3}{10}{gentle_01234-flame}{code}
+\experimentRow{baseline_noise_high}{high}{high}{3}{10}{gentle_01234-pine}{direct}
+\experimentRow{code_baseline_noise_high}{high}{high}{3}{10}{gentle_01234-orbit}{code}
+
+\end{longtable}
+
+\vspace{0.8em}
+
+\begin{longtable}{
+  p{3.2cm}
+  p{2.1cm}
+  p{1.2cm}
+  p{1.6cm}
+  p{0.9cm}
+  p{3.7cm}
+  p{2.23cm}
+}
+\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro-preview}, both using high reasoning.}\\
+
+\toprule
+\experimentHeader
+\midrule
+\endfirsthead
+
+\toprule
+\experimentHeader
+\midrule
+\endhead
+
+\bottomrule
+\endlastfoot
+
+\experimentRow{direct_context_shot_3}{high}{high}{0}{10}{frost_01234-pine}{direct}
+\experimentRow{code_context_shot_3}{high}{high}{0}{10}{frost_01234-orbit}{code}
+\experimentRow{no_context_shot}{none}{high}{3}{10}{gentle_01234-harbor}{direct}
+\experimentRow{code_no_context_shot}{none}{high}{3}{10}{gentle_01234-tide}{code}
 
 
 \end{longtable}
 \endgroup
 
-\section{Final Results}
-It consists on two drivers, the first that combine the results
-\subsection{Final results}
-The consolidate results comprises two scripts. First
+\section{Final Results scripts}
+It consists of one script that collects all results from the different run folders
 \begin{DocCode}
   python consolidate_results.py [TAG]
 \end{DocCode}
+And then two scripts to generate the tables and the plots for analysis and for the paper \code{generate_tables.py} and \code{generate_plots.py}
+
 \subsection{Consolidate results}
 It takes as input all \code{run_configurations/*.json}, optionally filter them by tag and creates two files.
 \code{results/consolidated/<row_slug>_summary.json} with the following entries:
@@ -166,81 +197,78 @@ If any of these two files would be empty, then it's not created.
 \subsection{Generate table}
 This script works with the output from the first one.
 \begin{DocCode}
-  python generate_tables.py [TAG]
+  python generate_csv_tables.py [TAG]
 \end{DocCode}
 Where [TAG] if passed only includes results from the previous script with that corresponding tag.
 
-The output of this second script are
+The output of this second script two csv artifact types (For direct analysis and inspection)
 \begin{itemize}
   \item \code{results/consolidated/tables/per_row_slug/<row_slug>.csv}
   \item \code{results/consolidated/tables/per_agent/<agent>.csv}
-  \item \code{docs/NIPS_2026_tsENV/tables/<row_slug>.tex}. It creates the tables of the papers. 
-  The templates are defined in \code{docs/NIPS_2026_tsENV/tables/templates}.
-  The tables should be created at \code{docs/NIPS_2026_tsENV/tables/main_tables}.
-  \begin{itemize}
-    \item \code{*_main_experiment_table.tex} gets the data from the following experiments \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high}.
-    \item \code{*_ablation_training_examples.tex} gets the data from the following experiments \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot}.
-  \end{itemize}
-  The exact data depends on the prefix
 \end{itemize}
 
-Each row in \code{results/consolidated/tables/per_row_slug/<row_slug>.csv} contains the following:
-\begin{itemize}
-  \item \code{shared_columns}
-  \item \code{average_top1_accuracy}
-  \item \code{average_shortlist_score}
-  \item \code{std_per_sample}: the standard deviation over per-sample top-1 correctness after concatenating all seeds.
-  \item \code{std_per_batch}: the standard deviation over per-seed top-1 accuracy.
-  \item \code{avg_cost}
-  \item \code{std_cost}
-  \item \code{avg_cumulative_tokens}
-  \item \code{std_cumulative_tokens}
-  \item \code{avg_tool_calls}
-  \item \code{std_tool_calls}
-  \item \code{avg_num_steps}
-  \item \code{std_num_steps}
-\end{itemize}
+The consolidated CSV schemas are stored as a template at \code{docs/NIPS_2026_tsENV/tables/templates/consolidated_csv_schema.tex}.
 
-Each row in \code{results/consolidated/tables/<per_agent>.csv} contains the following:
-\begin{itemize}
-  \item \code{shared_columns}
-  \item \code{average_top1_accuracy}
-  \item \code{average_shortlist_score}
-  \item \code{std_per_sample}: the standard deviation over per-sample top-1 correctness after concatenating all seeds.
-  \item \code{std_per_batch}: the standard deviation over per-seed top-1 accuracy.
-  \item \code{avg_cost}
-  \item \code{std_cost}
-  \item \code{avg_cumulative_tokens}
-  \item \code{std_cumulative_tokens}
-  \item \code{avg_tool_calls}
-  \item \code{std_tool_calls}
-  \item \code{avg_num_steps}
-  \item \code{std_num_steps}
-\end{itemize}
-Where \code{shared_columns} include:
-\begin{itemize}
-  \item \code{row_slug}
-  \item \code{agent}
-  \item \termDescLevel
-  \item \code{task_output}: either "code" or "direct"
-  \item \code{noise_level}
-  \item \code{train_samples}
-  \item \termSimulator
-\end{itemize}
+\paragraph{Identity fields.}
+Each consolidated CSV row contains these identity fields:
 
-Regarding \code{docs/NIPS_2026_tsENV/tables/main_tables/*.tex}, the style the numbers should match in case of tables that aggreage different enviroments together:
+\identityFieldsTable
+
+\paragraph{Per-row-slug CSV metrics.}
+Each row in \code{results/consolidated/tables/per_row_slug/<row_slug>.csv} also contains:
+
+\perRowSlugCsvMetricTable
+
+\paragraph{Per-agent CSV metrics.}
+Each row in \code{results/consolidated/tables/per_agent/<agent>.csv} also contains:
+
+\perAgentCsvMetricTable
+
+\begin{DocCode}
+  python generate_tex_tables.py [TAG]
+\end{DocCode}
+This instead generate the final table of the paper (i.e. the one in the experimental section and in the appendix)
+The tables are saved at \code{docs/NIPS_2026_tsENV/tables/*.tex}.
+Generated paper tables use the following rendered templates. The numbers shown here are the placeholder/example values stored in the template files.
+
+\textbf{Accuracy-style main table template.}\par
+\input{NIPS_2026_tsENV/tables/templates/acc_main}
+
+\medskip
+\textbf{Cost/token/tool-use main table template.}\par
+\input{NIPS_2026_tsENV/tables/templates/cost_main}
+
+\medskip
+\textbf{Accuracy-style ablation table template.}\par
+\input{NIPS_2026_tsENV/tables/templates/acc_ablation}
+
+\medskip
+\textbf{Cost/token/tool-use ablation table template.}\par
+\input{NIPS_2026_tsENV/tables/templates/ablation_main}
+
+\clearpage
+\textbf{Per-row-slug calibration appendix template.}\par
+\input{NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs}
+
+Question-baseline appendix tables are generated by a render function rather than a \code{.tex} template.
+The complete machine-readable mapping is documented at \code{docs/NIPS_2026_tsENV/tables/templates/manifest.json}.
+The table name matches its label in the \code{.tex} and in the \code{used_by} entry.
+So for example
+\begin{DocCode}
+\label{tab:acc_main_experiment_table}
+\input{tables/main_tables/acc_main_experiment_table}
+\end{DocCode}
+
 \begin{itemize}
-  \item for tables that start with \code{acc_} or \code{shortlist_}, including \code{shortlist_number_of_answers_*}; \code{docs/NIPS_2026_tsENV/tables/templates/acc_main.tex} or \code{docs/NIPS_2026_tsENV/tables/templates/acc_ablation.tex} depending on whether it's main or the ablation one
-  \item for tables that do not start with \code{acc_} or \code{shortlist_}: \code{docs/NIPS_2026_tsENV/tables/templates/cost_main.tex} or \code{docs/NIPS_2026_tsENV/tables/templates/ablation_main.tex} depending on whether it's main or the ablation one
-\end{itemize}
-Instead if the table don't aggregate multiple enviroments together but are per row it should be as:
-\begin{itemize}
-  \item \code{docs/NIPS_2026_tsENV/tables/templates/per_row_slug/}
+  \item \code{*_main_experiment_table.tex} gets the data from the following experiments \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high}.
+  \item \code{*_ablation_training_examples.tex} gets the data from the following experiments \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot}.
 \end{itemize}
 
 
-the ones in \code{docs/NIPS_2026_tsENV/tables/templates/*.tex}.
-However there should be multiple tables with different prefixes (like \code{acc_main_experiment_table})
+
+
+\paragraph{Metric prefixes.}
+Generated aggregate tables use these metric prefixes:
 
 \begin{itemize}
 \item \code{acc_} : accuracy 
@@ -258,14 +286,4 @@ The \code{acc_} tables go in the main paper (experiment section .tex).
 The other aggregate tables go to \code{appendix_main_tables.tex}
 Note that in the folder \code{enviroment_specific} we have the \code{<model_name>_acc_*} where the accuracy is reported separetely for each enviroment.
 
-\subsection{Night before submission}
-Create a table with this format template \code{docs/NIPS_2026_tsENV/tables/templates/per_row_slug/2_row_slugs.tex} for both 
-\begin{itemize}
-\item \code{gentle_01234-cloud} and \code{gentle_01234-pine}
-\end{itemize}
-
-For the calibration \code{high_desc_direct_0} the format  \code{docs/NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs.tex} and create the table in \code{docs/NIPS_2026_tsENV/tables/main_tables/appendix/calibration}
-
-Additionally export all the results: \code{results/consolidated/all_runs_CALIBRATION_PAPER_NO_NOISE_NO_CONTEXT.csv} and \code{results/consolidated/all_samples_CALIBRATION_PAPER_NO_NOISE_NO_CONTEXT.csv}.
-Export ATIF trajectories by copying all generated ATIF trajectories into a folder called \code{paper_trajectories} with names following \code{<agent>_<model>_<context>_<shots>_<noise>}.
 \end{document}
