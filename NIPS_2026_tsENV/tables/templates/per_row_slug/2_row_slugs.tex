@@ -2,13 +2,12 @@
 \small
 \newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
 
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{1.5pt}
 \setlength{\aboverulesep}{0pt}
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccc@{}}
 \toprule
 & \multicolumn{2}{c}{\textbf{\texttt{BallDrop}}}
 & \multicolumn{2}{c}{\textbf{\texttt{DampedMass}}}
@@ -54,6 +53,5 @@
 & \scorepm{.83}{0.100} \\
 
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

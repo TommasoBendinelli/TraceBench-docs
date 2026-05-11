@@ -7,8 +7,7 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccc@{}}
 \toprule
 & \multicolumn{2}{c}{Zero-example, high textual context}
 & \multicolumn{2}{c}{Three-example, no textual context} \\
@@ -18,15 +17,10 @@
 & \texttt{Direct}
 & \texttt{Code} \\
 \midrule
-\texttt{gpt-5.5} & \scorepm{0.96}{0.055} & \scorepm{0.96}{0.055} & \scorepm{0.92}{0.084} & \scorepm{0.86}{0.114} \\
-\texttt{gpt-5.5 (low)} & \scorepm{0.78}{0.164} & \scorepm{0.54}{0.288} & \scorepm{0.56}{0.089} & \scorepm{0.48}{0.239} \\
-\texttt{gpt-5.3-codex-spark} & \scorepm{0.44}{0.114} & \scorepm{0.3}{0.224} & \scorepm{0.3}{0.071} & -- \\
-\texttt{gemini-3.1-pro-preview} & \scorepm{0.82}{0.045} & \scorepm{0.72}{0.303} & \scorepm{0.7}{0.158} & \scorepm{0.42}{0.164} \\
-\texttt{gemini-3.1-pro-preview (low)} & \scorepm{0.82}{0.164} & \scorepm{0.76}{0.114} & \scorepm{0.64}{0.288} & \scorepm{0.64}{0.207} \\
-\texttt{claude-opus-4-6} & \scorepm{0.88}{0.084} & -- & -- & -- \\
-\texttt{claude-opus-4-6 (low)} & \scorepm{0.92}{0.045} & -- & -- & -- \\
-\texttt{minimax-m2.7} & -- & -- & -- & -- \\
+\texttt{gpt-5.5} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} \\
+\texttt{gemini-3.1-pro-preview} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} \\
+\texttt{claude-opus-4-6} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} \\
+\texttt{minimax-m2.7} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} & \scorepm{0.0}{0.0} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup
