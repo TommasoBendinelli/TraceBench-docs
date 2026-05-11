@@ -7,8 +7,7 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccc@{}}
 \toprule
 & \multicolumn{2}{c}{\textbf{\texttt{Noise:} \texttt{low}}}
 & \multicolumn{2}{c}{\textbf{\texttt{Noise:} \texttt{high}}} \\
@@ -18,11 +17,10 @@
 & \texttt{Direct}
 & \texttt{Code} \\
 \midrule
-\texttt{gpt-5.5 (high)} & \scorepm{0.78}{0.391} & \scorepm{0.932}{0.325} & \scorepm{0.975}{0.35} & \scorepm{1.191}{0.465} \\
-\texttt{gemini-3.1-pro-preview (high)} & \scorepm{2.362}{1.151} & \scorepm{2.915}{1.261} & \scorepm{2.796}{1.102} & \scorepm{3.687}{1.767} \\
-\texttt{claude-opus-4-6 (high)} & \scorepm{4.386}{1.75} & \scorepm{6.585}{2.191} & \scorepm{4.505}{1.039} & \scorepm{6.628}{1.302} \\
+\texttt{gpt-5.5} & \scorepm{0.78}{0.391} & \scorepm{0.932}{0.325} & \scorepm{0.975}{0.35} & \scorepm{1.191}{0.465} \\
+\texttt{gemini-3.1-pro-preview} & \scorepm{2.362}{1.151} & \scorepm{2.915}{1.261} & \scorepm{2.796}{1.102} & \scorepm{3.687}{1.767} \\
+\texttt{claude-opus-4-6} & \scorepm{4.386}{1.75} & \scorepm{6.585}{2.191} & \scorepm{4.505}{1.039} & \scorepm{6.628}{1.302} \\
 \texttt{minimax-m2.7} & \scorepm{0.999}{0.728} & \scorepm{3.589}{1.208} & \scorepm{0.841}{0.57} & \scorepm{3.04}{1.148} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

@@ -7,8 +7,7 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lccc@{}}
 \toprule
 & \textbf{\texttt{BallDrop}}
 & \textbf{\texttt{DampedMass}}
@@ -35,6 +34,5 @@
 & \scorepm{.89}{0.100} \\
 
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

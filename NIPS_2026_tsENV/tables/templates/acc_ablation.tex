@@ -2,13 +2,12 @@
 \small
 \newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
 
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{3pt}
 \setlength{\aboverulesep}{0pt}
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccc@{}}
 \toprule
 & \multicolumn{3}{c}{Zero-example, high textual context}
 & \multicolumn{3}{c}{Three-example, no textual context} \\
@@ -34,14 +33,6 @@
 & \scorepm{.93}{0.100}
 & \scorepm{.88}{0.100} \\
 
-\texttt{gpt-5.3-codex-spark}
-& \scorepm{.85}{0.100}
-& \scorepm{.91}{0.100}
-& \scorepm{.82}{0.100}
-& \scorepm{.85}{0.100}
-& \scorepm{.91}{0.100}
-& \scorepm{.82}{0.100} \\
-
 \texttt{gemini-3.1-pro-preview}
 & \scorepm{.87}{0.100}
 & \scorepm{.79}{0.100}
@@ -58,7 +49,14 @@
 & \scorepm{.89}{0.100}
 & \scorepm{.83}{0.100} \\
 
+\texttt{minimax-m2.7}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0} \\
+
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

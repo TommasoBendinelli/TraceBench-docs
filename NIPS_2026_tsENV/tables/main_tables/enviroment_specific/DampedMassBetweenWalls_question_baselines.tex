@@ -4,8 +4,7 @@
 \setlength{\aboverulesep}{0pt}
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llllll}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llllll@{}}
 \toprule
 \textbf{Baseline UUID} & \textbf{Use} & \textbf{Seeds} & \textbf{Samples (train/test)} & \textbf{Question rows (train/test)} & \textbf{Baseline parameters} \\
 \midrule
@@ -32,6 +31,5 @@
 \texttt{e9cc36d951655bdfbcf90d0bb2322a0e} & train/test & 0--4 & 7/6 & 126/126 & mass=16.5; viscous\_damping=0.46; restitution\_right=0.66; restitution\_left=0.76; initial\_position=7.9; initial\_velocity=-9.1; inclination\_angle=-0.47 \\
 \texttt{f12e13839aa35418b517ce7c64e0da71} & train/test & 0--3 & 6/6 & 108/126 & mass=3.1; viscous\_damping=0.055; restitution\_right=0.82; restitution\_left=0.74; initial\_position=6.2; initial\_velocity=-8.2; inclination\_angle=-0.31 \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

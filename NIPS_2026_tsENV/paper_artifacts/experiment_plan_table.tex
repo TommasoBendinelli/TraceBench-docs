@@ -3,15 +3,13 @@
 \newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.05}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccccccccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccccccccc@{}}
 \toprule
  & \multicolumn{4}{c}{\textbf{\makecell{\texttt{Ball}\\\texttt{Drop}}}} & \multicolumn{4}{c}{\textbf{\makecell{\texttt{Bounce}\\\texttt{Ball}}}} & \multicolumn{4}{c}{\textbf{\makecell{\texttt{Mass}\\\texttt{Slide}}}} \\
 \cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-13}
-Calibration & \texttt{gpt-5.5 (high)} & \texttt{gemini-3.1-pro-preview (high)} & \texttt{claude-opus-4-6 (high)} & \texttt{MiniMax} & \texttt{gpt-5.5 (high)} & \texttt{gemini-3.1-pro-preview (high)} & \texttt{claude-opus-4-6 (high)} & \texttt{MiniMax} & \texttt{gpt-5.5 (high)} & \texttt{gemini-3.1-pro-preview (high)} & \texttt{claude-opus-4-6 (high)} & \texttt{MiniMax} \\
+Calibration & \texttt{gpt-5.5} & \texttt{gemini-3.1-pro-preview} & \texttt{claude-opus-4-6} & \texttt{minimax-m2.7} & \texttt{gpt-5.5} & \texttt{gemini-3.1-pro-preview} & \texttt{claude-opus-4-6} & \texttt{minimax-m2.7} & \texttt{gpt-5.5} & \texttt{gemini-3.1-pro-preview} & \texttt{claude-opus-4-6} & \texttt{minimax-m2.7} \\
 \midrule
 \shortstack[l]{high direct} & \scorepm{1.000}{0.000} & \scorepm{1.000}{0.000} & \scorepm{0.980}{0.141} & \scorepm{0.360}{0.485} & \scorepm{1.000}{0.000} & \scorepm{0.980}{0.141} & \scorepm{1.000}{0.000} & \scorepm{0.200}{0.404} & \scorepm{0.980}{0.141} & \scorepm{0.860}{0.351} & \scorepm{0.940}{0.240} & \scorepm{0.580}{0.499} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

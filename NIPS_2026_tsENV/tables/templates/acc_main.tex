@@ -2,13 +2,12 @@
 \small
 \newcommand{\scorepm}[2]{$#1\,{\scriptstyle\pm #2}$}
 
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{3pt}
 \setlength{\aboverulesep}{0pt}
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccc@{}}
 \toprule
 & \multicolumn{3}{c}{\textbf{\texttt{Noise:} \texttt{low}}}
 & \multicolumn{3}{c}{\textbf{\texttt{Noise:} \texttt{high}}} \\
@@ -26,7 +25,7 @@
 & \texttt{Episode}
 & \texttt{Held-out} \\
 \midrule
-\texttt{gpt-5.5 (high)}
+\texttt{gpt-5.5}
 & \scorepm{0.96}{0.055}
 & \scorepm{0.96}{0.055}
 & \scorepm{0.888}{0.072}
@@ -34,23 +33,7 @@
 & \scorepm{0.86}{0.114}
 & \scorepm{0.706}{0.092} \\
 
-\texttt{gpt-5.5 (low)}
-& \scorepm{0.78}{0.164}
-& \scorepm{0.54}{0.288}
-& \scorepm{0.528}{0.184}
-& \scorepm{0.56}{0.089}
-& \scorepm{0.48}{0.239}
-& \scorepm{0.414}{0.114} \\
-
-\texttt{gpt-5.3-codex-spark}
-& \scorepm{0.44}{0.114}
-& \scorepm{0.3}{0.224}
-& \scorepm{0.274}{0.154}
-& \scorepm{0.3}{0.071}
-& --
-& -- \\
-
-\texttt{gemini-3.1-pro-preview (high)}
+\texttt{gemini-3.1-pro-preview}
 & \scorepm{0.82}{0.045}
 & \scorepm{0.72}{0.303}
 & \scorepm{0.686}{0.197}
@@ -58,38 +41,21 @@
 & \scorepm{0.42}{0.164}
 & \scorepm{0.427}{0.035} \\
 
-\texttt{gemini-3.1-pro-preview (low)}
-& \scorepm{0.82}{0.164}
-& \scorepm{0.76}{0.114}
-& \scorepm{0.632}{0.136}
-& \scorepm{0.64}{0.288}
-& \scorepm{0.64}{0.207}
-& \scorepm{0.609}{0.102} \\
-
-\texttt{claude-opus-4-6 (high)}
+\texttt{claude-opus-4-6}
 & \scorepm{0.88}{0.084}
-& --
-& --
-& --
-& --
-& -- \\
-
-\texttt{claude-opus-4-6 (low)}
-& \scorepm{0.92}{0.045}
-& --
-& --
-& --
-& --
-& -- \\
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0} \\
 
 \texttt{minimax-m2.7}
-& --
-& --
-& --
-& --
-& --
-& -- \\
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0}
+& \scorepm{0.0}{0.0} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

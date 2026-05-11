@@ -7,8 +7,7 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccc@{}}
 \toprule
 & \multicolumn{3}{c}{\textbf{\texttt{Noise:} \texttt{low}}}
 & \multicolumn{3}{c}{\textbf{\texttt{Noise:} \texttt{high}}} \\
@@ -26,7 +25,7 @@
 & \texttt{Episode}
 & \texttt{Held-out} \\
 \midrule
-\texttt{gpt-5.5 (high)}
+\texttt{gpt-5.5}
 & \scorepm{0.96}{0.055}
 & \scorepm{0.88}{0.084}
 & \scorepm{0.746}{0.037}
@@ -34,7 +33,7 @@
 & \scorepm{0.8}{0.187}
 & \scorepm{0.728}{0.085} \\
 
-\texttt{gemini-3.1-pro-preview (high)}
+\texttt{gemini-3.1-pro-preview}
 & \scorepm{0.68}{0.084}
 & \scorepm{0.76}{0.089}
 & \scorepm{0.691}{0.087}
@@ -42,7 +41,7 @@
 & \scorepm{0.68}{0.11}
 & \scorepm{0.744}{0.024} \\
 
-\texttt{claude-opus-4-6 (high)}
+\texttt{claude-opus-4-6}
 & \scorepm{0.82}{0.11}
 & \scorepm{0.76}{0.055}
 & \scorepm{0.81}{0.056}
@@ -58,6 +57,5 @@
 & \scorepm{0.52}{0.249}
 & \scorepm{0.623}{0.05} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

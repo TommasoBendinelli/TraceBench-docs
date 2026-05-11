@@ -4,8 +4,7 @@
 \setlength{\aboverulesep}{0pt}
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llllll}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llllll@{}}
 \toprule
 \textbf{Baseline UUID} & \textbf{Use} & \textbf{Seeds} & \textbf{Samples (train/test)} & \textbf{Question rows (train/test)} & \textbf{Baseline parameters} \\
 \midrule
@@ -51,6 +50,5 @@
 \texttt{e803fdb9e638552d9050b896808b9b46} & train/test & 0,4 & 1/3 & 18/63 & gravity\_constant=10.53; plane\_inclination=17.19; mass=4.739; coulomb\_friction\_coefficient=0.77; breakaway\_friction\_coefficient=1.095; initial\_velocity=-1.797; Amplitude=-261.4; Period=2.818 \\
 \texttt{f3198e91ff7d593b8b1d00e99b154708} & train/test & 0--4 & 4/6 & 72/126 & gravity\_constant=7.05; plane\_inclination=25.2; mass=4.134; coulomb\_friction\_coefficient=0.25; breakaway\_friction\_coefficient=3.5; initial\_velocity=8.971; Amplitude=-323.8; Period=0.8122 \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

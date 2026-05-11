@@ -9,19 +9,21 @@ This document matches the following two files: \code{shared/platform.json} and t
 They are used from the agentic rollout stage onward.
 
 \section*{Platform Schema}
-\code{shared/platform.json} must contain a non-empty JSON object keyed by \code{platform_id} (one  of \code{codex}, \code{gemini-cli}, \code{claude-code}, \code{opencode})
+\code{shared/platform.json} must contain a non-empty JSON object keyed by \code{platform_id}.
+Supported platform ids are \code{codex}, \code{gemini-cli}, \code{claude-code}, and \code{opencode}.
 
 Each platform entry must define exactly these fields:
 \begin{itemize}
+\item \code{name}: non-empty string matching the \code{platform_id}
 \item \code{npm_package}: non-empty string containing the pinned npm package spec used to build the install command
 \item \code{required_environmental_variable}: object mapping non-empty environment-variable names to non-empty shell-command strings; the object may be empty
-\item \code{default_tools}: tools shared by all agents of this platform currently empty tbd.
+\item \code{default_tools}: object containing tools shared by all agents of this platform; currently empty
 \end{itemize}
 
 \section*{Agent Schema}
 \code{shared/config/agents.json} must contain a non-empty JSON array of agent profile objects.
 
-Each agent profile object must define exactly these fields:
+Each agent profile object must define these required fields:
 \begin{itemize}
 \item \code{agent_id}: non-empty string; must be unique across entries
 \item \code{platform_id}: one of \code{codex}, \code{gemini-cli}, \code{claude-code}, \code{opencode}
@@ -40,6 +42,14 @@ Each agent profile object must define exactly these fields:
 \item \code{model_name}: non-empty string
 \item \code{reasoning}: \code{high}, \code{medium}, \code{low}, or \code{null}; non-null values are allowed only for \code{codex} and \code{claude-code} profiles
 \end{itemize}
-The full agent platforms and profile catalog is collected in the appendices, under Appendix: Agent Platforms and Profiles.
+
+Each agent profile may also define:
+\begin{itemize}
+\item \code{paper_facing_name}: non-empty string used as the model label in generated paper \code{.tex} tables  (consolidated CSV \code{agent} fields instead use \code{model_name}). It must be unique or empty.
+\end{itemize}
+
+If \code{paper_facing_name} is omitted, \code{.tex} tables generation falls back to a display name derived from \code{model_name}
+
+The full agent platform and profile catalog is collected in the appendices, under Appendix: Agent Platforms and Profiles.
 
 \end{document}

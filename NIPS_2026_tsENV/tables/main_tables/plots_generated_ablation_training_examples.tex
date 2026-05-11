@@ -7,8 +7,7 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccc@{}}
 \toprule
 & \multicolumn{2}{c}{Zero-example, high textual context}
 & \multicolumn{2}{c}{Three-example, no textual context} \\
@@ -18,9 +17,8 @@
 & \texttt{Direct}
 & \texttt{Code} \\
 \midrule
-\texttt{gpt-5.5 (high)} & \scorepm{1.667}{3.619} & \scorepm{0.067}{0.258} & \scorepm{1.333}{0.724} & \scorepm{0.133}{0.516} \\
-\texttt{gemini-3.1-pro-preview (high)} & \scorepm{5.733}{6.158} & \scorepm{2.0}{2.449} & \scorepm{10.27}{10.47} & \scorepm{8.867}{13.89} \\
+\texttt{gpt-5.5} & \scorepm{1.667}{3.619} & \scorepm{0.067}{0.258} & \scorepm{1.333}{0.724} & \scorepm{0.133}{0.516} \\
+\texttt{gemini-3.1-pro-preview} & \scorepm{5.733}{6.158} & \scorepm{2.0}{2.449} & \scorepm{10.27}{10.47} & \scorepm{8.867}{13.89} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

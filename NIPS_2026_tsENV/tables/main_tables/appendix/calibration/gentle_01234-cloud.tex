@@ -7,17 +7,15 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lccc@{}}
 \toprule
 & \textbf{\texttt{BallDrop}}
 & \textbf{\texttt{DampedMass}}
 & \textbf{\texttt{Inclined Plane}} \\
 \midrule
-\texttt{gpt-5.5 (high)} & \scorepm{1.0}{0.0} & \scorepm{0.84}{0.089} & \scorepm{0.96}{0.055} \\
-\texttt{gemini-3.1-pro-preview (high)} & \scorepm{0.68}{0.179} & \scorepm{0.92}{0.084} & \scorepm{0.68}{0.084} \\
-\texttt{claude-opus-4-6 (high)} & \scorepm{0.82}{0.13} & \scorepm{0.92}{0.13} & \scorepm{0.82}{0.11} \\
+\texttt{gpt-5.5} & \scorepm{1.0}{0.0} & \scorepm{0.84}{0.089} & \scorepm{0.96}{0.055} \\
+\texttt{gemini-3.1-pro-preview} & \scorepm{0.68}{0.179} & \scorepm{0.92}{0.084} & \scorepm{0.68}{0.084} \\
+\texttt{claude-opus-4-6} & \scorepm{0.82}{0.13} & \scorepm{0.92}{0.13} & \scorepm{0.82}{0.11} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup

@@ -7,8 +7,7 @@
 \setlength{\belowrulesep}{2pt}
 \renewcommand{\arraystretch}{1.05}
 
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccc@{}}
 \toprule
 & \multicolumn{3}{c}{Zero-example, high textual context}
 & \multicolumn{3}{c}{Three-example, no textual context} \\
@@ -26,7 +25,7 @@
 & \texttt{Episode}
 & \texttt{Held-out} \\
 \midrule
-\texttt{gpt-5.5 (high)}
+\texttt{gpt-5.5}
 & \scorepm{0.82}{0.148}
 & \scorepm{0.72}{0.164}
 & \scorepm{0.449}{0.076}
@@ -34,7 +33,7 @@
 & \scorepm{0.44}{0.241}
 & \scorepm{0.338}{0.148} \\
 
-\texttt{gemini-3.1-pro-preview (high)}
+\texttt{gemini-3.1-pro-preview}
 & \scorepm{0.44}{0.167}
 & \scorepm{0.65}{0.252}
 & \scorepm{0.63}{0.208}
@@ -42,6 +41,5 @@
 & \scorepm{0.3}{0.212}
 & \scorepm{0.229}{0.113} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular*}
 \endgroup
