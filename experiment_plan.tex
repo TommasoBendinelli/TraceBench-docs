@@ -146,7 +146,7 @@ It describes how to use the previous stages and it creates the final artifacts f
 \endgroup
 
 \section{Consolidated JSONs}
-This script collects all the atif_trajectory.json and copy them in the target folder \code{results/consolidated/*}
+This script collects all the \code{atif_trajectory.json} files and copies them in the target folder \code{results/consolidated/*}
 \begin{DocCode}
   python consolidate_trajectories.py [TAG] [--output-folder folder]
 \end{DocCode}
@@ -258,29 +258,29 @@ The rendered files below are layout templates only.
 They show the actual final-paper models, with displayed names defined in \code{shared/config/agents.json}, but their numeric entries are placeholders and are not authoritative results.
 The layout of the table is as follows:
 
-\subsubsubsection{Main experiment}
+\subsubsection*{Main experiment}
 The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
-\textbf{Accuracy}\par
-The experiment that goes in this one 
-
+\par
+\textbf{Accuracy table}\par
 \input{NIPS_2026_tsENV/tables/templates/acc_main}
 
 \medskip
-\textbf{Cost/token/tool-use main table template.}\par
+\textbf{Cost/token/tool-use main table template}\par
 \input{NIPS_2026_tsENV/tables/templates/cost_main}
 
-\subsubsubsection{Ablation experiment}
+\subsubsection*{Ablation experiment}
 The data is from \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot} only for  \code{gpt-5.5} and \code{gemini-3.1-pro-preview}
 \medskip
-\textbf{Accuracy-style ablation table template.}\par
+\par
+\textbf{Accuracy-style ablation table template}\par
 \input{NIPS_2026_tsENV/tables/templates/acc_ablation}
 
 \medskip
-\textbf{Cost/token/tool-use ablation table template.}\par
+\textbf{Cost/token/tool-use ablation table template}\par
 \input{NIPS_2026_tsENV/tables/templates/ablation_main}
 
 \clearpage
-\textbf{Per-row-slug appendix template.}\par
+\textbf{Per-row-slug appendix template}\par
 \input{NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs}
 
 The tables are generated with the following stylistic rules:
