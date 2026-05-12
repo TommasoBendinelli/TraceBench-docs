@@ -145,7 +145,11 @@ It describes how to use the previous stages and it creates the final artifacts f
 \end{longtable}
 \endgroup
 
-\section{Final Results}
+\section{Consolidated JSONs}
+This script collects all the atif_trajectory.json and copy them in the target folder \code{results/consolidated/*}
+\begin{DocCode}
+  python consolidate_trajectories.py [TAG] [--output-folder folder]
+\end{DocCode}
 
 
 \section{Final Compact Results}
@@ -193,8 +197,8 @@ Both share the following identity fields:
     \item \code{tokens}: \code{trajectory_evaluation.json::tokens}
     \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
     \item \code{number_of_tool_calls}: It is equal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
-    \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} (optional)
-    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots} (optional)
+    \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} 
+    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots} 
   \end{itemize}
 \end{itemize}
 While \code{<row_slug>.json} contains additionally the following:
@@ -204,17 +208,12 @@ While \code{<row_slug>.json} contains additionally the following:
   Collected from each run's scores.json.
 \end{itemize}
 
-Note that in both cases, an entry is appended only if all the \code{seeds} of the corresponding  \code{(agent_id, model, question_slug)} have:
-\begin{itemize}
-  \item in the \code{.json} file the row states "DONE" for all the  
-  \item \code{scores.json} exists and \code{trajectory_evaluation.json} exists.
-\end{itemize}
 
 In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
 If any of these two files would be empty, then it's not created.
 
 \subsection{Generate csv table}
-This script works with the output from the first one.
+This script works with the output from \code{<row_slug>.json}
 \begin{DocCode}
   python generate_csv_tables.py [TAG]
 \end{DocCode}
@@ -244,7 +243,7 @@ Use the following command:
 \begin{DocCode}
   python generate_tex_tables.py [TAG]
 \end{DocCode}
-This generates the final tables for the paper  presented in the experimental section and appendix.
+This generates the final tables for the paper presented in the experimental section and appendix and used the two \code{.csv} from before.
 The tables are saved at \code{docs/NIPS_2026_tsENV/tables/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
 \begin{DocCode}
@@ -259,13 +258,19 @@ The rendered files below are layout templates only.
 They show the actual final-paper models, with displayed names defined in \code{shared/config/agents.json}, but their numeric entries are placeholders and are not authoritative results.
 The layout of the table is as follows:
 
-\textbf{Accuracy-style main table template.}\par
+\subsubsubsection{Main experiment}
+The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
+\textbf{Accuracy}\par
+The experiment that goes in this one 
+
 \input{NIPS_2026_tsENV/tables/templates/acc_main}
 
 \medskip
 \textbf{Cost/token/tool-use main table template.}\par
 \input{NIPS_2026_tsENV/tables/templates/cost_main}
 
+\subsubsubsection{Ablation experiment}
+The data is from \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot} only for  \code{gpt-5.5} and \code{gemini-3.1-pro-preview}
 \medskip
 \textbf{Accuracy-style ablation table template.}\par
 \input{NIPS_2026_tsENV/tables/templates/acc_ablation}
@@ -278,7 +283,7 @@ The layout of the table is as follows:
 \textbf{Per-row-slug appendix template.}\par
 \input{NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs}
 
-The tables are generated with the following rules:
+The tables are generated with the following stylistic rules:
 \begin{itemize}
 \item The standard deviation is the \code{standard deviation per batch}
 \item Each entry at most four digits per number should be visible i.e. 0.559 ok, 0.5593 not ok. 123.4 ok, 123.43 not ok.
