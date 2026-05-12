@@ -146,6 +146,7 @@ It describes how to use the previous stages and it creates the final artifacts f
 \endgroup
 
 \section{Final Results scripts}
+These are all the final artifacts of the project and are pushed on git.
 It consists of one script that collects all results from the different run folders
 \begin{DocCode}
   python consolidate_results.py [TAG]
@@ -154,10 +155,32 @@ And then two scripts to generate the tables and the plots for analysis and for t
 
 \subsection{Consolidate results}
 It takes as input all \code{run_configurations/*.json}, optionally filter them by tag and creates two files.
-\code{results/consolidated/<row_slug>_summary.json} with the following entries:
+\code{results/consolidated/<row_slug>_summary.json} and \code{results/consolidated/<row_slug>.json}.
+Both share the following identity fields:
 
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+\toprule
+\textbf{Field} & \textbf{Description} \\
+\midrule
+\code{timestamp} & \code{configuration_name.json::timestamp} \\
+\code{configuration_name} & Name of the configuration file used \\
+\code{paths} & Path to the scores \\
+\termSimulator & \termSimulator name \\
+\code{agent_id} & Agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id} \\
+\code{question_slug} & Question slug \\
+\code{recipe} & Question recipe metadata copied from \code{question.recipe_info.*} field \\
+\code{seed_numbers} & Int stating how many seeds have been collected with that specific question \\
+\bottomrule
+\end{tabular}
+\endgroup
+
+
+\code{<row_slug>_summary.json} contains additionally the following:
 \begin{itemize}
-  \item \code{identity_entries}: an object with the structure defined as below.
   \item \code{score_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_test}. 
   Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
   \item \code{score_other_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code-rule runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
@@ -166,34 +189,23 @@ It takes as input all \code{run_configurations/*.json}, optionally filter them b
     \item \code{cost_usd}: \code{trajectory_evaluation.json::cost_usd}
     \item \code{tokens}: \code{trajectory_evaluation.json::tokens}
     \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
-    \item \code{number_of_tool_calls}: It's eqal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
+    \item \code{number_of_tool_calls}: It is equal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
     \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} (optional)
     \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots} (optional)
   \end{itemize}
 \end{itemize}
-\code{results/consolidated/{row_slug}.json} with following entries:
+While \code{<row_slug>.json} contains additionally the following:
 \begin{itemize}
-  \item \code{wrong_uuids}: It's a list of of list, where each element is (\code{question_uuid}, \code{samle_uuid})  of entries that the model gets wrong.
-  \item \code{identity_entries}: see below.  
-  \item \code{sample_results}: it is a list, where each inner list is a \code{sample_results}.
+  \item \code{wrong_uuids}: It is a list of lists, where each element is (\code{question_uuid}, \code{sample_uuid})  of entries that the model gets wrong.
+  \item \code{sample_results}: it is a list, where each inner list is a \code{sample_results}. 
+  Collected from each run's scores.json.
 \end{itemize}
 
-Where in both cases \code{identity_entries} is:
-\begin{itemize}
-  \item \code{timestamp}:  \code{configuration_name.json::timestamp} 
-  \item \code{configuration_name}: name of the configuration file used.
-  \item \code{paths}: Path to the scores 
-  \item \termSimulator
-  \item \code{agent_id}: agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id}.
-  \item \code{question_slug}: question slug
-  \item \code{recipe}: It contains all the configuration for this \code{question_slug}
-\end{itemize}
-Note that in both cases, a an entry is appended only if all the \code{seeds} of the corresponding  \code{(agent_id, model, question_slug)} have:
+Note that in both cases, an entry is appended only if all the \code{seeds} of the corresponding  \code{(agent_id, model, question_slug)} have:
 \begin{itemize}
   \item in the \code{.json} file the row states "DONE" for all the  
   \item \code{scores.json} exists and \code{trajectory_evaluation.json} exists.
 \end{itemize}
-For the combinations where there are not all the seeds (but are at least one), it prints a inside \code{logs/consolidate_logs_{timestamp}} with the missing information \code{<question_slug>} and missing seeds
 
 In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
 If any of these two files would be empty, then it's not created.
@@ -232,13 +244,22 @@ Each row in \code{results/consolidated/tables/per_agent/<agent>.csv} also contai
 \subsection{Generate tex table}
 Use the following command:
 \begin{DocCode}
-  python generate_tables.py [TAG]
+  python generate_tex_tables.py [TAG]
 \end{DocCode}
-This generates the final tables for the paper, including the tables in the experimental section and appendix.
-The tables are saved at \code{docs/NIPS_2026_tsENV/tables/*.tex}.
-Generated paper tables use the following rendered templates. 
-The models shown here are the actual models present in the final paper; their displayed names are defined in \code{shared/config/agents.json}.
-The numbers shown here are the placeholder/example values stored in the template files.
+This generates the final tables for the paper  presented in the experimental section and appendix.
+The tables are saved at \code{docs/NIPS_2026_tsENV/tables/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
+So for example
+\begin{DocCode}
+\label{tab:acc_main_experiment_table}
+\input{tables/main_tables/acc_main_experiment_table}
+\end{DocCode}
+
+Generated paper tables are written under \code{docs/NIPS_2026_tsENV/tables/main_tables/*.tex}.
+Their numbers come directly from consolidated results; if a requested result is not present, the generated table renders \code{-}.
+
+The rendered files below are layout templates only.
+They show the actual final-paper models, with displayed names defined in \code{shared/config/agents.json}, but their numeric entries are placeholders and are not authoritative results.
+The layout of the table is as follows:
 
 \textbf{Accuracy-style main table template.}\par
 \input{NIPS_2026_tsENV/tables/templates/acc_main}
@@ -259,14 +280,12 @@ The numbers shown here are the placeholder/example values stored in the template
 \textbf{Per-row-slug appendix template.}\par
 \input{NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs}
 
-Question-baseline appendix tables are generated by a render function rather than a \code{.tex} template.
-The complete machine-readable mapping is documented at \code{docs/NIPS_2026_tsENV/tables/templates/manifest.json}.
-The table name matches its label in the \code{.tex} and in the \code{used_by} entry.
-So for example
-\begin{DocCode}
-\label{tab:acc_main_experiment_table}
-\input{tables/main_tables/acc_main_experiment_table}
-\end{DocCode}
+The tables are generated with the following rules:
+\begin{itemize}
+\item The standard deviation is the \code{standard deviation per batch}
+\item Each entry at most four digits per number should be visible i.e. 0.559 ok, 0.5593 not ok. 123.4 ok, 123.43 not ok.
+
+\end{itemize}
 
 \begin{itemize}
   \item \code{*_main_experiment_table.tex} gets the data from the following experiments \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high}.
@@ -289,10 +308,23 @@ Generated aggregate tables use these metric prefixes:
 \item \code{python_calls}: num of python calls
 \item \code{plots_generated}: num of plots generated
 \end{itemize}
-Note that in these \code{*.tex} tables the standard deviation is the \code{standard deviation per batch}
-Note that in each table at most four digits per number should be visible i.e. 0.559 ok, 0.5593 not ok. 123.4 ok, 123.43 not ok.
 The \code{acc_} tables go in the main paper (experiment section .tex).
 The other aggregate tables go to \code{appendix_main_tables.tex}
 Note that in the folder \code{enviroment_specific} we have the \code{<model_name>_acc_*} where the accuracy is reported separetely for each enviroment.
+
+
+\section{Plot scripts}
+This script generates the plot in the experiment section.
+\begin{DocCode}
+  python generate_plots.py 
+\end{DocCode}
+The figure being generated is the following and it includes only the results in the main 
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{NIPS_2026_tsENV/pictures/accuracy_vs_tokens_and_python_calls.pdf}
+\caption{Top-1 accuracy as a function of cumulative token usage and Python calls for the results in the main experiment table.}
+\label{fig:experiment-plan-accuracy-vs-compute}
+\end{figure}
 
 \end{document}

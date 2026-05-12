@@ -4,7 +4,7 @@ However, their capacity to autonomously derive insights by integrating textual i
 In this paper, we introduce \name{}, a benchmark framework for generating root-cause analysis tasks from physical simulators.
 Successful completion of these tasks requires combining textual information with analysis of time-series observations.
 We instantiate \name{} with simulators of simple mechanical systems to construct a suite of benchmark tasks.
-We evaluate frontier closed- and open-weight agents on these generated tasks across varying noise levels, availability of textual information and time-series observations, and task output formats.
+We evaluate frontier closed- and open-weight agents on these generated tasks across varying noise levels, availability of textual information and labeld time-series examples, and task output formats.
 Our results show that frontier agents can achieve high accuracy in favorable low-noise direct-prediction settings, but their exploratory data-analysis capabilities remain brittle.
 Performance degrades under higher observation noise, when agents must encode their reasoning as reusable code rules, and when textual context is removed, suggesting that current agents struggle to abstract stable causal structure from time-series observations alone.
 \end{abstract}

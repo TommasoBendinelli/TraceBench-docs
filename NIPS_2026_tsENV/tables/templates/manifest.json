@@ -4,6 +4,7 @@
   "template_root": "docs/NIPS_2026_tsENV/tables/templates",
   "notes": [
     "This manifest documents the current table-generation contract. It is not read by the generator.",
+    "Template files under docs/NIPS_2026_tsENV/tables/templates are layout examples with placeholder numeric values; result-backed tables are generated under docs/NIPS_2026_tsENV/tables/main_tables/.",
     "The path segment enviroment_specific is intentionally spelled to match the existing generated directory."
   ],
   "data_sources": {
@@ -38,11 +39,6 @@
       "generator_metric": "accuracy",
       "value_scale": 1.0,
       "description": "Top-1 accuracy."
-    },
-    "acc_normalised": {
-      "generator_metric": "accuracy_normalised",
-      "value_scale": 1.0,
-      "description": "Chance-normalized top-1 accuracy. Generated but not currently included in the paper or appendix."
     },
     "shortlist_score": {
       "generator_metric": "shortlist_score",
@@ -91,7 +87,6 @@
       ],
       "templates_by_prefix": {
         "acc": "acc_main.tex",
-        "acc_normalised": "acc_main.tex",
         "shortlist_score": "acc_main.tex",
         "shortlist_number_of_answers": "acc_main.tex",
         "cost": "cost_main.tex",
@@ -105,7 +100,6 @@
         "tables/main_tables/cum_main_experiment_table"
       ],
       "appendix_includes": [
-        "tables/main_tables/acc_main_experiment_table",
         "tables/main_tables/shortlist_score_main_experiment_table",
         "tables/main_tables/shortlist_number_of_answers_main_experiment_table",
         "tables/main_tables/cost_main_experiment_table",
@@ -113,9 +107,6 @@
         "tables/main_tables/num_steps_main_experiment_table",
         "tables/main_tables/python_calls_main_experiment_table",
         "tables/main_tables/plots_generated_main_experiment_table"
-      ],
-      "generated_not_included": [
-        "tables/main_tables/acc_normalised_main_experiment_table"
       ]
     },
     "ablation_aggregate_tables": {
@@ -128,7 +119,6 @@
       ],
       "templates_by_prefix": {
         "acc": "acc_ablation.tex",
-        "acc_normalised": "acc_ablation.tex",
         "shortlist_score": "acc_ablation.tex",
         "shortlist_number_of_answers": "acc_ablation.tex",
         "cost": "ablation_main.tex",
@@ -142,7 +132,6 @@
         "tables/main_tables/cum_ablation_training_examples"
       ],
       "appendix_includes": [
-        "tables/main_tables/acc_ablation_training_examples",
         "tables/main_tables/shortlist_score_ablation_training_examples",
         "tables/main_tables/shortlist_number_of_answers_ablation_training_examples",
         "tables/main_tables/cost_ablation_training_examples",
@@ -150,9 +139,6 @@
         "tables/main_tables/num_steps_ablation_training_examples",
         "tables/main_tables/python_calls_ablation_training_examples",
         "tables/main_tables/plots_generated_ablation_training_examples"
-      ],
-      "generated_not_included": [
-        "tables/main_tables/acc_normalised_ablation_training_examples"
       ]
     },
     "per_environment_accuracy_tables": {
