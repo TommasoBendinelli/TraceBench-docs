@@ -222,26 +222,21 @@ Where [TAG] if passed only includes results from the previous script with that c
 
 The output of this second script two csv artifact types (For direct analysis and inspection)
 \begin{itemize}
-  \item \code{results/consolidated/tables/per_row_slug/<row_slug>.csv}
-  \item \code{results/consolidated/tables/per_agent/<agent>.csv}
+  \item \code{results/consolidated/all_runs.csv}
+  \item \code{results/consolidated/tables/all_samples.csv}
 \end{itemize}
 
-The consolidated CSV schemas are stored as a template at \code{docs/NIPS_2026_tsENV/tables/templates/consolidated_csv_schema.tex}.
+These CSV have the following columns
 
-\paragraph{Identity fields.}
-Each consolidated CSV row contains these identity fields:
+\paragraph{Run-level consolidated CSV.}
+Each row in \code{results/consolidated/all_runs.csv} describes one consolidated run:
 
-\identityFieldsTable
+\allRunsCsvSchemaTable
 
-\paragraph{Per-row-slug CSV metrics.}
-Each row in \code{results/consolidated/tables/per_row_slug/<row_slug>.csv} also contains:
+\paragraph{Sample-level consolidated CSV.}
+Each row in \code{results/consolidated/tables/all_samples.csv} describes one evaluated sample:
 
-\perRowSlugCsvMetricTable
-
-\paragraph{Per-agent CSV metrics.}
-Each row in \code{results/consolidated/tables/per_agent/<agent>.csv} also contains:
-
-\perAgentCsvMetricTable
+\allSamplesCsvSchemaTable
 
 \FloatBarrier
 \subsection{Generate tex table}
