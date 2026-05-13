@@ -303,18 +303,12 @@ Generated aggregate tables use these metric prefixes:
 
 \begin{itemize}
 \item \code{acc_} : accuracy 
-\item \code{shortlist_score}: shortlist score as defined in the main paper.
-\item \code{shortlist_number_of_answers}: number of answers per question
 \item \code{cost_}: cost 
 \item \code{cum_}: cumulative tokens (in M) (so numbers must be divided by \code{1_000_000})
 \item \code{num_steps}: num steps
 \item \code{python_calls}: num of python calls
 \item \code{plots_generated}: num of plots generated
 \end{itemize}
-The \code{acc_} tables go in the main paper (experiment section .tex).
-The other aggregate tables go to \code{appendix_main_tables.tex}
-Note that in the folder \code{enviroment_specific} we have the \code{<model_name>_acc_*} where the accuracy is reported separetely for each enviroment.
-
 
 \section{Plot scripts}
 This script generates the plot in the experiment section.
