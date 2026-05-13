@@ -5,10 +5,10 @@
   \section*{Calibration Results}%
 }
 \def\tsenvAppendixCalibrationResultsEnd{}
-\IfFileExists{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table.tex}{%
-  \def\tsenvCalibrationResultsTablePath{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+\IfFileExists{overleaf_paper/generated/paper_artifacts/experiment_plan_table.tex}{%
+  \def\tsenvCalibrationResultsTablePath{overleaf_paper/generated/paper_artifacts/experiment_plan_table}%
 }{%
-  \def\tsenvCalibrationResultsTablePath{docs/NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+  \def\tsenvCalibrationResultsTablePath{docs/overleaf_paper/generated/paper_artifacts/experiment_plan_table}%
 }
 \else\ifdefined\tsenvCombinedAppendixMode
 \def\tsenvAppendixCalibrationResultsStart{%
@@ -16,7 +16,7 @@
   \label{app:calibration-results}%
 }
 \def\tsenvAppendixCalibrationResultsEnd{}
-\def\tsenvCalibrationResultsTablePath{paper_artifacts/experiment_plan_table}
+\def\tsenvCalibrationResultsTablePath{generated/paper_artifacts/experiment_plan_table}
 \else
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
@@ -37,14 +37,14 @@
   \section*{Calibration Results}%
 }
 \def\tsenvAppendixCalibrationResultsEnd{\end{document}}
-\IfFileExists{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table.tex}{%
-  \def\tsenvCalibrationResultsTablePath{NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+\IfFileExists{overleaf_paper/generated/paper_artifacts/experiment_plan_table.tex}{%
+  \def\tsenvCalibrationResultsTablePath{overleaf_paper/generated/paper_artifacts/experiment_plan_table}%
 }{%
-  \def\tsenvCalibrationResultsTablePath{docs/NIPS_2026_tsENV/paper_artifacts/experiment_plan_table}%
+  \def\tsenvCalibrationResultsTablePath{docs/overleaf_paper/generated/paper_artifacts/experiment_plan_table}%
 }
 \fi\fi
 \ifdefined\tsenvCalibrationResultsTablePath\else
-\def\tsenvCalibrationResultsTablePath{paper_artifacts/experiment_plan_table}
+\def\tsenvCalibrationResultsTablePath{generated/paper_artifacts/experiment_plan_table}
 \fi
 \tsenvAppendixCalibrationResultsStart
 The table reports the calibration configurations and results used to validate the experimental setup.

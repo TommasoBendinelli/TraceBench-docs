@@ -20,7 +20,7 @@
 
 \providecommand{\FloatBarrier}{}
 
-\input{NIPS_2026_tsENV/tables/templates/consolidated_csv_schema}
+\input{overleaf_paper/generated/table_templates/consolidated_csv_schema}
 
 \newcommand{\calibrationHeader}{%
 \textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
@@ -248,7 +248,7 @@ The tables are saved at \code{docs/overleaf_paper/generated/tables/main/*.tex} w
 So for example
 \begin{DocCode}
 \label{tab:acc_main_experiment_table}
-\input{tables/main_tables/acc_main_experiment_table}
+\input{generated/tables/main/acc_main_experiment_table}
 \end{DocCode}
 
 
@@ -259,28 +259,28 @@ The model name is diplayed at \code{shared/config/agents.json},
 The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
 \par
 \textbf{Accuracy table}\par
-\input{NIPS_2026_tsENV/tables/templates/acc_main}
+\input{overleaf_paper/generated/table_templates/acc_main}
 
 \medskip
 \textbf{Cost/token/tool-use main table template}\par
-\input{NIPS_2026_tsENV/tables/templates/cost_main}
+\input{overleaf_paper/generated/table_templates/cost_main}
 
 \subsubsection*{Ablation experiment}
 The data is from \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot} only for  \code{gpt-5.5} and \code{gemini-3.1-pro-preview}
 \medskip
 \par
 \textbf{Accuracy-style ablation table template}\par
-\input{NIPS_2026_tsENV/tables/templates/acc_ablation}
+\input{overleaf_paper/generated/table_templates/acc_ablation}
 
 \medskip
 \textbf{Cost/token/tool-use ablation table template}\par
-\input{NIPS_2026_tsENV/tables/templates/ablation_main}
+\input{overleaf_paper/generated/table_templates/ablation_main}
 
 \clearpage
 \textbf{Per-row-slug appendix template}\par
 These tables are repeated for each experiment row in Tables~\ref{tab:experiment-plan-calibration}, \ref{tab:experiment-plan-main}, and \ref{tab:experiment-plan-ablation}.
 
-\input{NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs}
+\input{overleaf_paper/generated/table_templates/per_row_slug/1_row_slugs}
 
 The tables are generated with the following stylistic rules:
 \begin{itemize}
@@ -318,7 +318,7 @@ The figure being generated is the following and it includes only the results in 
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\linewidth]{NIPS_2026_tsENV/pictures/accuracy_vs_tokens_and_python_calls.pdf}
+\includegraphics[width=\linewidth]{overleaf_paper/assets/figures/results/accuracy_vs_tokens_and_python_calls.pdf}
 \caption{Top-1 accuracy as a function of cumulative token usage and Python calls for the results in the main experiment table.}
 \label{fig:experiment-plan-accuracy-vs-compute}
 \end{figure}

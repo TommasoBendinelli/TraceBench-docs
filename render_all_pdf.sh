@@ -23,8 +23,9 @@ LEFT_PADDING_DELTA="0pt"
 RIGHT_PADDING_DELTA="0pt"
 NIPS_LEFT_PADDING_DELTA="0pt"
 NIPS_RIGHT_PADDING_DELTA="0pt"
-NIPS_BUILD_SCRIPT="${SCRIPT_DIR}/NIPS_2026_tsENV/build.sh"
-NIPS_MAIN_PDF="${SCRIPT_DIR}/NIPS_2026_tsENV/main.pdf"
+NIPS_BUILD_SCRIPT="${SCRIPT_DIR}/overleaf_paper/build.sh"
+NIPS_MAIN_PDF="${SCRIPT_DIR}/overleaf_paper/archive/compiled/main.pdf"
+NIPS_MAIN_AUX="${SCRIPT_DIR}/overleaf_paper/build/main.aux"
 BUILD_COMBINED=false
 FORCE_REBUILD=false
 SKIP_PAPER=false
@@ -409,7 +410,7 @@ add_combined_index_paper_links() {
   local combined_pdf="$1"
 
   echo "Adding paper index links -> ${combined_pdf}"
-  python3 - <<'PY' "${combined_pdf}" "${INDEX_OVERRIDES_FILE}" "${COMBINED_DOCS_ONLY_FILE}" "${SCRIPT_DIR}/NIPS_2026_tsENV/build/main.aux"
+  python3 - <<'PY' "${combined_pdf}" "${INDEX_OVERRIDES_FILE}" "${COMBINED_DOCS_ONLY_FILE}" "${NIPS_MAIN_AUX}"
 from pathlib import Path
 import re
 import sys
@@ -535,7 +536,7 @@ if [ "${BUILD_COMBINED}" = "true" ] || [ ! -f "${INDEX_OVERRIDES_FILE}" ]; then
 fi
 
 update_index_overrides() {
-  python3 - <<'PY' "${COMBINED_DOCS_ONLY_FILE}" "${SCRIPT_DIR}/NIPS_2026_tsENV/build/main.aux" "${INDEX_OVERRIDES_FILE}"
+  python3 - <<'PY' "${COMBINED_DOCS_ONLY_FILE}" "${NIPS_MAIN_AUX}" "${INDEX_OVERRIDES_FILE}"
 from pathlib import Path
 import re
 import sys
