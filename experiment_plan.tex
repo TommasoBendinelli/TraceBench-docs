@@ -204,8 +204,7 @@ Both share the following identity fields:
 While \code{<row_slug>.json} contains additionally the following:
 \begin{itemize}
   \item \code{wrong_uuids}: It is a list of lists, where each element is (\code{question_uuid}, \code{sample_uuid})  of entries that the model gets wrong.
-  \item \code{sample_results}: it is a list, where each inner list is a \code{sample_results}. 
-  Collected from each run's scores.json.
+  \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
 \end{itemize}
 
 
@@ -243,7 +242,8 @@ Use the following command:
 \begin{DocCode}
   python generate_tex_tables.py [TAG]
 \end{DocCode}
-This generates the final tables for the paper presented in the experimental section and appendix and used the two \code{.csv} from before.
+This generates the final tables for the paper presented in the experimental section and appendix.
+The input data to generate this is coming from \code{all_run.csv}
 The tables are saved at \code{docs/NIPS_2026_tsENV/tables/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
 \begin{DocCode}
@@ -251,7 +251,7 @@ So for example
 \input{tables/main_tables/acc_main_experiment_table}
 \end{DocCode}
 
-Generated paper tables are written under \code{docs/NIPS_2026_tsENV/tables/main_tables/*.tex}.
+Generated paper tables are written under \code{docs/NIPS_2026_tsENV/tables/*.tex}.
 Their numbers come directly from consolidated results; if a requested result is not present, the generated table renders \code{-}.
 
 The rendered files below are layout templates only.
