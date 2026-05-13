@@ -58,7 +58,7 @@ It describes how to use the previous stages and it creates the final artifacts f
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Calibration experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\\
+\caption{Calibration experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
 
 \toprule
 \calibrationHeader
@@ -88,7 +88,7 @@ It describes how to use the previous stages and it creates the final artifacts f
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Main paper experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\\
+\caption{Main paper experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
 
 \toprule
 \experimentHeader
@@ -121,7 +121,7 @@ It describes how to use the previous stages and it creates the final artifacts f
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro-preview}, both using high reasoning.}\\
+\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro-preview}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
 
 \toprule
 \experimentHeader
@@ -212,7 +212,7 @@ In case there are multiple combinations of   \code{(agent_id, model, question_sl
 If any of these two files would be empty, then it's not created.
 
 \subsection{Generate csv table}
-This script works with the output from \code{<row_slug>.json}
+This script works with the output from all \code{<row_slug>.json}
 \begin{DocCode}
   python generate_csv_tables.py [TAG]
 \end{DocCode}
@@ -220,7 +220,7 @@ Where [TAG] if passed only includes results from the previous script with that c
 
 The output of this second script two csv artifact types (For direct analysis and inspection)
 \begin{itemize}
-  \item \code{results/consolidated/all_runs.csv}
+  \item \code{results/consolidated/all_runs.csv}: This is commited to git
   \item \code{results/consolidated/tables/all_samples.csv}
 \end{itemize}
 
@@ -243,21 +243,18 @@ Use the following command:
   python generate_tex_tables.py [TAG]
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The input data to generate this is coming from \code{all_run.csv}
-The tables are saved at \code{docs/NIPS_2026_tsENV/tables/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
+The input data to generate this is coming from \code{all_run.csv}.
+The tables are saved at \code{docs/overleaf_paper/generated/tables/main/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
 \begin{DocCode}
 \label{tab:acc_main_experiment_table}
 \input{tables/main_tables/acc_main_experiment_table}
 \end{DocCode}
 
-Generated paper tables are written under \code{docs/NIPS_2026_tsENV/tables/*.tex}.
-Their numbers come directly from consolidated results; if a requested result is not present, the generated table renders \code{-}.
 
-The rendered files below are layout templates only.
-They show the actual final-paper models, with displayed names defined in \code{shared/config/agents.json}, but their numeric entries are placeholders and are not authoritative results.
-The layout of the table is as follows:
-
+In the following we show the tables as they appear in the paper.
+Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
+The model name is diplayed at \code{shared/config/agents.json},
 \subsubsection*{Main experiment}
 The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
 \par
@@ -281,6 +278,8 @@ The data is from \code{direct_context_shot_3}, \code{code_context_shot_3}, \code
 
 \clearpage
 \textbf{Per-row-slug appendix template}\par
+These tables are repeated for each experiment row in Tables~\ref{tab:experiment-plan-calibration}, \ref{tab:experiment-plan-main}, and \ref{tab:experiment-plan-ablation}.
+
 \input{NIPS_2026_tsENV/tables/templates/per_row_slug/1_row_slugs}
 
 The tables are generated with the following stylistic rules:

@@ -2,19 +2,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANUAL_DIR="${SCRIPT_DIR}/manual"
+MANUAL_SRC_DIR="${MANUAL_DIR}/src"
+MANUAL_SUPPORT_DIR="${MANUAL_DIR}/support"
 BUILD_DIR="${SCRIPT_DIR}/build"
 WRAPPER_DIR="${SCRIPT_DIR}/.render_wrappers"
 OUTPUT_DIR="${SCRIPT_DIR}/pdf"
+LATEX_TEXINPUTS="${MANUAL_SUPPORT_DIR}//:${MANUAL_SRC_DIR}//:${SCRIPT_DIR}//:"
 NUMBERED_SUFFIX="_numbered"
 COMBINED_OUTPUT_FILE="${OUTPUT_DIR}/docs_combined_compact.pdf"
 COMBINED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only.pdf"
 COMBINED_NUMBERED_OUTPUT_FILE="${OUTPUT_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf"
 COMBINED_NUMBERED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only${NUMBERED_SUFFIX}.pdf"
-INDEX_SOURCE_FILE="${SCRIPT_DIR}/documentation_index.tex"
+INDEX_SOURCE_FILE="${MANUAL_SRC_DIR}/documentation_index.tex"
 INDEX_OVERRIDES_FILE="${BUILD_DIR}/documentation_index_page_overrides.tex"
-DOC_ORDER_MANIFEST="${SCRIPT_DIR}/docs_order_manifest.txt"
+DOC_ORDER_MANIFEST="${MANUAL_DIR}/docs_order_manifest.txt"
 COMBINED_INCLUDE_FILE="${BUILD_DIR}/docs_combined_manifest_inputs.tex"
-LAYOUT_CONFIG_FILE="${SCRIPT_DIR}/manual_docs_layout_config.tex"
+LAYOUT_CONFIG_FILE="${MANUAL_SUPPORT_DIR}/manual_docs_layout_config.tex"
 LEFT_PADDING_DELTA="0pt"
 RIGHT_PADDING_DELTA="0pt"
 NIPS_LEFT_PADDING_DELTA="0pt"
@@ -23,6 +27,7 @@ NIPS_BUILD_SCRIPT="${SCRIPT_DIR}/NIPS_2026_tsENV/build.sh"
 NIPS_MAIN_PDF="${SCRIPT_DIR}/NIPS_2026_tsENV/main.pdf"
 BUILD_COMBINED=false
 FORCE_REBUILD=false
+SKIP_PAPER=false
 
 usage() {
   cat <<EOF
@@ -36,13 +41,16 @@ Options:
   --nips-left-padding <delta>   Relative adjustment for the NIPS manuscript left margin.
   --nips-right-padding <delta>  Relative adjustment for the NIPS manuscript right margin.
   --combined               Rebuild and merge the combined manual PDFs.
+  --skip-paper             Build only the standalone docs and never invoke the NIPS build.
   --force                  Delete target build artifacts before compiling.
   --all                    Shortcut for --combined --force.
   --help                   Show this help message.
 
 Examples:
   bash docs/render_all_pdf.sh
+  bash docs/render_all_pdf.sh --skip-paper
   bash docs/render_all_pdf.sh --combined
+  bash docs/render_all_pdf.sh --skip-paper --combined
   bash docs/render_all_pdf.sh --all
   bash docs/render_all_pdf.sh --left-padding +0.2in --right-padding 0pt
   bash docs/render_all_pdf.sh --left-padding -6pt --right-padding +12pt
@@ -92,6 +100,10 @@ while [ "$#" -gt 0 ]; do
       BUILD_COMBINED=true
       shift
       ;;
+    --skip-paper)
+      SKIP_PAPER=true
+      shift
+      ;;
     --force)
       FORCE_REBUILD=true
       shift
@@ -138,17 +150,17 @@ if [ ! -f "${DOC_ORDER_MANIFEST}" ]; then
   exit 1
 fi
 
-if [ ! -x "${NIPS_BUILD_SCRIPT}" ]; then
+if [ "${SKIP_PAPER}" != "true" ] && [ ! -x "${NIPS_BUILD_SCRIPT}" ]; then
   echo "Error: NIPS build script not found or not executable at ${NIPS_BUILD_SCRIPT}" >&2
   exit 1
 fi
 
 shopt -s nullglob
-tex_files=("${SCRIPT_DIR}"/*.tex)
+tex_files=("${MANUAL_SRC_DIR}"/*.tex)
 shopt -u nullglob
 
 if [ "${#tex_files[@]}" -eq 0 ]; then
-  echo "Error: no LaTeX files found in ${SCRIPT_DIR}" >&2
+  echo "Error: no LaTeX files found in ${MANUAL_SRC_DIR}" >&2
   exit 1
 fi
 
@@ -173,8 +185,8 @@ for tex_name in "${indexed_tex_files[@]}"; do
   fi
   indexed_tex_registry+="${tex_name}"$'\n'
 
-  if [ ! -f "${SCRIPT_DIR}/${tex_name}" ]; then
-    echo "Error: indexed document ${tex_name} does not exist in ${SCRIPT_DIR}" >&2
+  if [ ! -f "${MANUAL_SRC_DIR}/${tex_name}" ]; then
+    echo "Error: indexed document ${tex_name} does not exist in ${MANUAL_SRC_DIR}" >&2
     exit 1
   fi
 done
@@ -270,7 +282,7 @@ generate_combined_include_file() {
     last_index=$((${#combined_tex_files[@]} - 1))
     for tex_name in "${combined_tex_files[@]}"; do
       printf '\\setManualDocSourceName{%s}\n' "${tex_name}"
-      printf '\\input{../%s}\n' "${tex_name}"
+      printf '\\input{../manual/src/%s}\n' "${tex_name}"
       if [ "${index}" -lt "${last_index}" ]; then
         printf '\\clearpage\n'
       fi
@@ -301,7 +313,8 @@ compile_tex() {
   fi
   (
     cd "${SCRIPT_DIR}"
-    latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+    TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
+      latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
       -output-directory="${BUILD_DIR}" "${source_file}"
   )
   if [ ! -f "${BUILD_DIR}/${stem}.pdf" ]; then
@@ -326,7 +339,7 @@ create_build_wrapper() {
     if [ "${enable_line_numbers}" = "true" ]; then
       printf '\\def\\manualDocEnableLineNumbers{1}\n'
     fi
-    cat "${SCRIPT_DIR}/${tex_name}"
+    cat "${MANUAL_SRC_DIR}/${tex_name}"
   } | write_file_if_changed "${wrapper_path}"
   printf -v "${output_var_name}" '%s' "${wrapper_path}"
 }
@@ -551,7 +564,11 @@ if not output.exists() or output.read_text() != text:
 PY
 }
 
-build_nips_main
+if [ "${SKIP_PAPER}" = "true" ]; then
+  echo "Skipping NIPS manuscript build because --skip-paper was provided."
+else
+  build_nips_main
+fi
 
 for tex_name in "${indexed_tex_files[@]}"; do
   compile_tex_variants "${tex_name}"
@@ -576,7 +593,8 @@ if [ "${FORCE_REBUILD}" = "true" ]; then
 fi
 (
   cd "${SCRIPT_DIR}"
-  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
+    latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_wrapper}"
 )
 copy_rendered_pdf "docs_combined_compact" "${COMBINED_DOCS_ONLY_FILE}"
@@ -588,7 +606,8 @@ if [ "${FORCE_REBUILD}" = "true" ]; then
 fi
 (
   cd "${SCRIPT_DIR}"
-  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
+    latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_numbered_wrapper}"
 )
 if [ ! -f "${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" ]; then
@@ -596,6 +615,13 @@ if [ ! -f "${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" ]; then
   exit 1
 fi
 copy_rendered_pdf "docs_combined_compact${NUMBERED_SUFFIX}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
+
+if [ "${SKIP_PAPER}" = "true" ]; then
+  copy_pdf_if_needed "${COMBINED_DOCS_ONLY_FILE}" "${COMBINED_OUTPUT_FILE}"
+  copy_pdf_if_needed "${COMBINED_NUMBERED_DOCS_ONLY_FILE}" "${COMBINED_NUMBERED_OUTPUT_FILE}"
+  echo "Skipping paper merge and paper index links because --skip-paper was provided."
+  exit 0
+fi
 
 update_index_overrides
 compile_tex_variants "documentation_index.tex"
@@ -606,7 +632,8 @@ if [ "${FORCE_REBUILD}" = "true" ]; then
 fi
 (
   cd "${SCRIPT_DIR}"
-  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
+    latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_wrapper}"
 )
 copy_rendered_pdf "docs_combined_compact" "${COMBINED_DOCS_ONLY_FILE}"
@@ -617,7 +644,8 @@ if [ "${FORCE_REBUILD}" = "true" ]; then
 fi
 (
   cd "${SCRIPT_DIR}"
-  latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
+  TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
+    latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_numbered_wrapper}"
 )
 copy_rendered_pdf "docs_combined_compact${NUMBERED_SUFFIX}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
