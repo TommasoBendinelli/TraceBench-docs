@@ -38,7 +38,14 @@
 }
 
 \docTitle{Experiment Plan}
-It describes how to use the previous stages and it creates the final artifacts for the paper: table and plots.
+It describes how to use the previous stages and it creates the artifacts that are show in the paper or use for human analysis.
+All the results by default are saved in three folders:
+\begin{itemize}
+  \item \code{results/} This folder is commited to git and contains results thare relatively small.
+  \item \code{results_large_artifacts/} This folder is not commited to git and contains anything that is large.
+  \item \code{docs/overleaf_paper/assets} This folder contains any result that is show to the paper or in the appendix
+\end{itemize}
+for the paper: table and plots.
 
 \phantomsection\label{docstart:experiment_plan}
 
@@ -146,9 +153,9 @@ It describes how to use the previous stages and it creates the final artifacts f
 \endgroup
 
 \section{Consolidated JSONs}
-This script collects all the \code{atif_trajectory.json} files and copies them in the target folder \code{results/consolidated/*}
+This script collects all the \code{atif_trajectory.json} files and copies them in the target folder \code{results/large_files/*}
 \begin{DocCode}
-  python consolidate_trajectories.py [TAG] [--output-folder folder]
+  python consolidate_trajectories.py [TAG ...] [--output-folder folder]
 \end{DocCode}
 
 
@@ -156,7 +163,7 @@ This script collects all the \code{atif_trajectory.json} files and copies them i
 These are the final compact artifacts of the project that are pushed on git.
 It consists of one script that collects all results from the different run folders
 \begin{DocCode}
-  python consolidate_results.py [TAG]
+  python consolidate_results.py [TAG ...]
 \end{DocCode}
 And then two scripts to generate the tables and the plots for analysis and for the paper \code{generate_tables.py} and \code{generate_plots.py}
 
