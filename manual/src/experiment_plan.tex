@@ -95,7 +95,7 @@ for the paper: tables and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
+\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
 
 \toprule
 \experimentHeader
@@ -246,18 +246,24 @@ Use the following command:
   python generate_tex_tables.py
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The input data comes from \code{all_run.csv}.
-The tables are saved at \code{docs/overleaf_paper/generated/tables/main/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
+The input data comes from \code{all_runs.csv}.
+Tables follows the following stylistic rules:
+\begin{itemize}
+\item The standard deviation is the `standard deviation per batch'
+\item Each number should display at most four digits, i.e., 0.559 is OK, 0.5593 is not OK; 123.4 is OK, 123.43 is not OK.
+\item All the tables follow the same font size and occupy the entire width
+\item The model name is displayed in \code{shared/config/agents.json}.
+\end{itemize}
+The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
 \begin{DocCode}
 \label{tab:acc_main_experiment_table}
-\input{generated/tables/main/acc_main_experiment_table}
+\input{generated/tables/acc_main_experiment_table}
 \end{DocCode}
 
 
 In the following we show the tables as they appear in the paper.
 Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
-The model name is displayed in \code{shared/config/agents.json}.
 \subsubsection*{Main experiment}
 The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
 \par
@@ -284,19 +290,6 @@ The data is from \code{direct_context_shot_3}, \code{code_context_shot_3}, \code
 These tables are repeated for each experiment row in Tables~\ref{tab:experiment-plan-calibration}, \ref{tab:experiment-plan-main}, and \ref{tab:experiment-plan-ablation}.
 
 \input{overleaf_paper/generated/table_templates/per_row_slug/1_row_slugs}
-
-The tables are generated with the following stylistic rules:
-\begin{itemize}
-\item The standard deviation is the \code{standard deviation per batch}
-\item Each number should display at most four digits, i.e., 0.559 is OK, 0.5593 is not OK; 123.4 is OK, 123.43 is not OK.
-
-\end{itemize}
-
-\begin{itemize}
-  \item \code{*_main_experiment_table.tex} gets the data from the following experiments \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high}.
-  \item \code{*_ablation_training_examples.tex} gets the data from the following experiments \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot}.
-\end{itemize}
-
 
 
 
