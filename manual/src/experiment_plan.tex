@@ -214,7 +214,7 @@ If any of these two files would be empty, then it's not created.
 \subsection{Generate csv table}
 This script works with the output from all \code{<row_slug>.json}
 \begin{DocCode}
-  python generate_csv_tables.py [TAG]
+  python generate_csv_tables.py [TAG ...]
 \end{DocCode}
 Where [TAG] if passed only includes results from the previous script with that corresponding tag.
 
@@ -240,7 +240,7 @@ Each row in \code{results/consolidated/tables/all_samples.csv} describes one eva
 \subsection{Generate tex table}
 Use the following command:
 \begin{DocCode}
-  python generate_tex_tables.py [TAG]
+  python generate_tex_tables.py
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
 The input data to generate this is coming from \code{all_run.csv}.
