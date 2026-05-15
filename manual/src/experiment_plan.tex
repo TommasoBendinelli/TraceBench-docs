@@ -42,7 +42,7 @@ It describes how to use the previous stages and it creates the artifacts that ar
 All the results by default are saved in three folders:
 \begin{itemize}
   \item \code{results/} This folder is committed to Git and contains results that are relatively small.
-  \item \code{results_large_artifacts/} This folder is not committed to Git and contains anything that is large.
+  \item \code{results_large_artifacts/} This folder is not committed to Git and contains anything that is large (agentic trajectories)
   \item \code{docs/overleaf_paper/generated} This folder contains any result that is shown in the paper or in the appendix
 \end{itemize}
 for the paper: tables and plots.
@@ -65,7 +65,7 @@ for the paper: tables and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
+\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
 
 \toprule
 \calibrationHeader
@@ -152,26 +152,21 @@ for the paper: tables and plots.
 \end{longtable}
 \endgroup
 
-\section{Consolidated JSONs}
-This script collects all the \code{atif_trajectory.json} files and copies them to the target folder \code{results/large_files/*}
+\section{Consolidated Results}
+These are two scripts that gather from each run folder all the results in \code{results_large_artifacts/*}.
+The first script is:
 \begin{DocCode}
-  python consolidate_trajectories.py [TAG ...] [--output-folder folder]
+python consolidate_trajectories.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
+This script collects all the \code{atif_trajectory.json}, optionally filted by tag and them in \code{FOLDER} by default in \code{results_large_artifacts/trajectories}
 
-
-\section{Final Compact Results}
-These are the final compact artifacts of the project that are committed to Git.
-It consists of one script that collects all results from the different run folders
 \begin{DocCode}
-  python consolidate_results.py [TAG ...]
+  python consolidate_results.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
-And then two scripts to generate the tables and the plots for analysis and for the paper \code{generate_tables.py} and \code{generate_plots.py}
-
-\subsection{Consolidate results}
-It takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and creates two files.
-\code{results/consolidated/<row_slug>_summary.json} and \code{results/consolidated/<row_slug>.json}.
-Both share the following identity fields:
-
+This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generate two files at \code{FOLDER} by default \code{results_large_artifacts/consolidated_numerical_results}
+\code{results_large_artifacts/consolidated_numerical_results/<row_slug>_summary.json} and \code{results_large_artifacts/consolidated_numerical_results/<row_slug>.json}.
+These two files have the following structure.
+Both of them share the following identity fields:
 \begingroup
 \small
 \setlength{\tabcolsep}{4pt}
@@ -218,7 +213,8 @@ While \code{<row_slug>.json} contains additionally the following:
 In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
 If any of these two files would be empty, then it's not created.
 
-\subsection{Generate CSV tables}
+\section{Generate final artifacts}
+\subsection{CSV Tables}
 This script works with the output from all \code{<row_slug>.json}
 \begin{DocCode}
   python generate_csv_tables.py [TAG ...]
@@ -316,7 +312,7 @@ Generated aggregate tables use these metric prefixes:
 \item \code{plots_generated}: num of plots generated
 \end{itemize}
 
-\section{Plot scripts}
+\subsection{Plots}
 This script generates the plots in the experiment section. 
 It currently generates a figure with two subplots: (i) Accuracy vs Cumulative Tokens and (ii) Accuracy vs Python Calls
 with only the data from the main experiments
