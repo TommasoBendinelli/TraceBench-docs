@@ -151,8 +151,8 @@ if [ ! -f "${DOC_ORDER_MANIFEST}" ]; then
   exit 1
 fi
 
-if [ "${SKIP_PAPER}" != "true" ] && [ ! -x "${NIPS_BUILD_SCRIPT}" ]; then
-  echo "Error: NIPS build script not found or not executable at ${NIPS_BUILD_SCRIPT}" >&2
+if [ "${SKIP_PAPER}" != "true" ] && { [ ! -f "${NIPS_BUILD_SCRIPT}" ] || [ ! -r "${NIPS_BUILD_SCRIPT}" ]; }; then
+  echo "Error: NIPS build script not found or not readable at ${NIPS_BUILD_SCRIPT}" >&2
   exit 1
 fi
 
