@@ -38,14 +38,14 @@
 }
 
 \docTitle{Experiment Plan}
-It describes how to use the previous stages and it creates the artifacts that are show in the paper or use for human analysis.
+It describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
 All the results by default are saved in three folders:
 \begin{itemize}
-  \item \code{results/} This folder is commited to git and contains results thare relatively small.
-  \item \code{results_large_artifacts/} This folder is not commited to git and contains anything that is large.
-  \item \code{docs/overleaf_paper/assets} This folder contains any result that is show to the paper or in the appendix
+  \item \code{results/} This folder is committed to Git and contains results that are relatively small.
+  \item \code{results_large_artifacts/} This folder is not committed to Git and contains anything that is large.
+  \item \code{docs/overleaf_paper/generated} This folder contains any result that is shown in the paper or in the appendix
 \end{itemize}
-for the paper: table and plots.
+for the paper: tables and plots.
 
 \phantomsection\label{docstart:experiment_plan}
 
@@ -65,7 +65,7 @@ for the paper: table and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Calibration experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
+\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
 
 \toprule
 \calibrationHeader
@@ -95,7 +95,7 @@ for the paper: table and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Main paper experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
+\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4-6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
 
 \toprule
 \experimentHeader
@@ -153,14 +153,14 @@ for the paper: table and plots.
 \endgroup
 
 \section{Consolidated JSONs}
-This script collects all the \code{atif_trajectory.json} files and copies them in the target folder \code{results/large_files/*}
+This script collects all the \code{atif_trajectory.json} files and copies them to the target folder \code{results/large_files/*}
 \begin{DocCode}
   python consolidate_trajectories.py [TAG ...] [--output-folder folder]
 \end{DocCode}
 
 
 \section{Final Compact Results}
-These are the final compact artifacts of the project that are pushed on git.
+These are the final compact artifacts of the project that are committed to Git.
 It consists of one script that collects all results from the different run folders
 \begin{DocCode}
   python consolidate_results.py [TAG ...]
@@ -168,7 +168,7 @@ It consists of one script that collects all results from the different run folde
 And then two scripts to generate the tables and the plots for analysis and for the paper \code{generate_tables.py} and \code{generate_plots.py}
 
 \subsection{Consolidate results}
-It takes as input all \code{run_configurations/*.json}, optionally filter them by tag and creates two files.
+It takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and creates two files.
 \code{results/consolidated/<row_slug>_summary.json} and \code{results/consolidated/<row_slug>.json}.
 Both share the following identity fields:
 
@@ -197,8 +197,8 @@ Both share the following identity fields:
 \begin{itemize}
   \item \code{score_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_test}. 
   Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{score_other_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code-rule runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{trajectory_evaluation}: It's list of dict, where each dict has information directly from \code{trajectory_evaluation.json}
+  \item \code{score_other_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{trajectory_evaluation}: It is a list of dictionaries, where each dictionary has information directly from \code{trajectory_evaluation.json}
   \begin{itemize}
     \item \code{cost_usd}: \code{trajectory_evaluation.json::cost_usd}
     \item \code{tokens}: \code{trajectory_evaluation.json::tokens}
@@ -210,7 +210,7 @@ Both share the following identity fields:
 \end{itemize}
 While \code{<row_slug>.json} contains additionally the following:
 \begin{itemize}
-  \item \code{wrong_uuids}: It is a list of lists, where each element is (\code{question_uuid}, \code{sample_uuid})  of entries that the model gets wrong.
+  \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \code{sample_uuid} for entries that the model answers incorrectly.
   \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
 \end{itemize}
 
@@ -218,20 +218,20 @@ While \code{<row_slug>.json} contains additionally the following:
 In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
 If any of these two files would be empty, then it's not created.
 
-\subsection{Generate csv table}
+\subsection{Generate CSV tables}
 This script works with the output from all \code{<row_slug>.json}
 \begin{DocCode}
   python generate_csv_tables.py [TAG ...]
 \end{DocCode}
 Where [TAG] if passed only includes results from the previous script with that corresponding tag.
 
-The output of this second script two csv artifact types (For direct analysis and inspection)
+The output of this second script consists of two CSV artifact types (for direct analysis and inspection)
 \begin{itemize}
-  \item \code{results/consolidated/all_runs.csv}: This is commited to git
+  \item \code{results/consolidated/all_runs.csv}: This is committed to Git
   \item \code{results/consolidated/tables/all_samples.csv}
 \end{itemize}
 
-These CSV have the following columns
+These CSVs have the following columns
 
 \paragraph{Run-level consolidated CSV.}
 Each row in \code{results/consolidated/all_runs.csv} describes one consolidated run:
@@ -244,13 +244,13 @@ Each row in \code{results/consolidated/tables/all_samples.csv} describes one eva
 \allSamplesCsvSchemaTable
 
 \FloatBarrier
-\subsection{Generate tex table}
+\subsection{Generate TeX tables}
 Use the following command:
 \begin{DocCode}
   python generate_tex_tables.py
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The input data to generate this is coming from \code{all_run.csv}.
+The input data comes from \code{all_run.csv}.
 The tables are saved at \code{docs/overleaf_paper/generated/tables/main/*.tex} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
 \begin{DocCode}
@@ -261,7 +261,7 @@ So for example
 
 In the following we show the tables as they appear in the paper.
 Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
-The model name is diplayed at \code{shared/config/agents.json},
+The model name is displayed in \code{shared/config/agents.json}.
 \subsubsection*{Main experiment}
 The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
 \par
@@ -292,7 +292,7 @@ These tables are repeated for each experiment row in Tables~\ref{tab:experiment-
 The tables are generated with the following stylistic rules:
 \begin{itemize}
 \item The standard deviation is the \code{standard deviation per batch}
-\item Each entry at most four digits per number should be visible i.e. 0.559 ok, 0.5593 not ok. 123.4 ok, 123.43 not ok.
+\item Each number should display at most four digits, i.e., 0.559 is OK, 0.5593 is not OK; 123.4 is OK, 123.43 is not OK.
 
 \end{itemize}
 
@@ -318,7 +318,7 @@ Generated aggregate tables use these metric prefixes:
 
 \section{Plot scripts}
 This script generates the plots in the experiment section. 
-Currently it generates a plot with two subplots (i) Accuracy vs Cumulative Tokens and (ii) Accuracy vs Python Calls
+It currently generates a figure with two subplots: (i) Accuracy vs Cumulative Tokens and (ii) Accuracy vs Python Calls
 with only the data from the main experiments
 \begin{DocCode}
   python generate_plots.py 
