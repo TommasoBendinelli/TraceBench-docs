@@ -42,6 +42,7 @@ The files are located in \code{models/simulink/<MODEL>/} and include:
 \end{itemize}
 \item \code{experiment_config.json}: 
 \begin{itemize}
+    \item \code{paper_facing_name}: the name of the environment that we use in the paper
     \item \code{exposed_variables}: defines which variables are externally exposed and the valid sampling ranges for them (used for validating \code{model_run_specs.json})
     \begin{itemize}
         \item \code{initial_state}: dictionary of state names. Each state maps to an object with:

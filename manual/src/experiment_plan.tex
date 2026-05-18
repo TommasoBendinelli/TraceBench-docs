@@ -9,6 +9,7 @@
 \usepackage{graphicx}
 \usepackage{makecell}
 \usepackage{multirow}
+\usepackage{caption}
 \usepackage{placeins}
 \usepackage{tabularx}
 
@@ -23,29 +24,28 @@
 \input{overleaf_paper/generated/table_templates/consolidated_csv_schema}
 
 \newcommand{\calibrationHeader}{%
-\textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
+\textbf{D} & \textbf{Noise} & \textbf{Train} &
 \textbf{Test} & \textbf{Row Slug} & \textbf{Mode} \\
 }
 \newcommand{\experimentHeader}{%
-\textbf{Experiment} & \textbf{D} & \textbf{Noise} & \textbf{Train} &
+\textbf{D} & \textbf{Noise} & \textbf{Train} &
 \textbf{Test} & \textbf{Row Slug} & \textbf{Mode} \\
 }
 \newcommand{\calibrationRow}[7]{%
-\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} \\
+\code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} \\
 }
 \newcommand{\experimentRow}[7]{%
-\code{#1} & \code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} \\
+\code{#2} & #3 & #4 & #5 & \code{#6} & \code{#7} \\
 }
 
 \docTitle{Experiment Plan}
-It describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
+This document describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
 All the results by default are saved in three folders:
 \begin{itemize}
   \item \code{results/} This folder is committed to Git and contains results that are relatively small.
   \item \code{results_large_artifacts/} This folder is not committed to Git and contains anything that is large (agentic trajectories)
-  \item \code{docs/overleaf_paper/generated} This folder contains any result that is shown in the paper or in the appendix
+  \item \code{docs/overleaf_paper/generated} This folder contains the tables and plots that are shown in the paper or in the appendix.
 \end{itemize}
-for the paper: tables and plots.
 
 \phantomsection\label{docstart:experiment_plan}
 
@@ -57,7 +57,6 @@ for the paper: tables and plots.
 \vspace{0.25em} 
 
 \begin{longtable}{
-  p{3.2cm}
   p{2.1cm}
   p{1.2cm}
   p{1.6cm}
@@ -65,7 +64,7 @@ for the paper: tables and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
+\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
 
 \toprule
 \calibrationHeader
@@ -87,7 +86,6 @@ for the paper: tables and plots.
 \vspace{0.8em}
 
 \begin{longtable}{
-  p{3.2cm}
   p{2.1cm}
   p{1.2cm}
   p{1.6cm}
@@ -95,7 +93,7 @@ for the paper: tables and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
+\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
 
 \toprule
 \experimentHeader
@@ -120,7 +118,6 @@ for the paper: tables and plots.
 \vspace{0.8em}
 
 \begin{longtable}{
-  p{3.2cm}
   p{2.1cm}
   p{1.2cm}
   p{1.6cm}
@@ -128,7 +125,7 @@ for the paper: tables and plots.
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro-preview}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
+\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
 
 \toprule
 \experimentHeader
@@ -158,15 +155,17 @@ The first script is:
 \begin{DocCode}
 python consolidate_trajectories.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
-This script collects all the \code{atif_trajectory.json}, optionally filted by tag and them in \code{FOLDER} by default in \code{results_large_artifacts/trajectories}
+This script collects all the \code{atif_trajectory.json}, optionally filtered by tag, and stores them in \code{FOLDER}, by default \code{results_large_artifacts/trajectories}.
 
 \begin{DocCode}
   python consolidate_results.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
-This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generate two files at \code{FOLDER} by default \code{results_large_artifacts/consolidated_numerical_results}
+This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generates two files at \code{FOLDER}, by default \code{results_large_artifacts/consolidated_numerical_results}:
 \code{results_large_artifacts/consolidated_numerical_results/<row_slug>_summary.json} and \code{results_large_artifacts/consolidated_numerical_results/<row_slug>.json}.
 These two files have the following structure.
-Both of them share the following identity fields:
+
+\noindent\textbf{Identity fields shared by both files.}
+
 \begingroup
 \small
 \setlength{\tabcolsep}{4pt}
@@ -246,13 +245,20 @@ Use the following command:
   python generate_tex_tables.py
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The input data comes from \code{all_runs.csv}.
-Tables follows the following stylistic rules:
+The script takes as input the tables from \code{all_runs.csv}.
+Tables follow the following rules:
 \begin{itemize}
-\item The standard deviation is the `standard deviation per batch'
-\item Each number should display at most four digits, i.e., 0.559 is OK, 0.5593 is not OK; 123.4 is OK, 123.43 is not OK.
-\item All the tables follow the same font size and occupy the entire width
+\item The standard deviation is the `standard deviation per batch'; generated tables use \verb|\scorepm{91.2}{0.4}|, rendered as \(91.2 \pm {\scriptstyle 0.4}\).
+\item Each number should display four digits, i.e., 0.559 is OK, 0.5593 is not OK; 123.4 is OK, 123.43 is not OK. 
+Both the main number and the std.
+\item All the tables follow the same font size and occupy the entire width.
 \item The model name is displayed in \code{shared/config/agents.json}.
+\item The model name must not go next line.
+\item Environment name must not go to the next line and their name must match \code{experiment_config.json::paper_facing_name}
+\item Model names and column names must all use \verb|\texttt{...}| and nothing else.
+\item Each word in the header should be capitalised.
+\item Group headers should be written as natural labels, e.g., \verb|\texttt{Low Noise}| and \verb|\texttt{High Noise}|.
+\item An entry is shown only if each environment has at least four seeds.
 \end{itemize}
 The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
@@ -260,38 +266,83 @@ So for example
 \label{tab:acc_main_experiment_table}
 \input{generated/tables/acc_main_experiment_table}
 \end{DocCode}
+Additionally tables in the Appendix follow these stylistic rules:
+\begin{itemize}
+  \item They are six stacked metric tables, all with the same structure Model × Environment.
+  The six metric sections are: 
+  \begin{itemize}
+  \item Episode Accuracy shows accuracy on the episode split. All four model rows are shown; unavailable values render as \code{-}.
+  \item Held-out Accuracy shows accuracy on held-out data, when present.
+  \item Python Calls shows how many Python calls were made.
+  \item Plots Generated shows how many plots were generated. Again, only the first two models have values.
+  \item Number Of Steps shows how many agent steps were recorded.
+  \item Successful Runs shows how many successful runs contributed to each cell.
+  Note that successful runs are shown even when there are fewer than four seeds.
+  This table should contain integers rather than std.
+  \end{itemize}
+  \item There is one stacked table for each experiment row. Note that if a value has more than four successul runs, then its entry cannot miss! 
+\end{itemize}
+   
 
-
-In the following we show the tables as they appear in the paper.
+In the following we show the generated result tables used by the paper in the same order as they appear in the paper.
 Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
-\subsubsection*{Main experiment}
-The data is from \code{baseline}, \code{code_baseline}, \code{baseline_noise_high}, and \code{code_baseline_noise_high} for \code{gpt-5.5}, \code{gemini-3.1-pro-preview}, \code{claude-opus-4.6} and \code{minimax-m2.7}
+\subsubsection*{Main paper result tables}
+
+These results are created with the experiments run from Table 2.
 \par
-\textbf{Accuracy table}\par
-\input{overleaf_paper/generated/table_templates/acc_main}
+\textbf{Main experiment accuracy table}\par
+\input{overleaf_paper/generated/tables/main/acc_main_experiment_table}
 
 \medskip
-\textbf{Cost/token/tool-use main table template}\par
-\input{overleaf_paper/generated/table_templates/cost_main}
+\textbf{Main experiment cumulative-token table}\par
+\input{overleaf_paper/generated/tables/main/cum_main_experiment_table}
 
-\subsubsection*{Ablation experiment}
-The data is from \code{direct_context_shot_3}, \code{code_context_shot_3}, \code{no_context_shot}, and \code{code_no_context_shot} only for  \code{gpt-5.5} and \code{gemini-3.1-pro-preview}
+\subsubsection*{Ablation paper result tables}
+\medskip
+These results are created with the experiments run from Table 3.
 \medskip
 \par
-\textbf{Accuracy-style ablation table template}\par
-\input{overleaf_paper/generated/table_templates/acc_ablation}
+\textbf{Ablation experiment accuracy table}\par
+\input{overleaf_paper/generated/tables/main/acc_ablation_training_examples}
 
 \medskip
-\textbf{Cost/token/tool-use ablation table template}\par
-\input{overleaf_paper/generated/table_templates/ablation_main}
+\textbf{Ablation experiment cumulative-token table}\par
+\input{overleaf_paper/generated/tables/main/cum_ablation_training_examples}
 
 \clearpage
-\textbf{Per-row-slug appendix template}\par
-These tables are repeated for each experiment row in Tables~\ref{tab:experiment-plan-calibration}, \ref{tab:experiment-plan-main}, and \ref{tab:experiment-plan-ablation}.
+\subsubsection*{Appendix summary tables}
+These generated tables summarize the main and ablation rows from Tables~\ref{tab:experiment-plan-main} and~\ref{tab:experiment-plan-ablation}.
 
-\input{overleaf_paper/generated/table_templates/per_row_slug/1_row_slugs}
+\textbf{Main experiment direct low-noise table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-cloud}
 
+\medskip
+\textbf{Main experiment code low-noise table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-flame}
 
+\medskip
+\textbf{Main experiment direct high-noise table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-pine}
+
+\medskip
+\textbf{Main experiment code high-noise table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-orbit}
+
+\medskip
+\textbf{Ablation zero-example direct table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-pine}
+
+\medskip
+\textbf{Ablation zero-example code table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-orbit}
+
+\medskip
+\textbf{Ablation no-textual-context direct table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-harbor}
+
+\medskip
+\textbf{Ablation no-textual-context code table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-tide}
 
 \paragraph{Metric prefixes.}
 Generated aggregate tables use these metric prefixes:
@@ -306,13 +357,15 @@ Generated aggregate tables use these metric prefixes:
 \end{itemize}
 
 \subsection{Plots}
-This script generates the plots in the experiment section. 
-It currently generates a figure with two subplots: (i) Accuracy vs Cumulative Tokens and (ii) Accuracy vs Python Calls
-with only the data from the main experiments
+This script generates the plots in the experiment section.
+By default, it filters to the main-experiment rows only and produces the paper-visible two-panel figure
+\code{accuracy_vs_tokens_and_python_calls.pdf}: (i) Accuracy vs Cumulative Tokens and (ii) Accuracy vs Python Calls.
+The command also writes supporting single-panel plot and CSV artifacts from the same filtered data.
 \begin{DocCode}
   python generate_plots.py 
 \end{DocCode}
-The figure being generated is the following and it includes only the results in the main 
+The script takes as input the run-level \code{results/consolidated/all_runs.csv}.
+The figure being generated is the following and it includes only the results in the main experiment table.
 
 \begin{figure}[ht]
 \centering

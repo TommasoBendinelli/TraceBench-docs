@@ -69,7 +69,7 @@ In case of \code{compute_baseline_detectability}:
 \begin{itemize}
 \item If there is an error during the calculation of above values, it returns "error".
 \item (Only for \code{compute_baseline_detectability}) It calls \code{detectability_specific_environment.py::is_detectable()} and this returns \code{environment_specific_detectability}, if this returns "no" then "detectability" is no.
-\item If the previous conditions don't apply and if the mean SNR ratio db is bigger than \code{experiment_config.json::detectability::signal_to_noise_ratio_db_thresholds::high} for any channel then it returns "yes"
+\item If the previous conditions don't apply and if the RMS distance is bigger than \code{experiment_config.json::detectability::RMS_thresholds} for any channel then it returns "yes"
 \begin{DocCode} 
 {
   "environment_specific_detectability": "yes" | "no" | "error", # Only for compute_baseline_detectability
