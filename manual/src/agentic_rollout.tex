@@ -110,7 +110,7 @@ Internal steps:
     \item Copy \code{terminal_bench/tasks_runtime/manual/<model>/<question_slug>/question_0/agent_payload} to a \code{tmp/<runid>/agent_payload} folder to avoid any race condition
     \item Inside \code{/app} in the container, copy \code{tmp/<runid>/agent_payload}/
     This should be the folders \code{test_samples/<uuid>.parquet}, and optionally if the question has train samples, should also include \code{train_samples/<uuid>.parquet}, and \code{train_labels.json}.
-    \item Run the agent, by using the command detailed in Platform Startup Commands in \code{appendix_agents.tex}.
+    \item Run the agent, by using the command detailed in Platform Startup Commands in \code{docs/overleaf_paper/src/appendix/appendix_agents.tex}.
     \item Collect all files in the \code{/app} folder, except the original inputs, and move them to \code{artifacts/}. 
     If the \code{platform=="opencode"}, export the completed OpenCode session inside the container after the agent finishes by redirecting stdout directly to the mounted agent-log file \code{opencode export <session_id> > /agent-logs/opencode-session-<session_id>.json}.
     Note that the harness must not capture \code{opencode export} stdout through a pipe before writing the file, because OpenCode has had truncated JSON failures when large export payloads are written through piped stdout.

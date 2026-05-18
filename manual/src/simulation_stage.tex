@@ -29,7 +29,7 @@ python workflows/simulate/run_pending_sims.py [--model MODEL] [--overwrite] [--r
 \item \code{--runs-root}: optional base directory for run artifacts. When set, each model writes to \code{RUNS_ROOT/<MODEL>/runs/} instead of \code{models/simulink/<MODEL>/runs/}. This is intended for local NVMe scratch storage.
 \item \code{--matlab-cache-root}: optional base directory for MATLAB/Simulink generated cache files. If omitted, MATLAB uses its normal cache and preference locations.
 \item \code{--profile-timing}: writes per-phase timing records to \code{profile\_timing.jsonl} in the selected run root.
-\item \code{--compute-features}: compute \code{features.json} with features specified. The features names must match the names at \code{appendix_environment.tex::model::Problem-specific features.}
+\item \code{--compute-features}: compute \code{features.json} with features specified. The feature names must match the names in \code{docs/overleaf_paper/src/appendix/appendix_environment.tex::model::Problem-specific features.}
 \end{itemize}
 
 The environment variable \code{SIMSCAPE_CUSTOM_PATH} must also be defined to the custom simscape blocks. For example: \code{SIMSCAPE_CUSTOM_PATH=/csem/divr/users/tbe/repo/tsENV/simscape_custom}.

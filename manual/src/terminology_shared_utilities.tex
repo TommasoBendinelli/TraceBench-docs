@@ -95,7 +95,7 @@ Where
     SNR_db(effect_signal, noise) = 20 log10(RMS(effect_signal) / RMS(noise))
 \end{DocCode}
 \code{effect_signal} is the intervention effect relative to the reference trajectory, not the raw signal amplitude.
-Note that the signals undergo preprocessing before the formula is applied, following \code{appendix_environment.tex::*::Signal preprocessing}
+Note that the signals undergo preprocessing before the formula is applied, following \code{docs/overleaf_paper/src/appendix/appendix_environment.tex::*::Signal preprocessing}
 Note that \code{quantify_effect_snr} also accepts \textbf{list} for the input arguments \code{src}, \code{src_noisy}, \code{ref=None}, \code{ref_noisy=None}.
 In that case it returns the mean SNR. The mean SNR is computed by first taking the mean over the linear effect-to-noise ratios, where n is the number of the list.
 The SNRdb is then returned by computing \code{20*log10(mean effect-to-noise ratio)}.

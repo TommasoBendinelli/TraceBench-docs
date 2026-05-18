@@ -127,7 +127,7 @@ baseline_loss_i = MSE(no_change_baseline_i, target_i)
 normalized_loss_i = raw_loss_i / max(baseline_loss_i, 1e-6)
 objective = mean(normalized_loss_i)
 \end{DocCode}
-The preprocessing is model specific and signal specific at it's defined at \code{docs/manual/src/appendix_environment.tex} 
+The preprocessing is model specific and signal specific at it's defined in the paper appendix file \code{docs/overleaf_paper/src/appendix/appendix_environment.tex}.
 By default all the signals are used for optimization. However, if the flag \code{--countinous-only} is passed, then only continuos signals are used for the search.  
 
 \begin{itemize}
