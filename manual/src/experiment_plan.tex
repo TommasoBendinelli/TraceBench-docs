@@ -199,7 +199,7 @@ These two files have the following structure.
     \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
     \item \code{number_of_tool_calls}: It is equal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
     \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} 
-    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots} 
+    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots}, i.e. plot artifacts actually seen by the agent 
   \end{itemize}
 \end{itemize}
 While \code{<row_slug>.json} contains additionally the following:
@@ -268,19 +268,20 @@ So for example
 \end{DocCode}
 Additionally tables in the Appendix follow these stylistic rules:
 \begin{itemize}
-  \item They are six stacked metric tables, all with the same structure Model × Environment.
-  The six metric sections are: 
+  \item They are seven stacked metric tables, all with the same structure Model × Environment.
+  The seven metric sections are: 
   \begin{itemize}
   \item Episode Accuracy shows accuracy on the episode split. All four model rows are shown; unavailable values render as \code{-}.
   \item Held-out Accuracy shows accuracy on held-out data, when present.
   \item Python Calls shows how many Python calls were made.
-  \item Plots Generated shows how many plots were generated. 
+  \item Plots Used shows how many plots were actually seen by the agent (not just generated). 
+  \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
   \item Successful Runs shows how many successful runs contributed to each cell.
   Note that successful runs are shown even when there are fewer than four seeds.
   This table should contain integers rather than std.
   \end{itemize}
-  \item There is one stacked table for each experiment row. Note that if a value has more than four successul runs, then its entry cannot miss! 
+  \item There is one stacked table for each experiment row. Note that if a value has more than four successful runs, then its entry cannot miss! 
 \end{itemize}
    
 
@@ -310,7 +311,7 @@ These results are created with the experiments run from Table 3.
 \input{overleaf_paper/generated/tables/main/cum_ablation_training_examples}
 
 \clearpage
-\subsubsection*{Appendix summary tables}
+\subsubsection*{Appendix A summary tables}
 These generated tables summarize the main and ablation rows from Tables~\ref{tab:experiment-plan-main} and~\ref{tab:experiment-plan-ablation}.
 
 \textbf{Main experiment direct low-noise table}\par
@@ -344,17 +345,12 @@ These generated tables summarize the main and ablation rows from Tables~\ref{tab
 \textbf{Ablation no-textual-context code table}\par
 \input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-tide}
 
-\paragraph{Metric prefixes.}
-Generated aggregate tables use these metric prefixes:
+\subsubsection*{Appendix B summary tables}
+These generated tables summarize the calibration results Tables~\ref{tab:experiment-plan-calibration}.
 
-\begin{itemize}
-\item \code{acc_} : accuracy 
-\item \code{cost_}: cost 
-\item \code{cum_}: cumulative tokens (in M) (so numbers must be divided by \code{1_000_000})
-\item \code{num_steps}: num steps
-\item \code{python_calls}: num of python calls
-\item \code{plots_generated}: num of plots generated
-\end{itemize}
+\textbf{Calibration direct no-noise table}\par
+\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-anchor}
+
 
 \subsection{Plots}
 This script generates the plots in the experiment section.
