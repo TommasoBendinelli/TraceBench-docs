@@ -160,10 +160,12 @@ This script collects all the \code{atif_trajectory.json}, optionally filtered by
 \begin{DocCode}
   python consolidate_results.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
-This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generates two files at \code{FOLDER}, by default \code{results_large_artifacts/consolidated_numerical_results}:
-\code{results_large_artifacts/consolidated_numerical_results/<row_slug>_summary.json} and \code{results_large_artifacts/consolidated_numerical_results/<row_slug>.json}.
-These two files have the following structure.
-
+This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generates two files in \code{FOLDER}, set by default at \code{results_large_artifacts/consolidated_numerical_results}.
+\begin{itemize}
+  \item \code{<row_slug>_summary.json} 
+  \item \code{<row_slug>.json}
+\end{itemize}
+These json share the following attributes.
 \noindent\textbf{Identity fields shared by both files.}
 
 \begingroup
@@ -187,7 +189,7 @@ These two files have the following structure.
 \endgroup
 
 
-\code{<row_slug>_summary.json} contains additionally the following:
+Additionally, \code{<row_slug>_summary.json} contains:
 \begin{itemize}
   \item \code{score_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_test}. 
   Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
@@ -202,7 +204,7 @@ These two files have the following structure.
     \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots}, i.e. plot artifacts actually seen by the agent 
   \end{itemize}
 \end{itemize}
-While \code{<row_slug>.json} contains additionally the following:
+And \code{<row_slug>.json} contains:
 \begin{itemize}
   \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \code{sample_uuid} for entries that the model answers incorrectly.
   \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
@@ -245,7 +247,7 @@ Use the following command:
   python generate_tex_tables.py
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The script takes as input the tables from \code{all_runs.csv}.
+The script takes as input \code{results/consolidated/all_runs.csv}, \code{results/consolidated/tables/all_samples.csv}, and matching \code{all_runs_*CALIBRATION*.csv}/\code{all_samples_*CALIBRATION*.csv} auxiliary files when present.
 Tables follow the following rules:
 \begin{itemize}
 \item The standard deviation is the `standard deviation per batch'; generated tables use \verb|\scorepm{91.2}{0.4}|, rendered as \(91.2 \pm {\scriptstyle 0.4}\).
@@ -254,11 +256,11 @@ Both the main number and the std.
 \item All the tables follow the same font size and occupy the entire width.
 \item The model name is displayed in \code{shared/config/agents.json}.
 \item The model name must not go next line.
-\item Environment name must not go to the next line and their name must match \code{experiment_config.json::paper_facing_name}
+\item \termSimulator name must not go to the next line and their name must match \code{experiment_config.json::paper_facing_name}
 \item Model names and column names must all use \verb|\texttt{...}| and nothing else.
 \item Each word in the header should be capitalised.
 \item Group headers should be written as natural labels, e.g., \verb|\texttt{Low Noise}| and \verb|\texttt{High Noise}|.
-\item An entry is shown only if each environment has at least four seeds.
+\item An entry is shown only if for each \termSimulator five seeds are present.
 \end{itemize}
 The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
@@ -268,7 +270,7 @@ So for example
 \end{DocCode}
 Additionally tables in the Appendix follow these stylistic rules:
 \begin{itemize}
-  \item They are seven stacked metric tables, all with the same structure Model × Environment.
+  \item They are seven stacked metric tables, all with the same structure Model × \termSimulator.
   The seven metric sections are: 
   \begin{itemize}
   \item Episode Accuracy shows accuracy on the episode split. All four model rows are shown; unavailable values render as \code{-}.
@@ -277,8 +279,8 @@ Additionally tables in the Appendix follow these stylistic rules:
   \item Plots Used shows how many plots were actually seen by the agent (not just generated). 
   \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
-  \item Successful Runs shows how many successful runs contributed to each cell.
-  Note that successful runs are shown even when there are fewer than four seeds.
+  \item Successful Runs shows how many successful runs contributed to each visible cell.
+  Under the five-seed visibility rule, visible cells contain five successful runs.
   This table should contain integers rather than std.
   \end{itemize}
   \item There is one stacked table for each experiment row. Note that if a value has more than four successful runs, then its entry cannot miss! 
