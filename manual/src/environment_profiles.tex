@@ -1,6 +1,7 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
 \externaldocument{build/terminology_shared_utilities}[terminology_shared_utilities.pdf]
+\externaldocument{build/generation_policy_schema}[generation_policy_schema.pdf]
 
 \begin{document}
 
@@ -8,139 +9,171 @@
 \phantomsection\label{docstart:environment_profiles}
 
 \section*{Overview}
-This document describes the files under \code{models/simulink/<MODEL>/} that define a \name{} environment.
-These artifacts need to be created before any simulation can be run. 
-The only step before creating these files is to set up the \code{simulink_model_original.mdl} and to run \code{build_metadata.py}
-A model is only usable once the required files exist and the model has been added to \code{shared/benchmark_utils.py:ALLOWED_TSENV_MODELS}.
+
+This document describes the manually owned files under \code{models/simulink/<MODEL>/} that define in \name{} a \termSimulator.
+A \termSimulator is usable once the required files exist, \code{build_metadata.py} has been run for \code{simulink_model_original.mdl}, and the model has been added to \code{shared/benchmark_utils.py:ALLOWED_TSENV_MODELS}.
 
 \phantomsection\label{sec:allowed-tsenv-models}
-The files are located in \code{models/simulink/<MODEL>/} and include:
+The files are located in \code{models/simulink/<MODEL>/}.
+\begin{DocCode}
+models/simulink/<MODEL>/
+|-- simulink_model_original.mdl
+|-- build_metadata.py
+|-- description_levels.json
+|-- experiment_config.json
+|-- noise_adder.py
+|-- generation_policies/<policy_id>.json
+|-- detectability_specific_environment.py  optional
+|-- features.py                            optional
+`-- basic_rule.py                          optional
+\end{DocCode}
 
-\subsection*{Required}
+Note that \code{generation_policies/<policy_id>.json} is described in \code{generation_policy_schema.tex}.
+\section*{\texorpdfstring{\titlecode{description_levels.json}}{description\_levels.json}}
+
+\code{description_levels.json} contains model-specific text used by the prompt renderer.
+It has:
 \begin{itemize}
-\item \code{description_levels.json}: contains textual information controlled by \termDescLevel and used to construct prompts for agents.
+\item \code{textual_description}: object keyed by \termDescLevel.
 \begin{itemize}
-    \item \code{textual_description}: object keyed by \termDescLevel:
-    \begin{itemize}
-        \item \termDescLevel value \code{low}: one-sentence system description.
-        With this description, the noiseless version of the task should be solvable in one shot. 
-        \item \termDescLevel value \code{high}: detailed system description, including relevant equations and important sampling information.
-        With this description, the noiseless version of the task should be solvable in zero shot.
-    \end{itemize}
-    \item \code{observed_signals_description}: signal description used in prompts
-    \item \code{internal_naming_to_agent_facing_signal}: object mapping internal signal names to agent-facing description. 
-    The non-\code{time} keys must appear in the same order as \code{experiment_config.json::observable_signals::observable_signals}, and the mapping also includes a final \code{time} entry.
-    \begin{DocCode}
+\item \code{high}: detailed natural-language description, including relevant equations, observed channels, and root-cause parameters.
+\end{itemize}
+\item \code{observed_signals_description}: signal description used in prompts.
+\item \code{internal_naming_to_agent_facing_signal}: object mapping internal signal names to agent-facing signal descriptions.
+The non-\code{time} keys must match \code{experiment_config.json::observable_signals::observable_signals} exactly and in the same order.
+\item \code{internal_naming_to_agent_facing_parameter}: object mapping internal intervenable parameter names from \code{experiment_config.json::exposed_variables.parameters} to agent-facing labels.
+\end{itemize}
+
+Example signal mapping:
+
+\begin{DocCode}
 {
   "signal_internal_name_0": "agent-facing description 0",
   "signal_internal_name_1": "agent-facing description 1",
-  "...": "...",
   "time": "time"
 }
-    \end{DocCode}
-    \item \code{internal_naming_to_agent_facing_parameter}: object mapping internal intervenable parameter names from \code{experiment_config.json::exposed_variables.parameters} to agent-facing labels. 
-\end{itemize}
-\item \code{experiment_config.json}: 
+\end{DocCode}
+
+\section*{\texorpdfstring{\titlecode{experiment_config.json}}{experiment\_config.json}}
+
+\code{experiment_config.json} defines the environment contract.
+It should contain:
+
 \begin{itemize}
-    \item \code{paper_facing_name}: the name of the environment that we use in the paper
-    \item \code{exposed_variables}: defines which variables are externally exposed and the valid sampling ranges for them (used for validating \code{model_run_specs.json})
-    \begin{itemize}
-        \item \code{initial_state}: dictionary of state names. Each state maps to an object with:
-        \begin{itemize}
-            \item \code{allowed_intervals}: a range \code{[min, max]}
-            \item \code{sampling_strategy}: either \code{uniform} or \code{loguniform}
-            \item \termMinSRDDistance
-            \item \termMinAbsDist
-        \end{itemize}
-        \item \code{parameters}: dictionary of parameter names. Each parameter maps to an object with:
-        \begin{itemize}
-            \item \code{allowed_intervals}: a range \code{[min, max]}
-            \item \termMinSRDDistance
-            \item \termMinAbsDist 
-            \item \code{sampling_strategy}: either \code{uniform} or \code{loguniform}
-        \end{itemize}
-    \end{itemize}
-    \item \code{observable_signals}: a dict containing information about the non-\code{time} observable signals
-    \begin{itemize}
-    \item \code{observable_signals}: the ordered list of \code{signal_name} that the agent will see
-    \item \code{signal_type}: a dict, where each key is a \code{signal_name} and values is another dictionary with:
-    \begin{itemize} 
-        \item \code{type}:  \code{continuous}  or \code{impulse_like}
-    \end{itemize}
-
-
-
-\end{itemize}
-    \item \code{sampling_rate_hz}: sampling rate for the simulation in Hz
-    \item \code{end_time_input_s}: the time at which the simulation terminates
-    \item \code{detectability}:
-    \begin{itemize}
-        \item \code{continuous}: settings for continuous signals
-        \begin{itemize}
-            \item \termMinSRDDistance: float, minimum \termSRD distance between baseline and intervention run to trigger detectability for continuous signals. Default to 0.01
-            \item \code{epsilon_SRD}: float, epsilon term used in the \termSRD formula denominator when computing detectability between baseline and intervention. Default to 0.01
-            \item \code{minimum_consecurive_below_SRD}: int, minimum number of following consecutive steps that need to have a distance above SRD to be considered a difference
-        \end{itemize}
-        \item \code{impulse_like}: settings for impulse-like signals
-        \begin{itemize}
-            \item \termMinSRDDistance: float, minimum \termSRD distance for impulse-like signals. Default to 0.3
-            \item \code{epsilon_SRD}: float, epsilon term used in the \termSRD formula denominator when computing detectability between baseline and intervention. Default to 1
-        \end{itemize}
-        \item \code{RMS_thresholds}: Dict it defines for each signal what RMS threshold we are using to consider whether a pair of signals is ambiguos or not
-        \begin{DocCode}
-            "RMS_thresholds": {
-                "Position": 0.012
-                "Velocity": 0.0432
-                "Hard_Stop_f": 0.054
-            }
-        \end{DocCode}
-    \end{itemize}
+\item \code{paper_facing_name}: environment name used in the paper and generated tables.
+\item \code{exposed_variables}: variables externally exposed to \name{}.
+\item \code{observable_signals}: non-time channels observed by agents and metrics.
+\item \code{sampling_rate_hz}: target sampling rate for materialized trajectories.
+\item \code{end_time_input_s}: simulation horizon.
+\item \code{detectability}: thresholds used by Stage: Compute Metrics.
 \end{itemize}
 
-    \item \code{noise_adder.py}. A self-contained script used to add noise to the data and to quantify its impact. 
-    It must expose the following functions and options
-    \begin{itemize}
-    \item \code{NOISE_DICT} with keys \code{low} and \code{high}; each profile contains the model-specific noise parameters.
-    \phantomsection\label{def:noise-adder-interface}
-    \begin{DocCode}
-    def quantify_noise(clean: pd.DataFrame, noisy: pd.DataFrame, reference: pd.DataFrame) -> dict
-    \end{DocCode}
-    \begin{DocCode}
-    def add_noise(src: pd.DataFrame, seed: int, noise_level: Literal["low","high"], ref: pd.DataFrame | None = None) -> tuple[pd.DataFrame, dict]
-    \end{DocCode}
-    \end{itemize}
-    \item \code{detectability_specific_environment.py}: A self-contained script that has a function \code{is_detectable(intervention: pd.Dataframe, baseline: pd.Dataframe, run_parameters, intervention_time, min_first_diff)}.
-    where \code{min_first_diff} is the smallest number in the list \code{first_diff} defined as \code{compute_metrics_stage.tex} and \code{run_parameters} is a dict with all the \code{baseline_parameters} plus the parameter changed and its new value
-    \item \code{features.py}: A self-contained script that contains a feature extractions set. It has a \code{FEATURE_NAMES: tuple[str, ...]} with a list of all available features.
-    Each feature can be exposed independently. It also has utility functions that are shared among feature. 
-    It's used by basic \code{rule.py} and by \code{detectability_specific_environment.py}.
-    \item \code{basic_rule.py}: Optional baseline prediction rule used by metric-computation sweeps.
-    \phantomsection\label{def:basic-rule-predict-interface}
-    It must expose a \code{predict(df) -> list[str]} function that returns a ranked list of labels for the provided dataframe.
+\subsection*{\code{exposed_variables}}
+
+\code{exposed_variables} has two groups:
+
+\begin{itemize}
+\item \code{parameters}: root-cause parameters that may be changed by an intervention.
+\item \code{initial_state}: baseline-only state variables that are sampled at the start of a run and must not change after simulation start.
 \end{itemize}
 
+Each exposed variable should define:
 
-\phantomsection\label{sec:environment-validation-rules}
+\begin{itemize}
+\item \code{allowed_intervals}: legal range \code{[min, max]}.
+\item \termMinSRDDistance
+\item \termMinAbsDist
+\end{itemize}
+
+\subsection*{\code{observable_signals}}
+
+\code{observable_signals} defines the channels that agents and downstream metrics see.
+
+\begin{itemize}
+\item \code{observable_signals}: ordered list of non-time signal names.
+\item \code{signal_type}: object keyed by signal name. Each value has \code{type}, which is either \code{continuous} or \code{impulse_like}.
+\end{itemize}
+
+\subsection*{\code{detectability}}
+
+\code{detectability} contains environment-specific thresholds used by Stage: Compute Metrics to decide whether an intervention is detectable from the observed signals.
+
+\begin{itemize}
+\item \code{continuous}: settings for continuous signals.
+\begin{itemize}
+\item \termMinSRDDistance: minimum \termSRD distance used for threshold-crossing detection.
+\item \code{epsilon_SRD}: epsilon term used in the \termSRD denominator.
+\item \code{minimum_consecutive_below_SRD}: number of consecutive samples that must exceed the threshold before a difference is recorded.
+\end{itemize}
+\item \code{impulse_like}: settings for impulse-like signals.
+\begin{itemize}
+\item \termMinSRDDistance: minimum \termSRD distance for impulse-like signals.
+\item \code{epsilon_SRD}: epsilon term used in the \termSRD denominator.
+\end{itemize}
+\item \code{RMS_thresholds}: object defining, for each observed signal, the RMS threshold used to decide whether two trajectories are sufficiently different.
+\end{itemize}
+
+\section*{\texorpdfstring{\titlecode{noise_adder.py}}{noise\_adder.py}}
+
+\code{noise_adder.py} implements the model-specific observation-noise profiles.
+It must expose:
+
+\begin{itemize}
+\item \code{NOISE_DICT} the values in this dict correspond to LOW noise.
+\phantomsection\label{def:noise-adder-interface}
+\end{itemize}
+
+\begin{DocCode}
+def quantify_noise(clean: pd.DataFrame, noisy: pd.DataFrame, reference: pd.DataFrame) -> dict
+\end{DocCode}
+
+\begin{DocCode}
+def add_noise(src: pd.DataFrame, seed: int, noise_level: Literal["low", "high"], ref: pd.DataFrame | None = None) -> tuple[pd.DataFrame, dict]
+\end{DocCode}
+
+\section*{Optional Implementation Hooks}
+
+\code{detectability_specific_environment.py} may expose:
+
+\begin{DocCode}
+def is_detectable(intervention: pd.DataFrame, baseline: pd.DataFrame, run_parameters: dict, intervention_time: float, min_first_diff: float | None) -> str
+\end{DocCode}
+
+This hook is an environment-specific veto used by Stage: Compute Metrics.
+If it returns \code{"no"}, the child is marked as not detectable even if the generic RMS/SRD checks pass.
+\subsection*{Optional files}
+
+\begin{itemize}
+\item \code{features.py}: A self-contained script that contains a feature extractions set. It has a \code{FEATURE_NAMES: tuple[str, ...]} with a list of all available features.
+Each feature can be exposed independently. It also has utility functions that are shared among feature. 
+It's used by basic \code{rule.py} and by \code{detectability_specific_environment.py}.
+\item \code{basic_rule.py}: Optional baseline prediction rule used by metric-computation sweeps.
+\end{itemize}
+
+\phantomsection\label{def:basic-rule-predict-interface}
+If present, \code{basic_rule.py} must expose:
+
+\begin{DocCode}
+def predict(df) -> list[str]
+\end{DocCode}
+
+
 \section*{Validation Rules}
-These checks happen at the start of Stage: Simulate.
-\begin{itemize}
+\phantomsection\label{sec:environment-validation-rules}
 
-\item For \code{description_levels.json}: \code{textual_description::<desc_level>} for \termDescLevel in \{\code{low}, \code{high}\} must start with ``by simulating''.
-The reason is that these will be appended to \code{shared/config/tsenv_shared_description.json::first_version}
-\item \code{description_levels.json} must stay consistent with \code{experiment_config.json}. This means:
+These checks happen before simulation or candidate generation:
+
 \begin{itemize}
-    \item \code{description_levels.json::internal_naming_to_agent_facing_signal} must be a non-empty object
-    \item the keys of \code{description_levels.json::internal_naming_to_agent_facing_signal}, excluding \code{time}, must match \code{experiment_config.json::observable_signals::observable_signals} exactly and in the same order
-\end{itemize}
+\item \code{description_levels.json::textual_description::<desc_level>} for \termDescLevel in \{\code{high}\} must start with ``by simulating'' when it is appended to the shared prompt text.
+\item \code{description_levels.json::internal_naming_to_agent_facing_signal} must be a non-empty object.
+\item The keys of \code{description_levels.json::internal_naming_to_agent_facing_signal}, excluding \code{time}, must match \code{experiment_config.json::observable_signals::observable_signals} exactly and in the same order.
 \item The signals listed in \code{experiment_config.json::observable_signals::observable_signals} must appear in either \code{generated/metadata.json::simulink_signals_available} or \code{generated/metadata.json::simscape_signals_available}.
+\end{itemize}
 
-\end{itemize}
 \paragraph{Modeling requirement.}
-These are modeling requirement rather than an automatically enforced validation rule.
-\begin{itemize}
-\item Parameters must be globally identifiable from the observed signals; that is, no two distinct parameter settings should produce the same observations. 
-\item Observations must be field quantities not power quantities.
-\end{itemize}
+Accepted benchmark samples should be filtered so that interventions are detectable from the observed signals and distinguishable from configured alternative root-cause classes.
+This is enforced by later metric and oracle stages, not solely by the environment schema.
+
 The full environment-by-environment catalog is collected in the paper appendix, under Appendix: Environment Catalog.
 
 \end{document}

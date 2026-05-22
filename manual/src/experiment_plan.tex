@@ -39,15 +39,69 @@
 }
 
 \docTitle{Experiment Plan}
+\phantomsection\label{docstart:experiment_plan}
 This document describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
+
+\section*{Run-Graph Generation Flow}
+
+The simulation-candidate workflow now separates sampling, materialization, metric filtering, dataset selection, and question export:
+
+\begin{DocCode}
+generation_policies/<policy_id>.json
+  -> plans/<policy_id>/run_nodes.jsonl + run_edges.jsonl
+  -> runs/<run_id>/data.parquet
+  -> metrics/<policy_id>/eligibility_metrics.jsonl
+  -> datasets/<dataset_id>/sample_manifest.json
+  -> tsENV_questions/<MODEL>/questions.json
+\end{DocCode}
+
+A typical command sequence is:
+
+\begin{DocCode}
+python workflows/generate_runs/compile_run_graph.py \
+  --model BallDrop \
+  --policy benchmark_v1 \
+  --overwrite
+
+python workflows/simulate/run_pending_sims.py \
+  --model BallDrop \
+  --policy benchmark_v1 \
+  --matlab-workers 8 \
+  --compute-features
+
+env/bin/python workflows/metrics/compute_metrics.py \
+  --model BallDrop \
+  --policy benchmark_v1 \
+  --jobs 8
+
+env/bin/python workflows/generate/select_dataset.py \
+  --model BallDrop \
+  --policy benchmark_v1 \
+  --dataset paper_main_v1
+
+env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py \
+  --model BallDrop \
+  --dataset paper_main_v1 \
+  --row-slug gentle_01234-cloud
+\end{DocCode}
+
+\section*{Experimental Hypotheses}
+
+The experiments are designed to test the following hypotheses:
+
+\begin{itemize}
+\item Increasing observation noise decreases agent accuracy.
+\item Requiring reusable code-rule predictions decreases performance relative to direct prediction.
+\item Removing textual context decreases performance more than removing labeled examples.
+\item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
+\end{itemize}
+
 All the results by default are saved in three folders:
 \begin{itemize}
   \item \code{results/} This folder is committed to Git and contains results that are relatively small.
   \item \code{results_large_artifacts/} This folder is not committed to Git and contains anything that is large (agentic trajectories)
   \item \code{docs/overleaf_paper/generated} This folder contains the tables and plots that are shown in the paper or in the appendix.
 \end{itemize}
-
-\phantomsection\label{docstart:experiment_plan}
 
 \begingroup
 \renewcommand{\arraystretch}{1.0}
@@ -201,7 +255,7 @@ Additionally, \code{<row_slug>_summary.json} contains:
     \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
     \item \code{number_of_tool_calls}: It is equal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
     \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} 
-    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots}, i.e. plot artifacts actually seen by the agent 
+    \item \code{plot_inspected}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots}, i.e. plot that are ispected by the agent, not only generated. 
   \end{itemize}
 \end{itemize}
 And \code{<row_slug>.json} contains:
@@ -260,7 +314,8 @@ Both the main number and the std.
 \item Model names and column names must all use \verb|\texttt{...}| and nothing else.
 \item Each word in the header should be capitalised.
 \item Group headers should be written as natural labels, e.g., \verb|\texttt{Low Noise}| and \verb|\texttt{High Noise}|.
-\item An entry is shown only if for each \termSimulator five seeds are present.
+\item An entry is shown only if for each \termSimulator five seeds are present. 
+This holds also for the aggregate main paper tables.
 \end{itemize}
 The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
@@ -276,7 +331,7 @@ Additionally tables in the Appendix follow these stylistic rules:
   \item Episode Accuracy shows accuracy on the episode split. All four model rows are shown; unavailable values render as \code{-}.
   \item Held-out Accuracy shows accuracy on held-out data, when present.
   \item Python Calls shows how many Python calls were made.
-  \item Plots Used shows how many plots were actually seen by the agent (not just generated). 
+  \item Plots Inspected shows how many plots were actually seen by the agent (not just generated). 
   \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
   \item Successful Runs shows how many successful runs contributed to each visible cell.
@@ -347,10 +402,10 @@ These generated tables summarize the main and ablation rows from Tables~\ref{tab
 \textbf{Ablation no-textual-context code table}\par
 \input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-tide}
 
-\subsubsection*{Appendix B summary tables}
-These generated tables summarize the calibration results Tables~\ref{tab:experiment-plan-calibration}.
+\subsubsection*{Appendix B no-noise summary tables}
+These generated tables summarize the no-noise results from Table~\ref{tab:experiment-plan-calibration}.
 
-\textbf{Calibration direct no-noise table}\par
+\textbf{No-noise direct results table}\par
 \input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-anchor}
 
 
@@ -364,6 +419,7 @@ The command also writes supporting single-panel plot and CSV artifacts from the 
 \end{DocCode}
 The script takes as input the run-level \code{results/consolidated/all_runs.csv}.
 The figure being generated is the following and it includes only the results in the main experiment table.
+It follows the same convention of the main experiment table, we are only showing a dot only if for each \termSimulator five seeds are present. 
 
 \begin{figure}[ht]
 \centering

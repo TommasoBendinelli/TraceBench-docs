@@ -124,6 +124,8 @@
 \newcommand{\manualDocDocCodeNumberStyle}{%
   {\linenumberfont\arabic{FancyVerbLine}}%
 }
+\definecolor{manualDocCodeBg}{RGB}{248,248,248}
+\definecolor{manualDocCodeBorder}{RGB}{210,210,210}
 \makeatletter
 \newcommand{\manualDocBeginNumberedDocCode}{%
   \nolinenumbers
@@ -163,6 +165,11 @@
     breakanywhere=true,
     breaksymbolleft={},
     breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg,
     numbers=left,
     stepnumber=1,
     numberblanklines=true,
@@ -177,7 +184,12 @@
     breaklines=true,
     breakanywhere=true,
     breaksymbolleft={},
-    breaksymbolright={}
+    breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg
   }
 \fi
 

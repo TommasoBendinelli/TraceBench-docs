@@ -1,64 +1,86 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\externaldocument{build/run_graph_schema}[run_graph_schema.pdf]
+\externaldocument{build/generation_policy_schema}[generation_policy_schema.pdf]
+\externaldocument{build/simulation_stage}[simulation_stage.pdf]
 
 \begin{document}
-\docTitle{Model Run Specs Schema}
+
+\docTitle{Legacy Model Run Specs Compatibility}
 \phantomsection\label{docstart:model_run_specs_schema}
 
-\section*{\texorpdfstring{\titlecode{model_run_specs.json}}{model_run_specs.json} Schema}
+\section*{\texorpdfstring{\titlecode{model_run_specs.json}}{model_run_specs.json} Compatibility Schema}
 \label{sec:model-run-specs-schema}
 
-This file defines the planned run topology for one model.
-It is authored by humans/agents and consumed by Stage: Simulate.
+\code{model_run_specs.json} is a legacy compatibility artifact.
+It is no longer the primary source of truth for planned runs.
 
-It defines:
-\begin{itemize}
-\item the baseline runs
-\item the intervention child runs derived from each baseline
-\item the synthetic time-zero baseline runs associated with each child
-\item the hashes used to keep the planned runs aligned with the materialized runs on disk
-\end{itemize}
+The new source of truth is the resolved run graph produced by the candidate-generation stage:
 
-\section*{Run Kinds}
+\begin{DocCode}
+models/simulink/<MODEL>/plans/<policy_id>/run_nodes.jsonl
+models/simulink/<MODEL>/plans/<policy_id>/run_edges.jsonl
+\end{DocCode}
 
-The current contract uses three run kinds:
+New code should consume the resolved run graph directly.
+\code{model_run_specs.json} may still be emitted during migration for older tools that expect the previous nested baseline/child/time-zero structure.
 
-\begin{itemize}
-\item A baseline run is the simulation defined by one entry of \code{baseline_parameters}.
-\item An intervention child run is the simulation obtained by changing exactly one of \code{baseline_parameters} that is also in \code{experiment_config.json:exposed_variables:parameters}.
-\item A time-zero baseline run is the synthetic run associated with one child intervention, where the same intervention is treated as active from time zero.
-\end{itemize}
+\section*{Status}
 
-\section*{Top-Level Shape}
+The old contract treated \code{model_run_specs.json} as the human-authored planned topology consumed by Stage: Simulate.
+The new contract separates those responsibilities:
 
-\code{model_run_specs.json} must be a non-empty JSON object keyed by \code{baseline_uuid}.
+\begin{center}
+\begin{tabular}{p{0.30\linewidth}p{0.60\linewidth}}
+\hline
+\textbf{Artifact} & \textbf{Responsibility} \\
+\hline
+\code{generation_policies/<policy_id>.json} & Human-authored or agent-authored sampling recipe for one candidate-generation campaign. \\
+\code{plans/<policy_id>/run_nodes.jsonl} & Resolved runnable run recipes. This is the canonical source of truth for \code{run_id}, \code{recipe_hash}, and simulator inputs. \\
+\code{plans/<policy_id>/run_edges.jsonl} & Resolved graph relationships among baseline, intervention, and time-zero/static-change runs. \\
+\code{model_run_specs.json} & Optional legacy compatibility export. It should not be edited manually and should not be consumed by new code. \\
+\hline
+\end{tabular}
+\end{center}
 
-Each top-level entry defines exactly one baseline and contains:
-\begin{itemize}
-\item \code{baseline_parameters}
-\item \code{baseline_parameters_hash}
-\item \code{children}
-\end{itemize}
+\section*{When This File Exists}
 
-A minimal shape is:
+A compatibility file may be written in either of these locations:
+
+\begin{DocCode}
+models/simulink/<MODEL>/plans/<policy_id>/model_run_specs.compat.json
+\end{DocCode}
+
+or, when an old script requires the historical root-level path:
+
+\begin{DocCode}
+models/simulink/<MODEL>/model_run_specs.json
+\end{DocCode}
+
+The preferred location is \code{plans/<policy_id>/model_run_specs.compat.json}, because it makes clear which policy produced the compatibility artifact.
+If the root-level \code{model_run_specs.json} exists, it must be treated as a generated compatibility copy, not as an editable source file.
+
+\section*{Legacy Shape}
+
+The compatibility file preserves the old nested shape:
 
 \begin{DocCode}
 {
   "<baseline_uuid>": {
     "baseline_parameters": {
       "simulation_specific_parameter_0": 1.0,
-      "simulation_specific_parameter_1": 2.0,
+      "simulation_specific_parameter_1": 2.0
     },
     "baseline_parameters_hash": "<32-hex-hash>",
     "children": {
       "<intervention_uuid>": {
-        "intervention_time": 3.0
+        "intervention_time": 3.0,
         "parameters": {
           "simulation_specific_parameter_0": 1.5
         },
         "parameter_hash": "<32-hex-hash>",
         "time0_baseline_hash": "<32-hex-hash>",
-        "time0_baseline_uuid": "<32-hex-hash>",
+        "time0_baseline_uuid": "<32-hex-id>",
         "direction": "increase"
       }
     }
@@ -66,234 +88,122 @@ A minimal shape is:
 }
 \end{DocCode}
 
-\section*{Field Definitions}
+This shape is retained only so that legacy consumers can recover the same baseline/intervention/time-zero topology they previously expected.
 
-\subsection*{Top-Level Object}
+\section*{Mapping from the Resolved Run Graph}
 
-The top-level object:
+The compatibility exporter builds this file from \code{run_nodes.jsonl} and \code{run_edges.jsonl}.
+For each \code{family_id}, the exporter should:
+
+\begin{enumerate}
+\item find the baseline node for the family;
+\item create one top-level baseline entry;
+\item find all intervention nodes connected to that baseline through \code{baseline_to_intervention} edges;
+\item for each intervention node, find its corresponding time-zero/static-change node through an \code{intervention_to_time0_baseline} edge;
+\item write the old nested child entry.
+\end{enumerate}
+
+The compatibility file must not introduce runnable runs that are absent from the resolved run graph.
+
+\section*{Identifiers}
+
+The new canonical identifier is \code{run_id} from \code{run_nodes.jsonl}.
+The old compatibility schema uses \code{baseline_uuid}, \code{intervention_uuid}, and \code{time0_baseline_uuid}.
+
+During compatibility export:
+
 \begin{itemize}
-\item must be non-empty
-\item is keyed by \code{baseline_uuid}
+\item \code{baseline_uuid} should correspond to the baseline node's \code{run_id};
+\item \code{intervention_uuid} should correspond to the intervention node's \code{run_id};
+\item \code{time0_baseline_uuid} should correspond to the time-zero/static-change node's \code{run_id}.
 \end{itemize}
 
-Each \code{baseline_uuid} identifies one planned baseline run.
+If a legacy consumer requires 32-character lowercase hexadecimal identifiers, the exporter may provide compatible aliases.
+New code must not depend on these aliases; it should use \code{run_id} from the resolved run graph.
 
-\subsection*{Baseline Entry}
+\section*{Hashes}
 
-Each baseline entry must define exactly these fields:
-\begin{itemize}
-\item \code{baseline_parameters}: object
-\item \code{baseline_parameters_hash}: 32-character hexadecimal string (computed by \code{refresh_model_run_spec_hashes.py})
-\item \code{children}: object keyed by \code{intervention_uuid}
-\end{itemize}
+The new canonical identity field is \code{recipe_hash} in \code{run_nodes.jsonl}.
+The old compatibility fields are \code{baseline_parameters_hash}, \code{parameter_hash}, and \code{time0_baseline_hash}.
 
-\subsection*{Baseline Parameters}
+These fields exist only for legacy consumers.
+They should be generated from the canonical run recipes and should not be edited manually.
+New code should compare \code{recipe_hash}, not these legacy hash fields.
 
-\code{baseline_parameters} contains the persisted baseline payload for one run. 
-It must include all \code{experiment_config.json:exposed_variables:parameters}, \code{experiment_config.json:exposed_variables:initial_state}.
+\section*{Skipped Children}
 
+The resolved run graph contains only runnable run nodes.
+It does not contain fake or null-valued children.
+If a requested parameter-direction pair cannot be sampled, the missing direction is recorded in:
 
-All values in \code{baseline_parameters} are numeric in the current contract.
-\subsection*{Children}
+\begin{DocCode}
+plans/<policy_id>/generation_report.json
+\end{DocCode}
 
-\code{children} is an object keyed by \code{intervention_uuid}.
-
-Each child entry must define exactly these fields:
-\begin{itemize}
-\item \code{parameters}: object
-\item \code{parameter_hash}: 32-character hexadecimal string (computed by \code{refresh_model_run_spec_hashes.py}) or \code{null} for skipped children
-\item \code{time0_baseline_uuid}: 32-character lowercase hexadecimal UUID string for the associated synthetic time-zero baseline, or \code{null} for skipped children
-\item \code{time0_baseline_hash}: 32-character hexadecimal string (computed by \code{refresh_model_run_spec_hashes.py}) or \code{null} for skipped children
-\item \code{direction}: \code{"increase"} or \code{"decrease"}
-\item \code{intervention_time}
-\end{itemize}
-
-Each child entry defines:
-\begin{itemize}
-\item one intervention child run, identified by \code{intervention_uuid}
-\item one associated synthetic time-zero baseline run
-\end{itemize}
-
-\subsection*{Child Parameters}
-
-The child \code{parameters} object must contain exactly one field.
-
-That field must be one of \code{experiment_config.json:exposed_variables:parameters}. For runnable children, the value is numeric and respects:
-\begin{itemize}
-  \item \code{experiment_config.json:exposed_variables:parameters:allowed_intervals} 
-  \item \code{experiment_config.json:exposed_variables:parameters:}\termMinSRDDistance minimum \termSRD from the base parameter
-  \item \code{experiment_config.json:exposed_variables:parameters:}\termMinAbsDist absolute distance from the base parameter
-\end{itemize}
-
-For skipped children, that single value is \code{null}; \code{direction} records whether the skipped child is the missing increase-side or decrease-side sample.
-
-Example:
+A compatibility exporter may optionally reconstruct skipped children for old validators that expect them.
+If skipped children are emitted, they must follow the historical null convention:
 
 \begin{DocCode}
 {
   "parameters": {
-    "viscous_damping": 0.3
-  }
+    "<parameter>": null
+  },
+  "parameter_hash": null,
+  "time0_baseline_uuid": null,
+  "time0_baseline_hash": null,
+  "direction": "increase",
+  "intervention_time": null
 }
 \end{DocCode}
 
-\section*{Example}
+Skipped children must never be materialized by Stage: Simulate.
+They are coverage annotations only.
 
-\begin{DocCode}
-{
-  "e386c1a131f5492f966c7fd71a723ae9": {
-    "baseline_parameters": {
-      "initial_position": 3,
-      "restitution_left": 0.99,
-      "restitution_right": 0.99,
-      "mass": 4,
-      "viscous_damping": 0.05,
-      "initial_velocity": -30,
-      
-    },
-    "baseline_parameters_hash": "de4d7c0a5335e9005510cc2442d0971e",
-    "children": {
-      "f6d835a5b86e4ec6920796e0f615111d": {
-        "intervention_time": 13
-        "parameters": {
-          "viscous_damping": 1
-        },
-        "parameter_hash": "7fd9daa0055fb3f412ef5e0ab8d4c5ba",
-        "time0_baseline_hash": "125c22431ec76a3d9f38dd805770b2aa",
-        "time0_baseline_uuid": "125c22431ec76f3d9f38dd805770b2aa",
-        "direction": "increase"
-      },
-      "8f1a15c7ef054d7f88d29ec91f1620f9": {
-        "parameters": {
-          "restitution_left": 0.4
-        },
-        "parameter_hash": "9e11c9de68b69422accfe658f62a66a0",
-        "time0_baseline_hash": "15ec0c9df0b90d09369c486ea338c0ac",
-        "time0_baseline_uuid": "125c25431e976f3d9f38dd805070b2aa",
-        "direction": "decrease"
-      }
-    }
-  }
-}
-\end{DocCode}
+\section*{Validation Rules for Compatibility Exports}
 
-\section*{UUIDs}
-
-\code{baseline_uuid}, \code{intervention_uuid}, and \code{time0_baseline_uuid} are
-persisted as 32-character lowercase hexadecimal UUID strings without hyphens.
-
-They are the canonical run identities used across downstream stages.
-
-In the current contract:
-\begin{itemize}
-\item every \code{baseline_uuid} must be unique within the file
-\item every \code{intervention_uuid} must be unique within the file
-\item every non-null \code{time0_baseline_uuid} must be unique within the file
-\end{itemize}
-
-\section*{Hashes}
-
-Hashes are used to keep planned runs aligned with materialized runs.
-
-All hash fields are represented as 32-character hexadecimal strings.
-
-The exact canonicalization and digest procedure is defined by \code{refresh_model_run_spec_hashes.py}.
-At a semantic level, the three hash fields mean:
+A generated compatibility file is valid only if:
 
 \begin{itemize}
-\item \code{baseline_parameters_hash} is the identity of the baseline run defined by \code{baseline_parameters}
-\item \code{parameter_hash} is the identity of the child run defined by the parent baseline together with the child \code{parameters} and \code{intervention_time} attributes.
-\item \code{time0_baseline_hash} is the identity of the synthetic time-zero baseline associated with that child run
-\end{itemize}
-
-\subsection*{Hash Computation}
-
-In the current implementation, hashes are recomputed by
-\code{refresh_model_run_spec_hashes.py} using the helper functions
-\code{compute_parameters_hash}, \code{compute_child_parameters_hash}, and
-\code{compute_time0_baseline_hash} from
-\code{shared/interface/model_record_json.py}.
-
-The refresh flow is:
-\begin{enumerate}
-\item load the stored \code{model_run_specs.json} object
-\item parse each baseline entry and its \code{baseline_parameters}
-\item normalize numeric-like values before rewriting the tree payload
-\item rebuild the canonical tree payload
-\item recompute all three hash fields from that normalized payload and rewrite them into the file
-\end{enumerate}
-
-The current normalization rules are:
-\begin{itemize}
-\item integers remain integers
-\item finite floats that are mathematically integral are rewritten as integers
-\item \code{0.0} is rewritten as \code{0}
-\item numeric strings may be rewritten to numeric JSON values before hashing
-\item non-finite numeric values are rejected
-\item UUID strings are normalized to the persisted 32-character lowercase hexadecimal form
-\end{itemize}
-
-Hashing itself uses:
-\begin{itemize}
-\item canonical JSON with sorted keys and compact separators
-\item SHA-256 as the digest
-\item the first 32 hexadecimal characters of that digest as the stored hash
-\end{itemize}
-
-The three hash payloads are:
-\begin{itemize}
-\item \code{baseline_parameters_hash}: SHA-256 over the full persisted \code{baseline_parameters} object
-\item \code{parameter_hash}: SHA-256 over
-\begin{DocCode}
-{
-  "intervention_time": 12.34,
-  "parent_parameters_hash": "<baseline_parameters_hash>",
-  "parameters": { ...single child parameter... }
-}
-\end{DocCode}
-\item \code{time0_baseline_hash}: SHA-256 over
-\begin{DocCode}
-{
-  "parameter_hash": "<parameter_hash>",
-  "kind": "time0"
-}
-\end{DocCode}
-\end{itemize}
-
-
-The refresh script does not trust previously stored hash strings. It recomputes all hash
-fields from the normalized payload and then rewrites the file.
-
-\section*{Semantic Validation Rules}
-
-These rules are enforced when hashes are refreshed by \code{refresh_model_run_spec_hashes.py [--repair]}.
-If \code{--repair} is passed, the script will try to repair these errors on its own. 
-Without the flag, or when it's not possible, an error will be raised.
-\begin{itemize}
-\item the top-level object must be non-empty
-\item each baseline entry must contain \code{baseline_parameters}, \code{baseline_parameters_hash}, and \code{children}
-\item all values in \code{baseline_parameters} must be numeric
-\item each child entry object must define \code{intervention_time}; it must satisfy \code{0 < intervention_time < experiment_config.json::end_time_input_s}
-\item each child entry must contain \code{parameters}, \code{parameter_hash}, \code{time0_baseline_uuid}, \code{time0_baseline_hash}, and \code{direction}
-\item each child \code{parameters} object must contain exactly one field
-\item for runnable children, the intervened field value must differ from the parent baseline value with an absolute change that strictly exceeds \code{experiment_config.json::exposed_variables.parameters.<parameter>.}\termMinAbsDist
-\item for runnable children, the intervened field value must differ from the parent baseline value with an \termSRD that strictly exceeds \code{experiment_config.json::exposed_variables.parameters.<parameter>.}\termMinSRDDistance
-\item for skipped children, the single child value must be \code{null}; \code{parameter_hash}, \code{time0_baseline_uuid}, and \code{time0_baseline_hash} must all be \code{null}
-\item each parent must contain at least two child for each parameter listed in \code{experiment_config.json::exposed_variables::parameters}. 
-One bigger than the baseline value and one smaller than the baseline value. If the child cannot be sampled because the effective interval to sample it is empty due to the constraints, then its value should be \code{null}, the child must still persist with the corresponding \code{direction}, and it is skipped during simulation.
-\item Each baseline must differ from every other baseline in at least one parameter listed under \code{experiment_config.json::exposed_variables.parameters} or in \code{experiment_config.json::exposed_variables.initial_state}.
-For that parameter, both the absolute difference and \termSRD must be greater than or equal to the parameter's \code{min_abs_dist}/5 and \code{min_srd_distance}/5, respectively.
-\item all UUIDs must be unique across the file
-\item all non-null hashes must be unique across the file, including \code{baseline_parameters_hash}, \code{parameter_hash}, and \code{time0_baseline_hash}
+\item every runnable baseline entry maps to one baseline node in \code{run_nodes.jsonl};
+\item every runnable child entry maps to one intervention node in \code{run_nodes.jsonl};
+\item every non-null \code{time0_baseline_uuid} maps to one time-zero/static-change node in \code{run_nodes.jsonl};
+\item every runnable child changes exactly one exposed root-cause parameter;
+\item every runnable child has an \code{intervention_time} satisfying \code{0 < intervention_time < experiment_config.json::end_time_input_s};
+\item every emitted identifier is unique within the compatibility file;
+\item every skipped child, if present, uses the historical null convention;
+\item no compatibility entry changes the canonical recipe represented by the resolved run graph.
 \end{itemize}
 
 \section*{Artifact Policy}
 
 \begin{itemize}
-\item \code{model_run_specs.json} is authored and modified by humans
-\item the hash fields are refreshed by \code{refresh_model_run_spec_hashes.py} and should not be edited manually
-\item if \code{model_run_specs.json} is newer than \code{model_record.json}, Stage: Simulate refreshes the hashes first and then continues reconciliation
-\item this file is a planning artifact only; it does not materialize runs by itself
+\item \code{model_run_specs.json} is no longer authored or modified by humans.
+\item The resolved run graph is the canonical planning artifact.
+\item \code{model_run_specs.json} may be generated only as a legacy compatibility artifact.
+\item Manual edits to \code{model_run_specs.json} are discouraged because they can diverge from \code{run_nodes.jsonl} and \code{run_edges.jsonl}.
+\item If the compatibility file is stale, regenerate it from the resolved run graph.
+\item Stage: Simulate should consume \code{run_nodes.jsonl} and \code{run_edges.jsonl}; it should not refresh or repair \code{model_run_specs.json}.
 \end{itemize}
+
+\section*{Migration Guidance}
+
+\begin{center}
+\begin{tabular}{p{0.34\linewidth}p{0.56\linewidth}}
+\hline
+\textbf{Old dependency} & \textbf{New dependency} \\
+\hline
+\code{baseline_uuid} & baseline \code{run_id} from \code{run_nodes.jsonl} \\
+\code{intervention_uuid} & intervention \code{run_id} from \code{run_nodes.jsonl} \\
+\code{time0_baseline_uuid} & time-zero/static-change \code{run_id} from \code{run_nodes.jsonl} \\
+\code{baseline_parameters_hash} & baseline node \code{recipe_hash} \\
+\code{parameter_hash} & intervention node \code{recipe_hash} \\
+\code{time0_baseline_hash} & time-zero/static-change node \code{recipe_hash} \\
+nested \code{children} object & \code{run_edges.jsonl} graph relationships \\
+skipped null children & \code{generation_report.json} coverage report \\
+\hline
+\end{tabular}
+\end{center}
+
+Once all downstream stages consume the resolved run graph directly, this compatibility document and the compatibility exporter can be removed.
 
 \end{document}

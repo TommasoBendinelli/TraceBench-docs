@@ -1,0 +1,132 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\externaldocument{build/environment_profiles}[environment_profiles.pdf]
+\externaldocument{build/generation_policy_schema}[generation_policy_schema.pdf]
+\externaldocument{build/run_graph_schema}[run_graph_schema.pdf]
+
+\begin{document}
+
+\docTitle{Stage: Candidate Run Generation}
+\phantomsection\label{docstart:candidate_generation_stage}
+
+\section*{Overview}
+
+This stage turns a high-level sampling policy into a resolved run graph.
+It is the only stage that samples new baseline parameters, intervention times, intervention values, and candidate families.
+Stage: Simulate does not sample; it only materializes the resolved recipes produced here.
+
+The main driver is:
+
+\begin{DocCode}
+workflows/generate_runs/compile_run_graph.py
+\end{DocCode}
+
+A typical invocation is:
+
+\begin{DocCode}
+python workflows/generate_runs/compile_run_graph.py \
+  --model BallDrop \
+  --policy benchmark_v1 \
+  --overwrite
+\end{DocCode}
+
+\section*{Inputs}
+
+For each model under \code{models/simulink/<MODEL>/}, the stage reads:
+
+\begin{itemize}
+\item \code{experiment_config.json}: hard environment contract, including exposed variables, legal intervals, simulation horizon, observed signals, and detectability configuration.
+\item \code{generated/metadata.json}: generated Simulink metadata, including exposed workspace variables and intervention block mappings.
+\item \code{generation_policies/<policy_id>.json}: campaign-specific sampling recipe.
+\item \code{manual_cases.jsonl}: optional curated cases to merge into the resolved run graph.
+\end{itemize}
+
+\section*{Outputs}
+
+The stage writes a plan under:
+
+\begin{DocCode}
+models/simulink/<MODEL>/plans/<policy_id>/
+\end{DocCode}
+
+with these artifacts:
+
+\begin{itemize}
+\item \code{run_nodes.jsonl}: flat list of runnable baseline, intervention, and time-zero/static-change recipes.
+\item \code{run_edges.jsonl}: graph relationships among run nodes.
+\item \code{generation_report.json}: generation summary, coverage statistics, and skipped parameter-direction requests.
+\item \code{validation_report.json}: schema, semantic, and policy-acceptance validation summary.
+\end{itemize}
+
+\section*{Execution Flow}
+
+\begin{enumerate}
+\item Load \code{experiment_config.json} and validate that all exposed variables are present in \code{generated/metadata.json}.
+\item Load \code{generation_policies/<policy_id>.json}.
+\item Resolve the random seed and initialize deterministic random-number generators.
+\item Sample baseline families according to \code{baseline_sampler}.
+\item For each baseline family, sample intervention children according to \code{intervention_sampler}.
+\item For each intervention child, create a matched time-zero/static-change recipe.
+\item Add optional curated manual cases from \code{manual_cases.jsonl}.
+\item Canonicalize every recipe and compute \code{recipe_hash} and \code{run_id}.
+\item Write flat runnable nodes to \code{run_nodes.jsonl}.
+\item Write baseline/intervention/time-zero relationships to \code{run_edges.jsonl}.
+\item Write skipped or impossible parameter-direction requests to \code{generation_report.json}.
+\item Validate the resolved run graph and write \code{validation_report.json}.
+\end{enumerate}
+
+\section*{Policy Intent and Acceptance Criteria}
+
+A generation policy should state the intended use of the candidate pool it creates.
+This is not a scientific hypothesis about agent behavior; it is an engineering contract for deciding whether the generated candidate universe is sufficient for the next stages.
+
+A generated plan is accepted only if it satisfies the policy's acceptance criteria.
+Typical criteria include:
+
+\begin{itemize}
+\item all generated run nodes pass schema validation;
+\item all \code{run_id} and \code{recipe_hash} values are unique;
+\item all sampled values lie inside \code{experiment_config.json} legal intervals;
+\item every intervention changes exactly one root-cause parameter;
+\item every intervention has a matched no-intervention baseline and time-zero/static-change run;
+\item the number of generated candidate families is at least the requested target;
+\item skipped parameter-direction requests are recorded in \code{generation_report.json};
+\item policy coverage targets are either satisfied or explicitly reported as unmet.
+\end{itemize}
+
+The candidate-generation stage does not guarantee that intervention trajectories are detectable or distinguishable after simulation.
+Those properties are evaluated by the metric and oracle stages after materialization.
+
+\section*{Manual Cases}
+
+Manual cases are optional curated examples.
+They are not a separate downstream schema.
+The generator resolves them into the same \code{run_nodes.jsonl} and \code{run_edges.jsonl} format as programmatic cases.
+
+Manual cases must still satisfy core validity rules: finite values, legal intervals, valid intervention times, and exactly one changed root-cause parameter for intervention runs.
+Manual provenance is recorded in node metadata:
+
+\begin{DocCode}
+"metadata": {
+  "source": "manual",
+  "validation_profile": "diagnostic"
+}
+\end{DocCode}
+
+\section*{Skipped Directions}
+
+The resolved run graph contains only runnable recipes.
+If the generator cannot sample an increase or decrease side for a parameter because the legal interval and distance constraints make it impossible, it must not create a null-valued run node.
+Instead, it records the skipped request in \code{generation_report.json}.
+
+\section*{Artifact Policy}
+
+\begin{itemize}
+\item \code{generation_policies/<policy_id>.json} is a source artifact and may be human-authored.
+\item \code{run_nodes.jsonl}, \code{run_edges.jsonl}, \code{generation_report.json}, and \code{validation_report.json} are generated artifacts.
+\item To change a generated candidate pool, edit the policy or manual cases and regenerate the plan.
+\item New downstream code should consume the resolved run graph, not \code{model_run_specs.json}.
+\item A legacy \code{model_run_specs.json} compatibility export may be generated during migration, but it is not canonical.
+\end{itemize}
+
+\end{document}

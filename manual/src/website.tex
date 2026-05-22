@@ -1,0 +1,687 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\begin{document}
+
+\docTitle{Website}
+\label{sec:website}
+
+The project website is the public-facing entry point for TSENV. 
+\begin{itemize}
+    \item Make the benchmark understandable before a reader opens the paper or repository: what TSENV measures, why time-series exploration is difficult for agents, how the tasks are generated, what results were observed, and how to reproduce the evaluation.
+    \item Enable people to download the results and trajectories
+    \item Allow external evaluators to submit their evaluations
+\end{itemize}
+We draw inspiration from \code{TerminalBench} and \code{TeamBench} websites. 
+The website is hosted at tsenv.github.io.
+Benchmark data, public examples, and downloadable artifacts are hosted on the Hugging Face Hub.
+The website should be both desktop- and mobile-friendly.
+
+\subsection*{Where is stuff hosted and located}
+GitHub Pages = public website, documentation, and static result tables.
+GitHub Actions = regenerate JSON and deploy website.
+Hugging Face Dataset = public benchmark data, samples, trajectories, and downloads.
+GitHub PRs = official submission mechanism.
+Where HF Dataset repo:
+\begin{verbatim}
+tsenv/tsenv-benchmark
+  |-- summary.json
+  |-- results.parquet
+  |-- all_samples.parquet
+  |-- examples/
+  |-- trajectories/
+  `-- README.md / dataset card
+\end{verbatim}
+
+\subsection*{Update mechanism}
+\begin{verbatim}
+new results committed / PR merged
+  -> GitHub Action runs:
+       python scripts/generate_website_data.py
+       python scripts/validate_website_data.py
+       npm run build
+  -> deploy to GitHub Pages
+\end{verbatim}
+
+
+
+
+\section*{Website textual mockup}
+\subsection*{Global style}
+
+The intended style is minimalistic and simple. 
+It should follow the design principle of `Perfection is not when there is nothing more to add, but there is nothing left to take away'.
+White background, simple navigation, strong typography, rectangular figures, thin divider lines, and a blue link style consistent with ETH SIPLAB pages should be the standard.
+
+The website goal is to explain what TSENV measures, how tasks are generated, what results were observed, how users can inspect examples, and how external evaluations can be submitted.
+
+The website should use a restrained research-lab style:
+
+\begin{itemize}
+    \item \textbf{Layout.} Use a wide centered content column with generous margins and strong vertical spacing.
+    \item \textbf{Typography.} Use large bold section titles, short descriptive subtitles, and compact body text.
+    \item \textbf{Navigation.} Use a simple top header menu with text links: \texttt{Home}, \texttt{Results}, \texttt{Environments}, \texttt{Get Started}, and \texttt{Authors}. The website must be implemented as a single-page application with client-side routing. These links should update the browser URL and render the corresponding route without loading separate HTML documents or merely scrolling to sections within one long page.
+    \item \textbf{Visuals.} Prefer rectangular plots and tables.
+    \item \textbf{Color.} Use mostly black, white, and grey. Use blue for links and active menu items. Use orange only as a secondary accent.
+    \item \textbf{Components.} Prefer thin rules, tables, and flat panels over heavy cards or shadows.
+    \item \textbf{Section labels.} Do not use eyebrow labels or small uppercase pre-headings above page titles or section titles. 
+    Each page should begin directly with its main title and short subtitle/description.
+    Section hierarchy should be communicated through headings, spacing, and thin divider lines rather than additional decorative labels.
+\end{itemize}
+
+\subsection*{Website structure and routing}
+
+The website must be implemented as a single-page application (SPA), not as a collection of separate static HTML pages and not as a single long scrolling page with anchor sections.
+Each top-level navigation item should map to a client-side route handled by the SPA router:
+
+\begin{itemize}
+    \item \texttt{/}: Overview
+    \item \texttt{/results/}: Results
+    \item \texttt{/environments/}: Environments
+    \item \texttt{/get-started/}: Get Started and Submit
+    \item \texttt{/authors/}: Authors, Citation, and Contact
+\end{itemize}
+
+The website should not include a separate Explorer page or \texttt{/explorer/} route.
+Generated examples or demo visuals, if needed, should appear on the Overview page only.
+
+The SPA should also support result-detail routes for individual leaderboard entries:
+
+\begin{itemize}
+    \item \texttt{/results/}: main leaderboard table
+    \item \texttt{/results/\textless submission-id\textgreater/}: detail page for one submitted evaluation
+\end{itemize}
+
+The navigation menu should link to these routes directly.
+Route changes should preserve the SPA shell and should not trigger full-page reloads.
+Internal anchor links may be used within a route for subsections, but the primary website structure must remain client-side routed.
+
+\subsection*{Page 1: Overview}
+
+The homepage should immediately explain TSENV, show the key benchmark statistics, and provide a compact example task visual before ending with the design principles.
+
+\subsubsection*{Header}
+
+The top navigation should contain the TSENV wordmark on the left and a horizontal menu:
+
+\begin{center}
+\texttt{Home \quad Results \quad Environments \quad Get Started \quad Authors \quad Paper (Arkiv) \quad Code}
+\end{center}
+
+The active page should be highlighted in blue.
+The header should have a thin horizontal rule below it, not a large navigation box.
+
+\subsubsection*{Hero}
+
+The hero should be a single full-width introductory block within the main centered content column.
+It should not use a two-column layout and should not place secondary panels, tables, statistics, benchmark-scope content, task-definition content, or design-principle content beside the title.
+The hero should contain only the main title and the two-paragraph subtitle/description.
+All other homepage content should appear below the hero.
+
+The hero should contain the title:
+
+\begin{quote}
+\textbf{TSENV: Controllable Time-Series Exploration Benchmark}
+\end{quote}
+
+The subtitle should explain the benchmark in two short paragraphs:
+
+\begin{quote}
+A benchmark for evaluating whether tool-using agents can perform evidence-grounded analysis of multivariate time series.
+
+Tasks are generated from physical simulators with known interventions.
+Agents must combine textual descriptions, noisy observations, and optional labeled examples to identify what changed, or that no intervention occurred.
+\end{quote}
+
+
+\subsubsection*{Homepage content order}
+
+Below the hero, the landing page should present the homepage sections in the following order:
+
+\begin{enumerate}
+  \item Statistic row
+  \item Example task visual
+  \item Design principles
+\end{enumerate}
+
+The \texttt{Design principles} section should appear near the bottom of the landing page, below the example task visual.
+
+\subsubsection*{Example task visual}
+
+
+The landing page should show a compact example task visual consisting of a full-width time-series plot with an intervention marker.
+The example time-series plot should be rendered from a small static JSON file, \texttt{public/data/example\_plot.json}.
+The JSON should include the intervention time, changed parameter, observed channels, candidate parameters, and decimated samples for the plotted channels.
+The example task visual should use a single-column layout. 
+The Task and Axis controls should appear above the plot.
+The time-series plot should appear below the controls and should span the full available content width.
+The prompt panel should appear below the plot, not beside it.
+The prompt panel should contain the task prompt and optional context/examples text.
+
+The example visual should include compact controls grouped into two labelled rows:
+
+\begin{verbatim}
+Task: [DIRECT] [CODE]
+Axis: [NOISE] [CONTEXT] [EXAMPLES]
+\end{verbatim}
+
+\texttt{DIRECT} and \texttt{CODE} should behave as mutually exclusive task-mode controls.
+Clicking \texttt{DIRECT} should show the direct-answer prompt, where the agent returns JSON predictions.
+Clicking \texttt{CODE} should show the code-mode prompt, where the agent writes an executable \texttt{rule.py} file.
+
+\texttt{NOISE}, \texttt{CONTEXT}, and \texttt{EXAMPLES} should behave as condition-axis toggles.
+When \texttt{NOISE} is highlighted, the same example plot should be shown with visibly noisier observations while preserving the same intervention marker and underlying trajectory.
+When \texttt{CONTEXT} is highlighted, the textual task description should include additional environment information, such as observed channels, candidate parameters, and relevant physical context.
+When \texttt{CONTEXT} is not highlighted, the description should remain short and minimal.
+When \texttt{EXAMPLES} is highlighted, the prompt should show that optional labeled examples are available to the agent; when \texttt{EXAMPLES} is not highlighted, no labeled examples should be shown.
+
+The toggles should make the benchmark conditions understandable without adding a separate Controllable axes section to the homepage.
+The interaction should remain simple: highlighted buttons indicate the currently active task mode and selected condition-axis variants.
+
+An agent, identified by a robot icon, should pop up the message ``Gravity changed''.
+
+After the example task visual, the homepage should include a section titled \texttt{Design principles}.
+
+\paragraph{Key features}
+\begin{itemize}
+  \item \textbf{Physics-grounded generation.} Samples are produced by simulators rather than by static datasets, giving reliable intervention labels and controllable task variants.
+  \item \textbf{Evidence-grounded agent evaluation.} Correct answers require inspecting the observed signals; textual context alone is not sufficient.
+  \item \textbf{Controlled difficulty axes.} TSENV varies textual context, observation noise, labeled examples, and answer interface in matched experimental conditions.
+\end{itemize}
+
+
+\subsubsection*{Statistic row}
+
+The homepage should include three compact statistics in the following exact order:
+
+\begin{center}
+\begin{tabular}{ll}
+\hline
+\textbf{Statistic} & \textbf{Meaning} \\
+\hline
+\textbf{3 physical simulators} & BallDrop, BounceBall, MassSlide \\
+\textbf{2 task modes} & Direct and Code \\
+\textbf{3 controllable axes} & noise, context, examples \\
+\hline
+\end{tabular}
+\end{center}
+
+The order should emphasize the benchmark structure first: simulators, then task modes, then controllable axes.
+
+
+\subsection*{Page 2: Results}
+
+The results page should follow a single leaderboard-table layout, similar in spirit to the Terminal-Bench leaderboard.
+It should not show separate grouped result columns for \texttt{Direct} and \texttt{Code} on the main page.
+Instead, the main results page should contain one sortable and filterable leaderboard table where each row corresponds to one submitted result.
+
+\subsubsection*{Main leaderboard table}
+
+The main results page should show a single leaderboard table with one row per submitted result.
+The table should be the primary object on the page.
+
+Recommended columns:
+
+\begin{center}
+\begin{tabular}{rllllll}
+\hline
+\textbf{Rank} & \textbf{Agent} & \textbf{Model} & \textbf{Task} & \textbf{Date} & \textbf{Submitter} & \textbf{Score} \\
+\hline
+1 & \texttt{gpt-5.5-agent} & \texttt{gpt-5.5} & Direct & 2026-05-01 & TSENV & 0.933 \\
+2 & \texttt{claude-agent} & \texttt{claude-opus-4.6} & Direct & 2026-05-01 & TSENV & 0.853 \\
+3 & \texttt{gemini-agent} & \texttt{gemini-3.1-pro} & Code & 2026-05-01 & TSENV & 0.733 \\
+\hline
+\end{tabular}
+\end{center}
+
+The main leaderboard should use simple table styling with thin rules and no heavy dashboard cards.
+The table should support sorting by rank, score, model, task, date, and submitter.
+
+The \texttt{Task} column should distinguish \texttt{Direct} and \texttt{Code}.
+Simulator, noise level, textual context, examples, and task should be available as filters.
+Seed, split, and submitter may remain available as metadata, but should not appear as main filters.
+
+\subsubsection*{Condition filters}
+
+The page should include compact filters above the leaderboard table for:
+
+\begin{itemize}
+    \item simulator,
+    \item noise level,
+    \item textual context,
+    \item examples,
+    \item task.
+\end{itemize}
+
+The filters should be simple and readable, similar to a research benchmark leaderboard.
+They should not make the page look like a heavy dashboard.
+
+
+\subsubsection*{Clickable leaderboard rows}
+
+Each leaderboard row should be clickable.
+Clicking a row should navigate to a result-detail route rather than expanding a panel in place.
+
+For example:
+
+\begin{verbatim}
+/results/<submission-id>/
+\end{verbatim}
+
+The result-detail page should show:
+
+\begin{itemize}
+    \item the selected agent, model, task, date, submitter, and score;
+    \item the exact benchmark condition: simulator, noise, textual context, examples, seed, split, and task;
+    \item cumulative tokens, Python calls, steps, and plots;
+    \item per-environment results;
+    \item per-seed results;
+    \item links to trajectories and downloadable artifacts.
+\end{itemize}
+
+The browser URL should update when a user opens a result-detail page.
+The route should remain inside the single-page application and should not trigger a full-page reload.
+
+
+\subsection*{Page 3: Environments}
+The page should have a grid layout where each environment is a square. 
+When you click on the square you get to an environment-specific layout.
+The top of the page should show a plot of the time series, followed by the description.
+OBSERVED CHANNELS
+height, velocity, contact impulse, time
+CANDIDATE PARAMETERS
+mass, drag coefficient, coefficient of restitution, gravity acceleration
+
+For example with reference to BallDrop
+\subsubsection*{BallDrop}
+The BallDrop row should include:
+\begin{itemize}
+    \item a time-series plot with an intervention marker;
+    \item a short description: vertical point-mass ball under gravity, quadratic drag, and restitution-based ground impacts;
+    \item observed channels: height, velocity, contact impulse, and time;
+    \item candidate parameters: mass, drag coefficient, restitution, and gravity.
+\end{itemize}
+
+
+\subsubsection*{Layout notes}
+
+The environment page should be easy to scan vertically.
+Plots should be large enough to be useful.
+Observed channels and candidate parameters should be aligned in labeled rows, not buried inside prose.
+
+\subsection*{Page 4: Get Started and Submit}
+
+The get-started page should be practical.
+It should contain a large copy-pasteable code block and a clear submission flow.
+
+\subsubsection*{Run locally}
+
+The quick-start section should contain:
+
+\begin{verbatim}
+# Clone and install
+git clone <TSENV_REPOSITORY_URL>
+cd tsENV
+python -m venv env
+source env/bin/activate
+pip install -e .
+
+# Launch local explorer
+bash web_model_explorer/start.sh
+
+# Generate question bundles
+python workflows/generate/train_test_selection.py --model BallDrop
+python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py \
+  --model BallDrop --row-slug <ROW_SLUG>
+
+# Run one agentic evaluation
+python workflows/rollout/question_run_orchestrator.py \
+  --tasks-dir tsENV_questions \
+  --model BallDrop \
+  --agent-id <AGENT_ID> \
+  --row-slug <ROW_SLUG>
+\end{verbatim}
+
+The code block should be visually prominent because this page is primarily a usage page.
+
+\subsubsection*{Submission flow}
+
+The submission flow should have four steps.
+The third step should be labeled clearly as \textbf{Submit / Open PR}, based on the handwritten print annotation.
+
+\begin{center}
+\begin{tabular}{lp{0.68\linewidth}}
+\hline
+\textbf{Step} & \textbf{Description} \\
+\hline
+1. Run & Produce predictions, logs, and score artifacts \\
+2. Validate & Check schema, date format, task counts, and condition metadata \\
+3. Submit / Open PR & Upload results to a branch and open a pull request \\
+4. Trace & Link each public score to generated artifacts \\
+\hline
+\end{tabular}
+\end{center}
+
+The page should also show the expected deliverables:
+
+\begin{itemize}
+    \item \texttt{results/*.json}
+    \item \texttt{logs/}
+    \item \texttt{artifacts/}
+    \item \texttt{metadata.json}
+    \item optional notes or README file
+\end{itemize}
+
+At the bottom, link back to the \texttt{Results} page for leaderboard structure and to the documentation for schema details.
+
+\subsection*{Page 5: Authors, Citation, and Contact}
+
+The final page should make the website feel complete, citable, and easy to contact.
+It should include authors, citation information, resources, and contact links.
+It should not include an FAQ section.
+
+\subsubsection*{Authors}
+
+The page should include a clear \textbf{Authors} section listing the project authors, affiliations, and optionally equal-contribution notes.
+
+\subsubsection*{Citation}
+
+The citation should be shown in a dark code block:
+
+\begin{verbatim}
+@inproceedings{tsenv2026,
+  title={TSENV: Controllable Time-Series Exploration Benchmark for Agents},
+  author={...},
+  year={2026}
+}
+\end{verbatim}
+
+If the final publication venue is not known yet, the citation block should either use a placeholder or say \texttt{Citation coming soon}.
+
+\subsubsection*{Contact}
+
+The final page should include a clear \textbf{Contact} section.
+This was added based on the print annotation.
+
+Recommended contact links:
+
+\begin{center}
+\texttt{Email \quad Repository \quad Affiliation}
+\end{center}
+
+The short description should be:
+
+\begin{quote}
+Questions, feedback, or collaboration.
+\end{quote}
+
+\subsubsection*{Resources}
+
+The resources section should contain text links:
+
+\begin{center}
+\texttt{paper \quad code \quad dataset \quad results}
+\end{center}
+
+If one of these artifacts is unavailable, the link should be visible but disabled or marked as ``coming soon''.
+
+\subsection*{Implementation checklist}
+
+The website should pass the following checks before being considered complete:
+
+\begin{itemize}
+    \item No leftover \texttt{eda-bench}, \texttt{terminal-bench}, \texttt{example.com}, or placeholder repository text.
+    \item The homepage explains TSENV within the first screen.
+    \item The results page uses a single leaderboard table with one row per submitted result and a \texttt{Task} column distinguishing \texttt{Direct} and \texttt{Code}.
+    \item The environments page lists observed channels and candidate parameters for all simulators.
+    \item The submission page uses \textbf{Submit / Open PR} as the third step.
+    \item The final page is titled Authors, Citation, and Contact, and does not include an FAQ section.
+    \item The website is a single-page application with client-side routing; top-level navigation changes routes without loading separate HTML documents.
+    \item The homepage hero is a single full-width block containing only the title and introductory description; no side panels, tables, statistics, benchmark-scope content, or task-definition content sit to the right of the hero title.
+    \item The homepage statistic row uses this exact order: simulators, task modes, controllable axes.
+    \item The example task visual groups controls into two rows: Task with \texttt{DIRECT} and \texttt{CODE}, and Axis with \texttt{NOISE}, \texttt{CONTEXT}, and \texttt{EXAMPLES}.
+    \item All result values are generated from consolidated artifacts rather than manually copied.
+\end{itemize}
+
+\section{Putting the website online}
+
+The website should be published in two phases:
+
+\begin{enumerate}
+    \item publish the current static single-page application first;
+    \item replace mock data with generated benchmark artifacts.
+\end{enumerate}
+
+\subsection*{GitHub Pages host}
+
+Use GitHub Pages as the public website host.
+This matches the intended architecture: public website and static result tables on GitHub Pages, benchmark data and downloads on Hugging Face, submissions through GitHub pull requests, and deployment updates through GitHub Actions.
+
+For the cleanest URL, create a GitHub repository named:
+
+\begin{verbatim}
+tsenv.github.io
+\end{verbatim}
+
+The static website files should live at the repository root:
+
+\begin{verbatim}
+tsenv.github.io/
+  index.html
+  404.html
+  assets/
+    app.js
+    styles.css
+  public/
+    data/
+      summary.json
+      leaderboard.json
+      environments.json
+\end{verbatim}
+
+The current static mockup already has the important static files:
+
+\begin{verbatim}
+index.html
+404.html
+assets/app.js
+assets/styles.css
+\end{verbatim}
+
+\subsection*{Publishing the mockup}
+
+From a local checkout of the website mockup:
+
+\begin{verbatim}
+unzip tsenv_website_mockup.zip
+cd tsenv_mockup
+
+git init
+git branch -M main
+git remote add origin git@github.com:tsenv/tsenv.github.io.git
+
+git add .
+git commit -m "Initial TSENV website"
+git push -u origin main
+\end{verbatim}
+
+In GitHub, configure Pages to deploy through GitHub Actions:
+
+\begin{verbatim}
+Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Actions
+\end{verbatim}
+
+\subsection*{Deployment workflow}
+
+Create:
+
+\begin{verbatim}
+.github/workflows/deploy.yml
+\end{verbatim}
+
+For the current vanilla static mockup, use:
+
+\begin{verbatim}
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+\end{verbatim}
+
+The \texttt{actions/deploy-pages} action deploys the Pages artifact uploaded by the workflow.
+
+\subsection*{SPA deep links}
+
+Because the website is a single-page application, routes such as these must load the SPA directly:
+
+\begin{verbatim}
+/results/
+/results/gpt-55-agent-direct-20260501/
+/environments/ball-drop/
+\end{verbatim}
+
+Keep \texttt{404.html} so direct links and browser reloads on nested routes still load the application.
+The current mockup already includes a \texttt{404.html} redirect.
+Later, improve this so nested-route reloads do not visibly show a ``404'' state before the SPA renders.
+
+\subsection*{Generated website data}
+
+The first deployed website may use mock data, but production result data should not stay hardcoded in \texttt{assets/app.js}.
+Move leaderboard and environment data into generated JSON files:
+
+\begin{verbatim}
+public/data/leaderboard.json
+public/data/summary.json
+public/data/environments.json
+public/data/example_plot.json
+public/data/submissions/<submission-id>.json
+\end{verbatim}
+
+Then load the data from \texttt{assets/app.js} with \texttt{fetch()}:
+
+\begin{verbatim}
+const submissions = await fetch("/public/data/leaderboard.json")
+  .then((response) => response.json());
+\end{verbatim}
+
+The website should not manually copy final result values.
+All public result values should come from consolidated benchmark artifacts.
+The homepage example plot should follow the same principle: \texttt{public/data/example\_plot.json} should be generated from a real BallDrop trajectory artifact and shipped as a small static JSON file.
+The browser should fetch this JSON and render it directly; it should not load parquet files or depend on Hugging Face at runtime for the landing-page example.
+
+\subsection*{Generation pipeline}
+
+Add data generation scripts:
+
+\begin{verbatim}
+scripts/
+  generate_website_data.py
+  validate_website_data.py
+\end{verbatim}
+
+The deployment workflow should eventually generate and validate website data before publishing:
+
+\begin{verbatim}
+steps:
+  - uses: actions/checkout@v4
+
+  - uses: actions/setup-python@v5
+    with:
+      python-version: "3.11"
+
+  - run: pip install -r requirements.txt
+
+  - run: python scripts/generate_website_data.py
+
+  - run: python scripts/validate_website_data.py
+
+  - uses: actions/configure-pages@v5
+
+  - uses: actions/upload-pages-artifact@v3
+    with:
+      path: .
+
+  - id: deployment
+    uses: actions/deploy-pages@v4
+\end{verbatim}
+
+If the website later migrates to Vite or React, add the Node build steps and deploy the generated \texttt{dist/} directory instead of the repository root:
+
+\begin{verbatim}
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 22
+
+  - run: npm ci
+  - run: npm run build
+\end{verbatim}
+
+\subsection*{Hugging Face downloads}
+
+The website repository should not store large trajectories or benchmark artifacts.
+GitHub Pages should stay lightweight: HTML, CSS, JavaScript, small JSON files, and static figures.
+
+Leaderboard rows and download links should point to the Hugging Face dataset:
+
+\begin{verbatim}
+https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/trajectories/...
+https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/results.parquet
+\end{verbatim}
+
+\subsection*{Launch checklist}
+
+Before making the website public, replace placeholder content:
+
+\begin{verbatim}
+TSENV Project Team
+Email coming soon
+paper coming soon
+https://arxiv.org/
+placeholder citation
+mock model names, if not real
+\end{verbatim}
+
+Also verify:
+
+\begin{verbatim}
+No eda-bench / terminal-bench / example.com leftovers
+Homepage explains TSENV immediately
+SPA routing works
+Results are generated, not manually copied
+Get Started has Submit / Open PR
+Authors page has no FAQ
+Mobile layout works
+\end{verbatim}
+
+\end{document}
