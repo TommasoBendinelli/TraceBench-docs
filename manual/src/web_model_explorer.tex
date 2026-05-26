@@ -1,6 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
-\externaldocument{build/run_graph_schema}[run_graph_schema.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
 \externaldocument{build/dataset_manifest_schema}[dataset_manifest_schema.pdf]
 
 \begin{document}
@@ -12,7 +12,7 @@ This document describes the local web explorers used to inspect \name{} runs and
 
 \section*{Model Explorer}
 
-The Web Model Explorer is a local, read-only browser for inspecting resolved run graphs, materialized Simulink runs, eligibility metrics, and generated candidate pools.
+The Web Model Explorer is a local, read-only browser for inspecting resolved run graphs, materialized Simulink runs, cheap-filter metrics, surrogate confidence records, and generated candidate pools.
 
 Start it from the repository with:
 
@@ -26,9 +26,9 @@ It uses \code{0.0.0.0:3001} by default.
 
 \section*{What It Shows}
 
-The sidebar lists allowed \name{} models that exist under \code{models/simulink/}.
-Models with missing required files remain listed but show a warning badge.
-The header shows the selected model, selected \code{policy_id}, active runs folder name, and a reload button that re-reads registry and distribution files from disk.
+The sidebar lists allowed \name{} \termSimulators that exist under \code{models/simulink/}.
+\termSimulators with missing required files remain listed but show a warning badge.
+The header shows the selected \termSimulator, selected \code{policy_id}, active runs folder name, and a reload button that re-reads registry and distribution files from disk.
 
 The main table is organized by \code{family_id} from the resolved run graph.
 Each family can be expanded to show its baseline run, intervention runs, and matched time-zero/static-change probe runs.
@@ -37,7 +37,7 @@ Table columns include:
 
 \begin{itemize}
 \item status from \code{model_record.json};
-\item eligibility from \code{eligibility_metrics.jsonl};
+\item cheap-filter status from \code{cheap_filter_metrics.jsonl};
 \item \code{run_id};
 \item \code{family_id};
 \item \code{source};
@@ -48,11 +48,12 @@ Table columns include:
 \end{itemize}
 
 Expanded intervention rows show changed parameter, direction, new value, and intervention time from \code{run_nodes.jsonl} and \code{run_edges.jsonl}.
+For production policies with surrogate scoring, the table also shows \code{surrogate_id}, \code{noise_level}, \code{predicted_label}, \code{true_label_confidence}, \code{confidence_margin}, and \code{surrogate_filter_pass}.
 
 \section*{Plot Area}
 
 The plot area renders selected runs.
-Plot data can be shown with no noise or with a model-provided low or high noise profile when \code{noise_adder.py} exists.
+Plot data can be shown with no noise or with a \termSimulator-provided low or high noise profile when \code{noise_adder.py} exists.
 
 Controls include:
 
@@ -63,11 +64,11 @@ Controls include:
 \item observed signal selection.
 \end{itemize}
 
-If two runs are selected and noise is enabled, the UI may show per-signal SNR values using the model noise-adder utilities.
+If two runs are selected and noise is enabled, the UI may show per-signal SNR values using the \termSimulator noise-adder utilities.
 
 \section*{Deep Links}
 
-Deep links can preselect a model, policy, run, and optional comparator.
+Deep links can preselect a \termSimulator, policy, run, and optional comparator.
 Supported query parameters include:
 
 \begin{DocCode}
@@ -88,33 +89,36 @@ opens the matching run directly if it can be located.
 \section*{Endpoints Used}
 
 \begin{itemize}
-\item \code{GET /api/models}: read allowed models and validation warnings.
-\item \code{GET /api/policies?model=<MODEL>}: list available resolved plans under \code{plans/}.
-\item \code{GET /api/registry?model=<MODEL>&policy=<POLICY_ID>}: load resolved run graph, runtime status, eligibility metrics, signal display names, noise profiles, and metadata.
-\item \code{GET /api/distribution?model=<MODEL>}: load \code{experiment_config.json} and generated metadata used for legal domains and sampling details.
-\item \code{GET /api/locate-run?run=<RUN_ID>}: resolve a deep-linked run identifier to model and policy.
-\item \code{GET /api/data?model=<MODEL>&run=<RUN_ID>&max_rows=<N>&noise_profile=<PROFILE>&noise_seed=<SEED>}: load a run artifact for plotting.
-\item \code{GET /api/simulate?model=<MODEL>&policy=<POLICY_ID>}: read saved simulation status information when present.
+\item \code{GET /api/models}: read allowed \termSimulators and validation warnings.
+\item \code{GET /api/policies?model=<simulator_id>}: list available resolved plans under \code{plans/}.
+\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>}: load resolved run graph, runtime status, cheap-filter metrics, surrogate confidence records, signal display names, noise profiles, and metadata.
+\item \code{GET /api/distribution?model=<simulator_id>}: load \code{experiment_config.json} and generated metadata used for legal domains and sampling details.
+\item \code{GET /api/locate-run?run=<RUN_ID>}: resolve a deep-linked run identifier to \termSimulator and policy.
+\item \code{GET /api/data?model=<simulator_id>&run=<RUN_ID>&max_rows=<N>&noise_profile=<PROFILE>&noise_seed=<SEED>}: load a run artifact for plotting.
+\item \code{GET /api/simulate?model=<simulator_id>&policy=<POLICY_ID>}: read saved simulation status information when present.
 \end{itemize}
 
 \section*{Files Read}
 
 \begin{itemize}
-\item \code{models/simulink/<MODEL>/plans/<policy_id>/run_nodes.jsonl}
-\item \code{models/simulink/<MODEL>/plans/<policy_id>/run_edges.jsonl}
-\item \code{models/simulink/<MODEL>/plans/<policy_id>/generation_report.json}
-\item \code{models/simulink/<MODEL>/plans/<policy_id>/validation_report.json}
-\item \code{models/simulink/<MODEL>/<runs>/model_record.json}
-\item \code{models/simulink/<MODEL>/metrics/<policy_id>/eligibility_metrics.jsonl}
-\item \code{models/simulink/<MODEL>/generated/metadata.json}
-\item \code{models/simulink/<MODEL>/description_levels.json}
-\item \code{models/simulink/<MODEL>/experiment_config.json}
-\item \code{models/simulink/<MODEL>/<runs>/<run_id>/data.parquet}
-\item \code{tsENV_questions/<MODEL>/dataframes/<run_id>.parquet}, as fallback for exported bundles
-\item \code{models/simulink/<MODEL>/noise_adder.py}
+\item \code{models/simulink/<simulator_id>/plans/<policy_id>/run_nodes.jsonl}
+\item \code{models/simulink/<simulator_id>/plans/<policy_id>/run_edges.jsonl}
+\item \code{models/simulink/<simulator_id>/plans/<policy_id>/generation_report.json}
+\item \code{models/simulink/<simulator_id>/plans/<policy_id>/validation_report.json}
+\item \code{models/simulink/<simulator_id>/<runs>/model_record.json}
+\item \code{models/simulink/<simulator_id>/metrics/<policy_id>/cheap_filter_metrics.jsonl}
+\item \code{models/simulink/<simulator_id>/metrics/<policy_id>/surrogate_scores/<surrogate_id>.jsonl}
+\item \code{models/simulink/<simulator_id>/surrogates/<surrogate_id>/thresholds.json}
+\item \code{models/simulink/<simulator_id>/generated/metadata.json}
+\item \code{models/simulink/<simulator_id>/description_levels.json}
+\item \code{models/simulink/<simulator_id>/experiment_config.json}
+\item \code{models/simulink/<simulator_id>/<runs>/<run_id>/data.parquet}
+\item \code{tsENV_questions/<simulator_id>/dataframes/<run_id>.parquet}, as fallback for exported bundles
+\item \code{models/simulink/<simulator_id>/noise_adder.py}
 \end{itemize}
 
 During migration, the explorer may read a legacy \code{model_run_specs.json} compatibility artifact, but the resolved run graph is the preferred source of truth.
+\code{eligibility_metrics.jsonl} is supported only as a migration alias for \code{cheap_filter_metrics.jsonl}.
 
 \section*{Web Human Study}
 

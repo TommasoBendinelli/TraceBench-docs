@@ -1,26 +1,22 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
 \externaldocument{build/environment_profiles}[environment_profiles.pdf]
-\externaldocument{build/run_graph_schema}[run_graph_schema.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
 \externaldocument{build/simulation_stage}[simulation_stage.pdf]
 
 \begin{document}
 
-\docTitle{Stage: Compute Metrics}
-\phantomsection\label{docstart:compute_metrics_stage}
+\docTitle{Stage: Cheap Filter Metrics}
+\phantomsection\label{docstart:cheap_filter_metrics_stage}
 
-This stage computes detectability and eligibility metrics from materialized simulation runs.
-The result is used by dataset selection and question generation to reject impossible or ambiguous samples.
-
-The main driver is:
-
-\begin{DocCode}
-env/bin/python workflows/metrics/compute_metrics.py [--model MODEL] --policy POLICY_ID [--jobs N]
-\end{DocCode}
+This stage computes low-cost detectability, numerical-validity, and SNR metrics from materialized simulation runs.
+It rejects failed, non-detectable, numerically invalid, and low-SNR candidates.
+It does not prove distinguishability from all alternative root-cause classes and does not run optimized counterfactual search.
+Final benchmark selection is performed later by combining \code{cheap_filter_pass} with \code{surrogate_filter_pass}.
 
 \section*{Inputs}
 
-For each model, the stage reads:
+For each \termSimulator, the stage reads:
 
 \begin{itemize}
 \item \code{plans/<policy_id>/run_nodes.jsonl}: canonical run recipes and \code{run_id} values.
@@ -28,7 +24,7 @@ For each model, the stage reads:
 \item \code{runs/model_record.json}: runtime status and recipe hashes.
 \item \code{runs/<run_id>/data.parquet}: materialized trajectories.
 \item \code{experiment_config.json}: observed signals, signal types, and detectability thresholds.
-\item \code{noise_adder.py}: model-specific noise profiles and SNR analysis.
+\item \code{noise_adder.py}: \termSimulator-specific noise profiles and SNR analysis.
 \item \code{detectability_specific_environment.py}: optional environment-specific detectability veto hook.
 \end{itemize}
 
@@ -47,7 +43,7 @@ For each intervention node, the stage uses \code{run_edges.jsonl} to find:
 
 These relationships are not inferred from filename or identifier structure.
 
-\section*{Detectability Computation}
+\section*{Cheap-Filter Computation}
 
 For each successful intervention run, compute detectability against:
 
@@ -56,7 +52,7 @@ For each successful intervention run, compute detectability against:
 \item its matched time-zero/static-change run.
 \end{itemize}
 
-Both comparisons load the dataframes, assert aligned timestamps, apply model-specific noise when requested, preprocess channels according to the environment and paper appendix, compute SRD threshold crossings, compute RMS distances, and compute effect-to-noise SNR values.
+Both comparisons load the dataframes, assert aligned timestamps, apply \termSimulator-specific noise when requested, preprocess channels according to the environment and paper appendix, compute SRD threshold crossings, compute RMS distances, and compute effect-to-noise SNR values.
 
 The generic output includes:
 
@@ -74,19 +70,22 @@ For the comparison against the no-intervention baseline, the stage may additiona
 detectability_specific_environment.py::is_detectable(...)
 \end{DocCode}
 
-If this hook returns \code{"no"}, the intervention is not detectable even if the generic RMS/SRD checks pass.
+If this hook returns \code{"no"}, the intervention fails the cheap filter even if the generic RMS/SRD checks pass.
 
-\section*{Eligibility Rules}
+\section*{Pass Rules}
 
-An intervention is eligible only if:
+An intervention has \code{cheap_filter_pass = true} only if:
 
 \begin{itemize}
 \item it has status \code{success} in \code{model_record.json};
+\item it is numerically valid and has all required observable signals;
 \item its comparison against the matched baseline has \code{detectable == "yes"};
-\item its comparison against the matched time-zero/static-change run has \code{detectable == "yes"}.
+\item its comparison against the matched time-zero/static-change run has \code{detectable == "yes"};
+\item the relevant noise levels satisfy configured SNR thresholds;
+\item no \termSimulator-specific low-cost veto hook rejects it.
 \end{itemize}
 
-A family is eligible when it has eligible children for at least the configured minimum number of distinct root-cause parameters.
+A family has \code{family_cheap_filter_pass = true} when it has cheap-filter-passing children for at least the configured minimum number of distinct root-cause parameters.
 The default minimum is three distinct parameters unless a policy or selection stage specifies a stricter rule.
 
 \section*{Output}
@@ -94,35 +93,67 @@ The default minimum is three distinct parameters unless a policy or selection st
 The preferred output location is:
 
 \begin{DocCode}
-models/simulink/<MODEL>/metrics/<policy_id>/eligibility_metrics.jsonl
+models/simulink/<simulator_id>/metrics/<policy_id>/cheap_filter_metrics.jsonl
 \end{DocCode}
+
+During migration, the same payload may also be written to \code{eligibility_metrics.jsonl} as a backward-compatible alias.
+New documentation and new code should use \code{cheap_filter_metrics.jsonl}.
 
 A legacy aggregate file may also be written during migration:
 
 \begin{DocCode}
-models/simulink/<MODEL>/runs/eligibility_metrics.json
+models/simulink/<simulator_id>/runs/eligibility_metrics.json
 \end{DocCode}
 
 \section*{Preferred JSON Lines Shape}
 
-Each line of \code{eligibility_metrics.jsonl} records either one intervention or one family summary.
+Each line of \code{cheap_filter_metrics.jsonl} records one run or one family summary.
 
 Example intervention record:
 
 \begin{DocCode}
 {
-  "record_type": "intervention",
-  "policy_id": "benchmark_v1",
+  "record_type": "run",
+  "policy_id": "production_v1",
   "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
   "run_id": "run_7fd9daa0055fb3f412ef5e0ab8d4c5ba",
+  "kind": "intervention",
+  "ground_truth_label": "gravity",
   "baseline_run_id": "run_baseline_...",
   "time0_run_id": "run_time0_...",
   "changed_parameter": "gravity",
-  "eligible": true,
+  "cheap_filter_pass": true,
   "detectability": {
     "vs_baseline": {"detectable": "yes"},
     "vs_time0_baseline": {"detectable": "yes"}
-  }
+  },
+  "snr": {
+    "none": null,
+    "low": {"mean_snr_db": 18.2},
+    "high": {"mean_snr_db": 9.7}
+  },
+  "failure_reasons": []
+}
+\end{DocCode}
+
+Example baseline or no-intervention record:
+
+\begin{DocCode}
+{
+  "record_type": "run",
+  "policy_id": "production_v1",
+  "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
+  "run_id": "run_baseline_...",
+  "kind": "baseline",
+  "ground_truth_label": "no_intervention",
+  "cheap_filter_pass": true,
+  "detectability": null,
+  "snr": {
+    "none": null,
+    "low": {"mean_snr_db": 22.4},
+    "high": {"mean_snr_db": 12.1}
+  },
+  "failure_reasons": []
 }
 \end{DocCode}
 
@@ -131,11 +162,11 @@ Example family record:
 \begin{DocCode}
 {
   "record_type": "family",
-  "policy_id": "benchmark_v1",
+  "policy_id": "production_v1",
   "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
   "baseline_run_id": "run_baseline_...",
-  "family_eligible": true,
-  "eligible_parameters": ["gravity", "mass", "drag_coeff"]
+  "family_cheap_filter_pass": true,
+  "cheap_filter_pass_parameters": ["gravity", "mass", "drag_coeff"]
 }
 \end{DocCode}
 
@@ -144,8 +175,8 @@ Example family record:
 \begin{itemize}
 \item Every metric record must refer to a \code{run_id} present in \code{run_nodes.jsonl}.
 \item Every intervention metric must have a matched baseline and time-zero/static-change run from \code{run_edges.jsonl}.
-\item Only successful materialized runs may be marked eligible.
-\item The metric stage must not change run recipes or recipe hashes.
+\item Only successful materialized runs may have \code{cheap_filter_pass = true}.
+\item The cheap-filter stage must not change run recipes or recipe hashes.
 \item Re-running this stage may overwrite previous metrics for the same \code{policy_id}.
 \end{itemize}
 

@@ -1,58 +1,61 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
 \externaldocument{build/dataset_manifest_schema}[dataset_manifest_schema.pdf]
-\externaldocument{build/run_graph_schema}[run_graph_schema.pdf]
-\externaldocument{build/compute_metrics_stage}[compute_metrics_stage.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+\externaldocument{build/cheap_filter_metrics_stage}[cheap_filter_metrics_stage.pdf]
+\externaldocument{build/surrogate_confidence_scoring_stage}[surrogate_confidence_scoring_stage.pdf]
 
 \begin{document}
 
 \docTitle{Stage: Generate Question}
 \phantomsection\label{docstart:generate_question_stage}
 
-This stage converts selected model run artifacts into \name{} question bundles for downstream agent rollout.
-It now consumes a selected dataset manifest rather than the full candidate universe directly.
+This stage converts selected \termSimulator run artifacts into \name{} question bundles for downstream agent rollout.
+It consumes a frozen selected dataset manifest rather than the full candidate universe directly.
 
 The intended flow is:
 
 \begin{DocCode}
-resolved run graph
-  -> simulation
-  -> eligibility metrics
+bootstrap policy -> bootstrap simulations -> bootstrap cheap filter -> surrogate training
+production policy -> production simulations -> production cheap filter -> surrogate confidence scoring
   -> dataset manifest
   -> question export
 \end{DocCode}
 
 \section*{Required Inputs}
 
-For each model, question generation requires:
+For each \termSimulator, question generation requires:
 
 \begin{itemize}
 \item \code{datasets/<dataset_id>/sample_manifest.json}: selected train/test panels.
 \item \code{datasets/<dataset_id>/selected_runs.jsonl}: selected runs and split metadata.
+\item \code{datasets/<dataset_id>/selection_report.json}: frozen selection diagnostics.
 \item \code{runs/<run_id>/data.parquet}: materialized time-series artifacts.
 \item \code{runs/model_record.json}: runtime inventory for selected runs.
-\item \code{plans/<policy_id>/run_nodes.jsonl}: canonical run recipes and hashes.
-\item \code{plans/<policy_id>/run_edges.jsonl}: baseline/intervention/time-zero relationships.
-\item \code{metrics/<policy_id>/eligibility_metrics.jsonl}: detectability and eligibility information.
+\item \code{plans/<production_policy_id>/run_nodes.jsonl}: canonical production run recipes and hashes.
+\item \code{plans/<production_policy_id>/run_edges.jsonl}: production baseline/intervention/time-zero relationships.
 \item \code{experiment_config.json}
 \item \code{description_levels.json}
 \item \code{noise_adder.py}
-\item \code{all_possible_combinations.csv} or the resolved row/shot/test configuration used for the exported questions.
 \end{itemize}
 
-During migration, \code{train_test_selection.py} may still build \code{sample_manifest.json} directly from \code{runs/eligibility_metrics.json}. The preferred design writes the selected dataset artifacts first.
+Question generation itself should not need to rescore the whole candidate pool.
+During migration, \code{train_test_selection.py} may still build \code{sample_manifest.json} directly from legacy compatibility metrics.
+The preferred design writes the selected dataset artifacts first.
 
 \section*{Step 1: Dataset Selection}
 
 The selection step builds a selected dataset manifest.
+It is documented in the Dataset Manifest Schema and is conceptually upstream of this stage.
 
 Recommended invocation:
 
 \begin{DocCode}
 env/bin/python workflows/generate/select_dataset.py \
-  --model MODEL \
-  --policy POLICY_ID \
+  --model SIMULATOR \
+  --policy PRODUCTION_POLICY_ID \
   --dataset DATASET_ID \
+  --surrogate-id SURROGATE_ID \
   [--row-slug ROW_SLUG [ROW_SLUG ...]]
 \end{DocCode}
 
@@ -60,23 +63,11 @@ Legacy invocation during migration:
 
 \begin{DocCode}
 env/bin/python workflows/generate/train_test_selection.py \
-  --model MODEL \
+  --model SIMULATOR \
   --policy POLICY_ID \
   --dataset DATASET_ID \
   [--row_slug ROW_SLUG [ROW_SLUG ...]]
 \end{DocCode}
-
-Selection rules:
-
-\begin{enumerate}
-\item Retain only family-eligible baselines and eligible intervention children.
-\item Build the available class list from \code{experiment_config.json::exposed_variables.parameters} plus the no-intervention class.
-\item For each \code{test_set_slug} and seed, sample one shared class-balanced test set.
-\item Ensure that each selected test sample comes from a different family unless the selection policy explicitly allows reuse.
-\item For each shot configuration, sample training examples that do not overlap with the test set.
-\item If adversarial selection is enabled, reject candidate train/test panels when baseline classifiers exceed the configured normalized accuracy threshold.
-\item Write \code{selected_runs.jsonl}, \code{sample_manifest.json}, and \code{selection_report.json}.
-\end{enumerate}
 
 \section*{Step 2: Generate Exported Questions}
 
@@ -84,7 +75,7 @@ This step is deterministic once \code{sample_manifest.json} exists.
 
 \begin{DocCode}
 env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py \
-  --model MODEL [MODEL ...] \
+  --model SIMULATOR [SIMULATOR ...] \
   --dataset DATASET_ID \
   --row-slug SLUG [SLUG ...]
 \end{DocCode}
@@ -92,7 +83,7 @@ env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.
 It materializes the canonical exported bundle under:
 
 \begin{DocCode}
-tsENV_questions/<MODEL>/
+tsENV_questions/<simulator_id>/
 \end{DocCode}
 
 with:
@@ -142,9 +133,10 @@ The exported \code{questions.json} contains:
 \item \code{environment_name}
 \end{itemize}
 
-\code{ground_truth_information} is derived from the selected run graph and eligibility metrics.
+\code{ground_truth_information} is derived from the selected production run graph and selected dataset manifest.
 For each selected sample, it records initial parameters, changed parameter, intervention time, new value, and \code{first_diff} values.
 No-intervention samples use the no-intervention class and null intervention fields.
+Surrogate confidence values may be copied into hidden provenance metadata, but they must not appear in the agent-visible prompt or files.
 
 \section*{Question Text}
 
@@ -169,6 +161,8 @@ These values are resolved from \code{shared/config/tsenv_shared_description.json
 \section*{Validation Rules}
 
 \begin{itemize}
+\item Question generation must not select new samples.
+\item It may only export samples already present in \code{datasets/<dataset_id>/selected_runs.jsonl} and grouped by \code{sample_manifest.json}.
 \item Every selected \code{run_id} must exist in \code{run_nodes.jsonl} and \code{model_record.json}.
 \item Every selected run must have a materialized \code{data.parquet} artifact.
 \item Test-set length must match the requested \code{number_test_samples}.

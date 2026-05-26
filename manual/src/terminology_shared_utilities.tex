@@ -26,17 +26,24 @@ When \(\varepsilon=0\) and \(a,b\neq 0\), this equals the harmonic mean of the o
 In this case we use the corresponding agent-facing class is "no intervention". However in the paper we submitted to NeuroNIPS we used "no parameter change"
 \item (\termDescLevel): It describes the amount of textual description provided to the agent. Its allowed values are \code{none} and \code{high}.
 \item (\termSimulator): One of physical simulator from which we generate data. The allowed values are defined in \code{ALLOWED_TSENV_MODELS}.
+\item (\termSimulatorRecipe): One configuration that can be given as input to the simulate stage to generate.
+\item (\termFamily): A \termFamily is the baseline-centered group of run nodes generated from one sampled baseline recipe. It contains the baseline run, all intervention children derived from that baseline, and the matched time-zero/static-change probe for each intervention. All nodes in the group share the same \code{family_id}.
 \item (\termTaskMode): The required form of the agent's final answer. 
 Its allowed values are \code{direct} and \code{code}. 
 In \code{direct} mode, the agent must directly write the predictions for the test samples. In \code{code} mode, the agent must write an interpretable \code{rule.py} file defining a prediction function that is evaluated on the test samples and held-out samples.
-\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample. Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} returns the clean simulator output; \code{low} and \code{high} call the model-specific \code{add_noise(...)} implementation and must satisfy the corresponding detectability SNR thresholds. The realized effect-to-noise SNR values are reported in \code{noise_analysis}.
+\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample. Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} returns the clean simulator output; \code{low} and \code{high} call the \termSimulator-specific \code{add_noise(...)} implementation and must satisfy the corresponding detectability SNR thresholds. The realized effect-to-noise SNR values are reported in \code{noise_analysis}.
+
 \end{itemize}
 
 \section*{Common Utilities}
-This is used (i) Compute Metrics (ii) Agentic Rollout (iii) Final Artifact Scoring
+
 \begin{algorithm}[H]
-\phantomsection\label{def:materialize-utility}
-\textbf{\code{materialize(uuid\_path, noise\_level, seed=None, uuid\_reference\_path=None)}}\par\smallskip
+\caption{\code{materialize(...)}}
+\label{def:materialize-utility}
+\textbf{Purpose.} Loads a saved run artifact, optionally applies the requested observation-noise profile, anonymizes columns to \code{col1}, \code{col2}, \ldots, \code{colN}, and returns the agent-visible dataframe.
+
+\textbf{Used by.} Cheap Filter Metrics, Agentic Rollout, and Final Artifact Scoring.
+\par\smallskip
 \begin{algorithmic}[1]
 \State \code{src} $\gets$ read parquet file at \code{uuid_path}
 \State \code{ref} $\gets$ \code{None}
@@ -56,16 +63,24 @@ This is used (i) Compute Metrics (ii) Agentic Rollout (iii) Final Artifact Scori
 \end{algorithmic}
 \end{algorithm}
 
-Where \code{add_noise} is defined for each MODEL in \code{noise_adder.py}.
+Where \code{add_noise} is defined for each \termSimulator in \code{noise_adder.py}.
+
+\code{NOISE_LEVEL_MULTIPLIER} maps a noise-regime word to a multiplier, by default \code{none} -> \code{0}, \code{low} -> \code{1}, and \code{high} -> \code{4}.
+Each \termSimulator's \code{noise_adder.py} defines \code{NOISE_DICT}, whose values give the \termSimulator-specific base magnitudes for the low-noise regime.
 \begin{algorithm}[H]
-\phantomsection\label{def:add-noise-utility}
-\textbf{\code{add_noise(src, seed, noise_level, ref=None)}}\par\smallskip
+\caption{\code{add_noise(...)}}
+\label{def:add-noise-utility}
+\textbf{Purpose.} Applies the \termSimulator-specific low or high observation-noise profile to a clean simulator trajectory and optionally to its matched reference trajectory.
+
+\textbf{Used by.} \code{materialize(...)}, Cheap Filter Metrics, Agentic Rollout, and noise-analysis reporting.
+\par\smallskip
 \begin{algorithmic}[1]
-\Assert{\code{noise_level} is one of \code{"low"} or \code{"high"}}
+\Assert{\code{noise_level} is in \code{"none","low","high"}}
 \State \code{current_seed} $\gets$ \code{seed}
-\State \code{src_noisy} $\gets$ apply model-specific noise to \code{src} using \code{current_seed}, \code{NOISE_DICT[noise_level]}
+\State \code{scale} $\gets$ \code{NOISE_LEVEL_MULTIPLIER[noise_level]}
+\State \code{src_noisy} $\gets$ apply \termSimulator-specific noise to \code{src} using \code{current_seed}, \code{scale}, \code{NOISE_DICT}
 \If{\code{ref} is not \code{None}}
-    \State \code{ref_noisy} $\gets$ apply model-specific noise to \code{ref} using \code{current_seed+10}, \code{NOISE_DICT[noise_level]}
+    \State \code{ref_noisy} $\gets$ apply \termSimulator-specific noise to \code{ref} using \code{current_seed+10}, \code{scale}, \code{NOISE_DICT}
 \Else
     \State \code{ref_noisy} $\gets$ \code{None}
 \EndIf
@@ -76,8 +91,12 @@ Where \code{add_noise} is defined for each MODEL in \code{noise_adder.py}.
 \end{algorithm}
 
 \begin{algorithm}[H]
-\phantomsection\label{def:quantify-noise-utility}
-\textbf{\code{quantify_effect_snr(src, src_noisy, ref=None, ref_noisy=None)}}\par\smallskip
+\caption{\code{quantify_effect_snr(...)}}
+\label{def:quantify-noise-utility}
+\textbf{Purpose.} Computes the effect-to-noise signal-to-noise ratio between a clean trajectory, its noisy version, and optionally a matched reference trajectory.
+
+\textbf{Used by.} Noise analysis during materialization and cheap-filter metrics.
+\par\smallskip
 \begin{algorithmic}[1]
 \State \code{snr_analysis} $\gets$ \code{[]}
 \ForAll{observed non-time signals \code{signal}}

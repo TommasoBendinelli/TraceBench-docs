@@ -1,17 +1,20 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
-\externaldocument{build/run_graph_schema}[run_graph_schema.pdf]
-\externaldocument{build/compute_metrics_stage}[compute_metrics_stage.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+\externaldocument{build/cheap_filter_metrics_stage}[cheap_filter_metrics_stage.pdf]
+\externaldocument{build/surrogate_confidence_scoring_stage}[surrogate_confidence_scoring_stage.pdf]
+\externaldocument{build/dataset_manifest_schema}[dataset_manifest_schema.pdf]
 
 \begin{document}
 
-\docTitle{Stage: Oracle Solution}
-\phantomsection\label{docstart:oracle_solution}
+\docTitle{Stage: Oracle Audit, optional}
+\phantomsection\label{docstart:oracle_audit}
 
-The oracle stage searches for the best non-ground-truth explanation of an intervention trajectory.
-It is used to test whether an accepted sample is distinguishable from alternative root-cause parameters.
+The Oracle Audit is an optional expensive post-hoc analysis.
+It is not part of the default large-scale dataset-generation or dataset-selection pipeline.
+It may be run on a small subset of cheap-filtered and surrogate-confidence-passing samples to estimate whether selected samples remain ambiguous under optimized alternative-root-cause search.
 
-The stage comprises:
+The audit implementation currently comprises:
 
 \begin{itemize}
 \item \code{workflows/metrics/parameter_optimisation_over_all.py}: orchestrator.
@@ -23,7 +26,7 @@ The stage comprises:
 
 \begin{DocCode}
 env/bin/python workflows/metrics/parameter_optimisation_over_all.py \
-  --model MODEL [MODEL ...] \
+  --model SIMULATOR [SIMULATOR ...] \
   --policy POLICY_ID \
   [--overwrite] \
   [--matlab-workers N] \
@@ -31,30 +34,32 @@ env/bin/python workflows/metrics/parameter_optimisation_over_all.py \
 \end{DocCode}
 
 Optimization flags from \code{parameter_optimisation.py}, such as \code{--max-iter} and \code{--coarse-grid-points}, may be forwarded.
+\code{--matlab-workers} controls the MATLAB parallel pool used inside the optimization search.
+It does not change candidate generation or the resolved run graph; each audited run is optimized from its existing run artifacts and a temporary copied Simulink model.
 
 \section*{Inputs}
 
-For each model, the oracle reads:
+For each \termSimulator, the audit reads selected or explicitly requested audited samples:
 
 \begin{itemize}
-\item \code{plans/<policy_id>/run_nodes.jsonl}: canonical recipes and run IDs.
-\item \code{plans/<policy_id>/run_edges.jsonl}: baseline/intervention/time-zero relationships.
-\item \code{metrics/<policy_id>/eligibility_metrics.jsonl}: eligible intervention candidates.
-\item \code{experiment_config.json}: exposed parameters, allowed intervals, observable signals, and timing.
-\item \code{noise_adder.py}: model-specific noise support.
-\item \code{runs/<run_id>/simulink_model.mdl}: materialized Simulink model for the target run.
-\item \code{runs/<run_id>/data.parquet}: target trajectory.
+\item \code{plans/<policy_id>/run_nodes.jsonl}
+\item \code{plans/<policy_id>/run_edges.jsonl}
+\item \code{datasets/<dataset_id>/selected_runs.jsonl}, or an explicit \code{audit_runs.jsonl}
+\item \code{metrics/<policy_id>/cheap_filter_metrics.jsonl}
+\item \code{metrics/<policy_id>/surrogate_scores/<surrogate_id>.jsonl}, when auditing selected production samples
+\item \code{experiment_config.json}
+\item \code{noise_adder.py}
+\item \code{runs/<run_id>/data.parquet}
 \end{itemize}
 
-During migration, the stage may also read legacy \code{model_run_specs.json}; new code should use the resolved run graph.
+During migration, the audit may read legacy compatibility metrics only to recover sample metadata.
+New selection code must not depend on audit outputs.
 
 \section*{Candidate Collection}
 
-If \code{--only-tsENV-questions} is not passed, the orchestrator iterates over eligible intervention records from \code{eligibility_metrics.jsonl} whose family is eligible.
-
-If \code{--only-tsENV-questions} is passed, the orchestrator iterates over the unique intervention runs selected in the exported question manifest.
-
-For each selected intervention, the stage recovers the parent baseline recipe, changed parameter, intervention value, and intervention time from \code{run_nodes.jsonl} and \code{run_edges.jsonl}.
+The audit starts from a frozen selected dataset or a dedicated audit request list.
+It recovers the parent baseline recipe, changed parameter, intervention value, and intervention time from \code{run_nodes.jsonl} and \code{run_edges.jsonl}.
+The audit should not iterate over the full candidate universe as the default path for dataset construction.
 
 \section*{Per-Run Optimization}
 
@@ -63,13 +68,13 @@ A typical per-run invocation is:
 \begin{DocCode}
 env/bin/python workflows/metrics/parameter_optimisation.py \
   --model BallDrop \
-  --policy benchmark_v1 \
+  --policy production_v1 \
   --run-id run_7fd9daa0055fb3f412ef5e0ab8d4c5ba \
   --max-iter 10 \
   --coarse-grid-points 9
 \end{DocCode}
 
-\code{RUN_ID} must identify an intervention run.
+\code{RUN_ID} must identify an intervention run selected for audit.
 For each possible root-cause parameter, the script optimizes a post-intervention value that best fits the target trajectory.
 Candidate simulations are diagnostic and are not registered as benchmark samples.
 
@@ -88,28 +93,23 @@ normalized_loss_i = raw_loss_i / max(baseline_loss_i, 1e-6)
 objective = mean(normalized_loss_i)
 \end{DocCode}
 
-The preprocessing is model-specific and signal-specific as defined in the paper appendix.
+The preprocessing is \termSimulator-specific and signal-specific as defined in the paper appendix.
 
 \section*{Output}
 
-Per-run output is written under:
+Audit output is written under:
 
 \begin{DocCode}
-models/simulink/<MODEL>/runs/<run_id>/optimisation_results.json
+models/simulink/<simulator_id>/audits/<audit_id>/oracle_audit_summary.json
+models/simulink/<simulator_id>/audits/<audit_id>/oracle_audit_runs.jsonl
 \end{DocCode}
 
-The orchestrator also writes:
-
-\begin{DocCode}
-models/simulink/<MODEL>/metrics/<policy_id>/optimisation_summary.json
-\end{DocCode}
-
-The summary records, for each intervention run, the ground-truth intervention, best alternative intervention, optimization losses, and whether the best alternative remains distinguishable from the target.
+Per-run diagnostic details may still be written beside audited run artifacts while migration is in progress, but those files are audit artifacts, not selection inputs.
 
 \section*{Counterfactual Generation}
 
-\code{generate_trajectory_counterfactul_and_get_measurement.py} uses each \code{optimisation_results.json} file to simulate the best non-ground-truth counterfactual trajectory.
-It writes a counterfactual parquet artifact and a detectability/distinguishability summary.
+\code{generate_trajectory_counterfactul_and_get_measurement.py} uses each per-run optimization result to simulate the best non-ground-truth counterfactual trajectory.
+It writes a counterfactual parquet artifact and an audit summary describing residual ambiguity under the optimized search.
 
 \section*{Validation Rules}
 
@@ -118,7 +118,9 @@ It writes a counterfactual parquet artifact and a detectability/distinguishabili
 \item The target run must have a matched baseline edge.
 \item Candidate parameters must come from \code{experiment_config.json::exposed_variables.parameters}.
 \item Candidate values must remain inside the configured \code{allowed_intervals}.
-\item The oracle must not modify \code{run_nodes.jsonl}, \code{run_edges.jsonl}, or \code{model_record.json}.
+\item The audit must not modify \code{run_nodes.jsonl}, \code{run_edges.jsonl}, \code{model_record.json}, or selected dataset manifests.
+\item Oracle Audit outputs must never be required by \code{select_dataset.py} or question generation.
+\item If Oracle Audit results are used to remove samples, that dataset must declare an explicit \code{selection_policy} with \code{oracle_audit.enabled=true}.
 \end{itemize}
 
 \end{document}

@@ -42,48 +42,91 @@
 \phantomsection\label{docstart:experiment_plan}
 This document describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
 
-\section*{Run-Graph Generation Flow}
+\section*{Two-Phase Dataset Generation Flow}
 
-The simulation-candidate workflow now separates sampling, materialization, metric filtering, dataset selection, and question export:
+The simulation-candidate workflow separates bootstrap data for surrogate training from production data for benchmark selection:
 
 \begin{DocCode}
-generation_policies/<policy_id>.json
-  -> plans/<policy_id>/run_nodes.jsonl + run_edges.jsonl
+Bootstrap phase:
+generation_policies/<bootstrap_policy_id>.json
+  -> plans/<bootstrap_policy_id>/run_nodes.jsonl + run_edges.jsonl
   -> runs/<run_id>/data.parquet
-  -> metrics/<policy_id>/eligibility_metrics.jsonl
+  -> metrics/<bootstrap_policy_id>/cheap_filter_metrics.jsonl
+  -> surrogates/<surrogate_id>/
+
+Production phase:
+generation_policies/<production_policy_id>.json
+  -> plans/<production_policy_id>/run_nodes.jsonl + run_edges.jsonl
+  -> runs/<run_id>/data.parquet
+  -> metrics/<production_policy_id>/cheap_filter_metrics.jsonl
+  -> metrics/<production_policy_id>/surrogate_scores/<surrogate_id>.jsonl
   -> datasets/<dataset_id>/sample_manifest.json
-  -> tsENV_questions/<MODEL>/questions.json
+  -> tsENV_questions/<simulator_id>/questions.json
 \end{DocCode}
 
 A typical command sequence is:
 
 \begin{DocCode}
+# Bootstrap pool
 python workflows/generate_runs/compile_run_graph.py \
   --model BallDrop \
-  --policy benchmark_v1 \
+  --policy bootstrap_v1 \
   --overwrite
 
 python workflows/simulate/run_pending_sims.py \
   --model BallDrop \
-  --policy benchmark_v1 \
+  --policy bootstrap_v1 \
   --matlab-workers 8 \
   --compute-features
 
 env/bin/python workflows/metrics/compute_metrics.py \
   --model BallDrop \
-  --policy benchmark_v1 \
+  --policy bootstrap_v1 \
   --jobs 8
+
+env/bin/python workflows/surrogate/train_surrogate.py \
+  --model BallDrop \
+  --policy bootstrap_v1 \
+  --surrogate-id surrogate_ball_drop_v1 \
+  --noise-level all
+
+# Production pool
+python workflows/generate_runs/compile_run_graph.py \
+  --model BallDrop \
+  --policy production_v1 \
+  --overwrite
+
+python workflows/simulate/run_pending_sims.py \
+  --model BallDrop \
+  --policy production_v1 \
+  --matlab-workers 8 \
+  --compute-features
+
+env/bin/python workflows/metrics/compute_metrics.py \
+  --model BallDrop \
+  --policy production_v1 \
+  --jobs 8
+
+env/bin/python workflows/surrogate/score_surrogate.py \
+  --model BallDrop \
+  --policy production_v1 \
+  --surrogate-id surrogate_ball_drop_v1 \
+  --noise-level all
 
 env/bin/python workflows/generate/select_dataset.py \
   --model BallDrop \
-  --policy benchmark_v1 \
-  --dataset paper_main_v1
+  --policy production_v1 \
+  --dataset paper_main_v2 \
+  --surrogate-id surrogate_ball_drop_v1
 
 env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py \
   --model BallDrop \
-  --dataset paper_main_v1 \
+  --dataset paper_main_v2 \
   --row-slug gentle_01234-cloud
 \end{DocCode}
+
+\code{workflows/metrics/compute_metrics.py} is the legacy driver name for the Cheap Filter Metrics stage.
+If a dedicated \code{compute_cheap_filter_metrics.py} script exists, use that clearer name with the same arguments.
 
 \section*{Experimental Hypotheses}
 
@@ -265,7 +308,7 @@ And \code{<row_slug>.json} contains:
 \end{itemize}
 
 
-In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
+In case there are multiple combinations of \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, where \code{model} is the \termSimulator identifier, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
 If any of these two files would be empty, then it's not created.
 
 \section{Generate final artifacts}

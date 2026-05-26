@@ -1,0 +1,90 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\externaldocument{build/cheap_filter_metrics_stage}[cheap_filter_metrics_stage.pdf]
+\externaldocument{build/surrogate_training_stage}[surrogate_training_stage.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+
+\begin{document}
+
+\docTitle{Stage: Surrogate Confidence Scoring}
+\phantomsection\label{docstart:surrogate_confidence_scoring_stage}
+
+This stage applies a frozen surrogate to the production candidate pool after cheap filtering.
+It writes per-run confidence records used by dataset selection.
+
+\section*{Main Driver}
+
+\begin{DocCode}
+env/bin/python workflows/surrogate/score_surrogate.py \
+  --model SIMULATOR \
+  --policy PRODUCTION_POLICY_ID \
+  --surrogate-id SURROGATE_ID \
+  [--noise-level none|low|high|all]
+\end{DocCode}
+
+\section*{Inputs}
+
+\begin{itemize}
+\item \code{plans/<production_policy_id>/run_nodes.jsonl}
+\item \code{plans/<production_policy_id>/run_edges.jsonl}
+\item \code{runs/model_record.json}
+\item \code{runs/<run_id>/data.parquet}
+\item \code{metrics/<production_policy_id>/cheap_filter_metrics.jsonl}
+\item \code{surrogates/<surrogate_id>/model.pt}
+\item \code{surrogates/<surrogate_id>/thresholds.json}
+\item \code{experiment_config.json}
+\item \code{noise_adder.py}
+\end{itemize}
+
+\section*{Output}
+
+The stage writes:
+
+\begin{DocCode}
+models/simulink/<simulator_id>/metrics/<production_policy_id>/surrogate_scores/<surrogate_id>.jsonl
+\end{DocCode}
+
+Records are per \code{run_id} and per noise level because a sample that is recognizable with low noise may not be recognizable with high noise.
+
+\begin{DocCode}
+{
+  "record_type": "surrogate_score",
+  "policy_id": "production_v1",
+  "surrogate_id": "surrogate_ball_drop_v1",
+  "run_id": "run_7fd9daa0055fb3f412ef5e0ab8d4c5ba",
+  "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
+  "kind": "intervention",
+  "noise_level": "high",
+  "ground_truth_label": "gravity",
+  "predicted_label": "gravity",
+  "true_label_confidence": 0.981,
+  "max_confidence": 0.981,
+  "second_best_label": "mass",
+  "confidence_margin": 0.312,
+  "entropy": 0.08,
+  "cheap_filter_pass": true,
+  "surrogate_filter_pass": true,
+  "thresholds": {
+    "min_true_label_confidence": 0.94,
+    "min_margin": 0.20
+  },
+  "failure_reasons": []
+}
+\end{DocCode}
+
+\section*{Pass Rule}
+
+\code{surrogate_filter_pass} is true only if:
+
+\begin{enumerate}
+\item \code{cheap_filter_pass == true};
+\item \code{predicted_label == ground_truth_label};
+\item \code{true_label_confidence} is at least the applicable global or per-class threshold;
+\item \code{confidence_margin} is at least the configured margin threshold, when a margin threshold is enabled.
+\end{enumerate}
+
+Using \code{max_confidence} alone is not sufficient.
+A confidently wrong sample must be rejected.
+Selection must use confidence in the simulator ground-truth label.
+
+\end{document}

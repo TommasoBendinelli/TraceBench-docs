@@ -7,9 +7,9 @@
 
 \section*{Overview}
 
-\code{models/simulink/<MODEL>/generated/metadata.json} is the extracted manifest produced by
+\code{models/simulink/<simulator_id>/generated/metadata.json} is the extracted manifest produced by
 \begin{DocCode}
-workflows/simulate/build_metadata.py [--model MODEL] [--overwrite]
+workflows/simulate/build_metadata.py [--model SIMULATOR] [--overwrite]
 \end{DocCode}
 It is a programmatically generated artifact not to be edited manually.
 This script must run before any downstream manual environment files are authored. It only depends on \code{simulink_model_original.mdl}.
