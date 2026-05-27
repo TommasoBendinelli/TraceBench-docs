@@ -15,20 +15,6 @@
 The dataset manifest records which materialized production-policy runs are selected for a concrete benchmark dataset.
 It separates the candidate universe from the final train/test samples used to create questions.
 
-The intended flow is:
-
-\begin{DocCode}
-bootstrap run graph
-  -> bootstrap materialized runs
-  -> bootstrap cheap_filter_metrics.jsonl
-  -> trained/calibrated surrogate
-production run graph
-  -> production materialized runs
-  -> production cheap_filter_metrics.jsonl
-  -> production surrogate_scores/<surrogate_id>.jsonl
-  -> selected dataset manifest
-  -> exported questions
-\end{DocCode}
 
 Candidate generation may intentionally overproduce runs.
 The dataset manifest is the frozen selection of examples that a downstream question bundle consumes.
@@ -61,7 +47,7 @@ The selection stage consumes:
 \item \code{surrogates/<surrogate_id>/thresholds.json}
 \item \code{experiment_config.json}
 \item \code{description_levels.json}
-\item \code{selection_policies/<selection_id>.json}, or legacy \code{all_possible_combinations.csv}
+\item \code{selection_policies/<selection_id>.json}
 \end{itemize}
 
 During migration, \code{eligibility_metrics.jsonl} may be read only as a backward-compatible alias for \code{cheap_filter_metrics.jsonl}.
@@ -143,16 +129,5 @@ Selection should enforce:
 \item final selected per-class counts;
 \item final pass/fail status for selection acceptance criteria.
 \end{itemize}
-
-\section*{Relationship to Question Generation}
-
-Stage: Generate Question consumes the selected dataset manifest and exports the task bundle under:
-
-\begin{DocCode}
-tsENV_questions/<simulator_id>/
-\end{DocCode}
-
-The exported bundle remains the only dependency of agentic rollout.
-The dataset manifest is a pre-export selection artifact used to make the candidate-to-question boundary explicit.
 
 \end{document}

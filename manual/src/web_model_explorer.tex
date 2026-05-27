@@ -117,8 +117,6 @@ opens the matching run directly if it can be located.
 \item \code{models/simulink/<simulator_id>/noise_adder.py}
 \end{itemize}
 
-During migration, the explorer may read a legacy \code{model_run_specs.json} compatibility artifact, but the resolved run graph is the preferred source of truth.
-\code{eligibility_metrics.jsonl} is supported only as a migration alias for \code{cheap_filter_metrics.jsonl}.
 
 \section*{Web Human Study}
 
@@ -136,9 +134,9 @@ There is also a button to mark a question as problematic.
 Shortcut forms include:
 
 \begin{itemize}
-\item \code{http://localhost:5173/<run_id>} or \code{<sample_uuid>}: open a sample.
+\item \code{http://localhost:5173/<run_id>}: open a sample by \termRunID.
 \item \code{http://localhost:5173/<question_id>}: open a question.
-\item \code{http://localhost:5173/<question_id>-<sample_uuid>}: open a specific sample within a question.
+\item \code{http://localhost:5173/<question_id>-<run_id>}: open a specific run within a question.
 \end{itemize}
 
 \end{document}

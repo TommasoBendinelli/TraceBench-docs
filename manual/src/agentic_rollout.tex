@@ -111,10 +111,17 @@ Internal steps:
     \item Inside \code{/app} in the container, copy \code{tmp/<runid>/agent_payload}/
     This should be the folders \code{test_samples/<uuid>.parquet}, and optionally if the question has train samples, should also include \code{train_samples/<uuid>.parquet}, and \code{train_labels.json}.
     \item Run the agent, by using the command detailed in Platform Startup Commands in \code{docs/overleaf_paper/src/appendix/appendix_agents.tex}.
-    \item Collect all files in the \code{/app} folder, except the original inputs, and move them to \code{artifacts/}. 
-    If the \code{platform=="opencode"}, export the completed OpenCode session inside the container after the agent finishes by redirecting stdout directly to the mounted agent-log file \code{opencode export <session_id> > /agent-logs/opencode-session-<session_id>.json}.
-    Note that the harness must not capture \code{opencode export} stdout through a pipe before writing the file, because OpenCode has had truncated JSON failures when large export payloads are written through piped stdout.
-    After export, the harness must validate that \code{/agent-logs/opencode-session-<session_id>.json} is valid JSON before accepting the run artifact.
+    \item Collect all files in the \code{/app} folder, except the original inputs, and move them to \code{artifacts/}.
+    If the \code{platform=="opencode"}, also run the OpenCode export procedure:
+    \begin{enumerate}
+      \item After the agent finishes, export the completed OpenCode session inside the container.
+      \item Redirect stdout directly to the mounted agent-log file:
+      \begin{DocCode}
+opencode export <session_id> > /agent-logs/opencode-session-<session_id>.json
+      \end{DocCode}
+      \item Do not capture \code{opencode export} stdout through a pipe before writing the file, because OpenCode has had truncated JSON failures when large export payloads are written through piped stdout.
+      \item Validate that \code{/agent-logs/opencode-session-<session_id>.json} is valid JSON before accepting the run artifact.
+    \end{enumerate}
 
   \end{itemize}
   \item Cleanup depends on the rollout mode.
@@ -160,8 +167,11 @@ The directory contains:
 
 \subsection*{Kill running resources}
 
-\code{workflows/rollout/cleanup_tb_question_resources [--run-id RUN_ID ...] --dry-run}, which kills any running container, i.e. if we run --keep-container.
-By default it removes all the running conaineters and any resource that starts with \code{/question_0-}.
-If \code{--dry-run} is passed then it only lists what will be deleted
+The cleanup command kills any running container, i.e. if we run \code{--keep-container}:
+\begin{DocCode}
+workflows/rollout/cleanup_tb_question_resources.sh [--run-id RUN_ID ...] [--dry-run]
+\end{DocCode}
+By default it removes all the running containers and any resource that starts with \code{/question_0-}.
+If \code{--dry-run} is passed then it only lists what will be deleted.
 
 \end{document}

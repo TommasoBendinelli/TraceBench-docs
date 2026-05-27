@@ -111,6 +111,7 @@
 \newcommand{\termSimulators}{\code{simulators}\xspace}
 \newcommand{\termSimulatorRecipe}{\code{simulator_recipe}\xspace}
 \newcommand{\termFamily}{\code{family}\xspace}
+\newcommand{\termRunID}{\code{run_id}\xspace}
 \newcommand{\termTaskMode}{\code{task_mode}\xspace}
 \newcommand{\termNoiseLevel}{\code{noise_level}\xspace}
 \newcommand{\termNoParameterChangeClass}{\ensuremath{\mathrm{NI} }\xspace}
@@ -179,8 +180,27 @@
     numbersep=10pt,
     firstnumber=last
   }
+  \DefineVerbatimEnvironment{LinkedDocCode}{Verbatim}{
+    fontsize=\small,
+    breaklines=false,
+    breaksymbolleft={},
+    breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg,
+    numbers=left,
+    stepnumber=1,
+    numberblanklines=true,
+    numbersep=10pt,
+    firstnumber=last,
+    commandchars=\\\{\}
+  }
   \BeforeBeginEnvironment{DocCode}{\manualDocBeginNumberedDocCode}
   \AfterEndEnvironment{DocCode}{\manualDocEndNumberedDocCode}
+  \BeforeBeginEnvironment{LinkedDocCode}{\manualDocBeginNumberedDocCode}
+  \AfterEndEnvironment{LinkedDocCode}{\manualDocEndNumberedDocCode}
 \else
   \DefineVerbatimEnvironment{DocCode}{Verbatim}{
     fontsize=\small,
@@ -193,6 +213,18 @@
     framesep=3pt,
     rulecolor=\color{manualDocCodeBorder},
     bgcolor=manualDocCodeBg
+  }
+  \DefineVerbatimEnvironment{LinkedDocCode}{Verbatim}{
+    fontsize=\small,
+    breaklines=false,
+    breaksymbolleft={},
+    breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg,
+    commandchars=\\\{\}
   }
 \fi
 

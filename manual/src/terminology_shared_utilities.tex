@@ -27,11 +27,16 @@ In this case we use the corresponding agent-facing class is "no intervention". H
 \item (\termDescLevel): It describes the amount of textual description provided to the agent. Its allowed values are \code{none} and \code{high}.
 \item (\termSimulator): One of physical simulator from which we generate data. The allowed values are defined in \code{ALLOWED_TSENV_MODELS}.
 \item (\termSimulatorRecipe): One configuration that can be given as input to the simulate stage to generate.
-\item (\termFamily): A \termFamily is the baseline-centered group of run nodes generated from one sampled baseline recipe. It contains the baseline run, all intervention children derived from that baseline, and the matched time-zero/static-change probe for each intervention. All nodes in the group share the same \code{family_id}.
+\item (\termRunID): An identifier for a single run. 
+\item (\termFamily): A \termFamily is the baseline-centered group of run nodes generated from one sampled baseline recipe. 
+It contains the baseline run, all intervention children derived from that baseline, and the matched time-zero/static-change probe for each intervention. 
+All nodes in the group share the same \code{family_id}, which is \termRunID of the baseline.
 \item (\termTaskMode): The required form of the agent's final answer. 
 Its allowed values are \code{direct} and \code{code}. 
 In \code{direct} mode, the agent must directly write the predictions for the test samples. In \code{code} mode, the agent must write an interpretable \code{rule.py} file defining a prediction function that is evaluated on the test samples and held-out samples.
-\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample. Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} returns the clean simulator output; \code{low} and \code{high} call the \termSimulator-specific \code{add_noise(...)} implementation and must satisfy the corresponding detectability SNR thresholds. The realized effect-to-noise SNR values are reported in \code{noise_analysis}.
+\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample. 
+Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} returns the clean simulator output; \code{low} and \code{high} call the \termSimulator-specific \code{add_noise(...)} implementation and must satisfy the corresponding detectability SNR thresholds. 
+\code{high} has a scale of 4 compared to \code{low}.
 
 \end{itemize}
 

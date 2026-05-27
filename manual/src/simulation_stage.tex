@@ -18,14 +18,14 @@ A resolved run graph is the concrete output of the candidate-generation stage: a
 Stage: Simulate does not sample new runs; it only materializes these resolved recipes.
 
 The stage can be launched concurrently for different \termSimulators.
-If worker parallelism is enabled for a single \termSimulator, it parallelizes materialization of already resolved \code{run_id} nodes.
-Each worker must write to a distinct \code{run_id} directory, and worker count must not change candidate generation, the resolved run graph, or recipe contents.
+Additionally, if MATLAB's Parallel Computing Toolbox is installed, the script supports running multiple runs in parallel within the same \termSimulator by starting a MATLAB \code{parpool} with \code{N} workers.
 
 \section*{Invocation}
 
 \begin{DocCode}
 python workflows/simulate/run_pending_sims.py \
   [--model SIMULATOR] \
+  [--matlab-workers N] \
   --policy POLICY_ID \
   [--overwrite] \
   [--rerun-failed] \
@@ -40,6 +40,7 @@ python workflows/simulate/run_pending_sims.py \
 
 \begin{itemize}
 \item \code{--model}: selected \termSimulator. If omitted, the script iterates over \hyperref[sec:allowed-tsenv-models]{all allowed \name{} \termSimulators}.
+\item \code{--matlab-workers}: number of MATLAB \code{parpool} workers. The default is \code{1}, which runs one simulation at a time and does not start an explicit parallel pool. Values greater than \code{1} require MATLAB's Parallel Computing Toolbox; \code{0} is invalid.
 \item \code{--policy}: policy identifier. The script reads the resolved run graph under \code{models/simulink/<simulator_id>/plans/<policy_id>/}.
 \item \code{--overwrite}: mark all selected runs as \code{not_run} and materialize them again.
 \item \code{--rerun-failed}: mark only selected runs currently recorded as \code{failed} as \code{not_run} and materialize them again.
@@ -49,7 +50,7 @@ python workflows/simulate/run_pending_sims.py \
 \item \code{--runs-root}: optional base directory for run artifacts. When set, each \termSimulator writes to \code{RUNS_ROOT/<simulator_id>/runs/} instead of \code{models/simulink/<simulator_id>/runs/}. This is intended for local NVMe scratch storage.
 \item \code{--matlab-cache-root}: optional base directory for MATLAB/Simulink generated cache files. If omitted, MATLAB uses its normal cache and preference locations.
 \item \code{--profile-timing}: write per-phase timing records to \code{profile_timing.jsonl} in the selected run root.
-\item \code{--compute-features}: compute \code{features.json}. If feature names are provided, they must match the feature names defined by the \termSimulator-specific \code{features.py}. If no feature names are provided, all default features are computed. By default, no features are computed.
+\item \code{--compute-features}: compute \code{features.json}. If feature names are provided, they must match the feature names defined by the \termSimulator-specific \code{features.py}.  By default, no features are computed.
 \end{itemize}
 
 The environment variable \code{SIMSCAPE_CUSTOM_PATH} must also be defined to the custom Simscape blocks.
@@ -155,6 +156,75 @@ The first timestamp is expected to be \code{dt = 1/sampling_rate_hz}; the last p
 \item \code{validate(run_id)} reloads the saved artifact and checks timestamp spacing, column order, \code{float32} storage, minimum length, expected sample count, and absence of \code{NaN} or \code{inf} values.
 \end{enumerate}
 
+\subsection*{MATLAB Parallel Execution and Logging}
+
+When \code{--matlab-workers 1} is used, Stage: Simulate starts one MATLAB engine session and materializes pending runs serially.
+The console prints one \code{Simulating <kind> <run_id>...} line before each run.
+
+When \code{--matlab-workers N} is greater than \code{1}, Stage: Simulate starts one MATLAB engine session, creates or reuses a MATLAB \code{parpool} with up to \code{N} workers, and dispatches prepared run jobs to the pool.
+This is MATLAB worker parallelism, not Python process parallelism.
+It requires MATLAB's Parallel Computing Toolbox and uses the active MATLAB local cluster profile.
+If MATLAB reports that the profile has a smaller \code{NumWorkers} limit than the requested \code{N}, the run fails before simulations start.
+For example, a \code{Processes} profile with \code{NumWorkers = 10} rejects \code{--matlab-workers 20}.
+The configured limit can be inspected in MATLAB with:
+
+\begin{DocCode}
+c = parcluster("Processes");
+c.NumWorkers
+\end{DocCode}
+
+and changed, if the local machine and license can support it, with:
+
+\begin{DocCode}
+c = parcluster("Processes");
+c.NumWorkers = 20;
+saveProfile(c);
+\end{DocCode}
+
+The stage first prepares isolated temporary workspaces for all pending runs, each containing a rewritten \code{simulink_model.mdl}, \code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
+It then submits those jobs to MATLAB in chunks.
+By default the chunk size is \code{10 * --matlab-workers}; it can be overridden with:
+
+\begin{DocCode}
+TSENV_MATLAB_PARPOOL_CHUNK_SIZE=20
+\end{DocCode}
+
+Chunking is used because MATLAB returns simulation result objects to Python only after a submitted MATLAB batch returns.
+Without chunks, a long run may look silent even though MATLAB workers are busy.
+The MATLAB helper stores the chunk return as a cell array of scalar job-result structs so MATLAB Engine can transfer the results back to Python.
+Python mirrors MATLAB \code{stdout} and \code{stderr} through \code{io.StringIO}-compatible streams, which is required by MATLAB Engine and allows the terminal to show MATLAB progress messages.
+With chunks enabled, the expected console output is:
+
+\begin{DocCode}
+Running 1374 simulations with MATLAB parpool (10 workers).
+Using MATLAB parpool with 10 workers.
+Preparing 1374 MATLAB parpool job workspaces...
+Prepared 1374 MATLAB parpool jobs; submitting 14 chunks of up to 100.
+Submitting MATLAB parpool chunk 1/14 (100 jobs; completed 0/1374).
+Submitted 100 MATLAB parpool jobs (0/1374 already complete before this chunk).
+completed 1/1374 chunk 1/100 run_id=<run_id> status=success
+...
+Finished MATLAB parpool chunk 1/14; processed 100/1374 jobs.
+\end{DocCode}
+
+The \code{completed X/Y} lines are emitted by MATLAB as \code{fetchNext} receives worker results.
+After a chunk returns, Python extracts signals, resamples, serializes \code{data.parquet}, validates, applies the status to \code{model_record.json}, and persists the registry.
+Therefore \code{data.parquet} counts and \code{model_record.json} advance chunk-by-chunk, not at every individual MATLAB worker completion.
+If the terminal shows no per-run output while \code{MATLAB -parallelserver} workers are consuming CPU, MATLAB is still inside the currently submitted chunk.
+Use a smaller \code{TSENV_MATLAB_PARPOOL_CHUNK_SIZE} when faster visible registry/artifact progress is more important than submission overhead.
+
+More workers are not expected to produce a linear speedup.
+Only the MATLAB simulation batch is parallelized; Python preparation, workspace rewriting, signal extraction, resampling, serialization, validation, registry persistence, MATLAB startup, parpool startup, and worker coordination still cost wall-clock time.
+Short simulations are especially sensitive to that fixed overhead.
+In practice, small benchmark subsets may show faster MATLAB chunk execution but similar or slower end-to-end wall time.
+Large policies amortize the fixed overhead better, so a stable low worker count such as \code{--matlab-workers 2} can be faster for a full policy even when it is not faster on a 20-run smoke test.
+Very high worker counts can become slower or unstable because MATLAB workers compete for memory, disk/cache access, Simulink/Simscape initialization, and license/profile resources.
+
+Use \code{--profile-timing} to compare worker counts on the target machine.
+The end-to-end wall time should be compared together with \code{profile_timing.jsonl} phases:
+\code{matlab_parpool_simulations} measures the submitted MATLAB chunk time, while \code{parallel_materialization} includes preparation and Python-side post-processing.
+For a fair test, run the same policy into separate \code{--runs-root} directories and compare successful \code{data.parquet} counts as well as wall time.
+
 \section*{Output Artifacts}
 
 By default, materialized artifacts are stored under:
@@ -200,5 +270,29 @@ In addition to run-specific validation, the stage enforces:
 \item if MATLAB worker parallelism is enabled, materializing the same selected runs with one worker and with multiple workers must produce equivalent \code{recipe.json}, \code{data.parquet}, and success/failure records;
 \item run folders outside the selected plan must not be deleted unless an explicit cleanup mode is enabled.
 \end{itemize}
+
+\section*{Troubleshooting: MathWorks Online Licensing State}
+
+If Stage: Simulate cannot start MATLAB even though the MATLAB installation is present, check for stale MathWorks online-licensing state in the user's home directory.
+This has previously affected \code{L7161}: MATLAB was unable to reuse the existing online license state until the local MathWorks licensing, credentials, and ServiceHost state were moved aside and regenerated by an interactive MATLAB login.
+
+First inspect MATLAB and MathWorks background processes scoped to the current user:
+
+\begin{DocCode}
+pkill -TERM -u "$USER" -f 'MATLAB|matlab|MathWorks|MathWorksServiceHost|MATLABWindow|matlabwindow|mvm|xvfb|fluxbox'
+\end{DocCode}
+
+This could be enough, altough if not, we need to delete some cretdential files and regenerate them. 
+Specifically
+
+
+\begin{itemize}
+\item \code{~/.matlab/credentials/} (also located at \code{/Users/tbe/Library/Application Support/MathWorks/credentials})
+\item \code{~/.MathWorks/licensing/} (also located at \code{/Users/tbe/Library/Application Support/MathWorks/credentials})
+\item \code{~/.MathWorks/ServiceHost/l7161/} (also located at \code{/Users/tbe/Library/Application Support/MathWorks/credentials})
+\end{itemize}
+
+On the previous recovery, new credential keys appeared after login and \code{~/.MathWorks/licensing/licenses/license_mhkokgon.mwlicx} appeared afterward.
+Once those files exist, retry the simulate stage.
 
 \end{document}

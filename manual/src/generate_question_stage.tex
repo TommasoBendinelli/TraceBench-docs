@@ -10,17 +10,7 @@
 \docTitle{Stage: Generate Question}
 \phantomsection\label{docstart:generate_question_stage}
 
-This stage converts selected \termSimulator run artifacts into \name{} question bundles for downstream agent rollout.
-It consumes a frozen selected dataset manifest rather than the full candidate universe directly.
-
-The intended flow is:
-
-\begin{DocCode}
-bootstrap policy -> bootstrap simulations -> bootstrap cheap filter -> surrogate training
-production policy -> production simulations -> production cheap filter -> surrogate confidence scoring
-  -> dataset manifest
-  -> question export
-\end{DocCode}
+This stage exports selected simulator runs into the canonical TSENV question bundle: the standard exchange format consumed by agentic rollout, baseline evaluation, and downstream analysis.
 
 \section*{Required Inputs}
 
@@ -40,7 +30,6 @@ For each \termSimulator, question generation requires:
 \end{itemize}
 
 Question generation itself should not need to rescore the whole candidate pool.
-During migration, \code{train_test_selection.py} may still build \code{sample_manifest.json} directly from legacy compatibility metrics.
 The preferred design writes the selected dataset artifacts first.
 
 \section*{Step 1: Dataset Selection}
@@ -59,16 +48,6 @@ env/bin/python workflows/generate/select_dataset.py \
   [--row-slug ROW_SLUG [ROW_SLUG ...]]
 \end{DocCode}
 
-Legacy invocation during migration:
-
-\begin{DocCode}
-env/bin/python workflows/generate/train_test_selection.py \
-  --model SIMULATOR \
-  --policy POLICY_ID \
-  --dataset DATASET_ID \
-  [--row_slug ROW_SLUG [ROW_SLUG ...]]
-\end{DocCode}
-
 \section*{Step 2: Generate Exported Questions}
 
 This step is deterministic once \code{sample_manifest.json} exists.
@@ -80,22 +59,18 @@ env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.
   --row-slug SLUG [SLUG ...]
 \end{DocCode}
 
-It materializes the canonical exported bundle under:
-
+It materializes the canonical exported bundle as:
 \begin{DocCode}
-tsENV_questions/<simulator_id>/
+  tsENV_questions/<simulator_id>/
+  |-- questions.json
+  |-- dataframes/
+  |   `-- *.parquet
+  |-- noise_adder.py
+  |-- sample_manifest.json
+  |-- model_record.json
+  `-- selection_provenance.jsonl
 \end{DocCode}
-
-with:
-
-\begin{itemize}
-\item \code{questions.json}
-\item \code{dataframes/*.parquet}
-\item \code{noise_adder.py}
-\item \code{sample_manifest.json}
-\item \code{model_record.json}
-\end{itemize}
-
+Where:
 \section*{\texorpdfstring{\titlecode{sample_manifest.json}}{sample\_manifest.json}}
 
 The manifest is keyed by \code{shot_slug}.

@@ -1,5 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\hypersetup{hidelinks}
 \externaldocument{build/generate_question_stage}[generate_question_stage.pdf]
 
 \begin{document}
@@ -7,35 +8,60 @@
 \docTitle{Website}
 \label{sec:website}
 
-This is the website of TSENV. 
+
+\phantomsection\label{sec:website-document-contents}
+\section*{Document Contents}
+This document defines both the public-facing design of the TSENV website and the technical implementation needed to host, populate, validate, and deploy it.
+The document is divided into two parts:
+\begin{itemize}
+  \item \hyperref[sec:website-design-brief]{Design Brief}
+  \begin{itemize}
+    \item \hyperref[sec:website-overview]{Website goals and overview}
+    \item \hyperref[sec:website-user-admin-actions]{User and admin actions}
+    \item \hyperref[sec:website-global-style]{Global visual style}
+    \item \hyperref[sec:website-page-overview]{Overview page}
+    \item \hyperref[sec:website-page-results]{Results page}
+    \item \hyperref[sec:website-page-environments]{Environments page}
+    \item \hyperref[sec:website-page-get-started]{Get Started and Submit page}
+    \item \hyperref[sec:website-page-authors]{Authors, Citation, and Contact page}
+  \end{itemize}
+  \item \hyperref[sec:website-technical-brief]{Technical Brief}
+  \begin{itemize}
+    \item \hyperref[sec:website-hosting-structure]{Hosting structure}
+    \item \hyperref[sec:website-routing]{Website structure and routing}
+    \item \hyperref[sec:website-generated-json]{Generated JSON files}
+    \item \hyperref[sec:website-validation-pipeline]{Validation pipeline}
+    \item \hyperref[sec:website-deployment]{Deployment workflow}
+    \item \hyperref[sec:website-huggingface-downloads]{Hugging Face downloads}
+  \end{itemize}
+
+\end{itemize}
+
+\phantomsection\label{sec:website-design-brief}
+\section*{Design Brief}
+\phantomsection\label{sec:website-overview}
+\subsection*{Overview}
+This is the public website for tsENV. The goals of the website are to:
 \begin{itemize}
     \item Make the benchmark understandable before a reader opens the paper or the repository.
     \item Enable people to download results, trajectories, and datasets.
     \item Allow third parties to submit their agentic scores.
 \end{itemize}
 We draw inspiration from \code{TerminalBench} and \code{TeamBench} websites. 
+The website is hosted at \code{tsenv.github.io}.
+We draw inspiration from the TerminalBench and TeamBench websites. 
 The website is hosted at tsenv.github.io.
-Benchmark data, public examples, and downloadable artifacts are hosted on the Hugging Face Hub.
+Results, complete result tables, trajectories, benchmark data, public examples, and downloadable artifacts are hosted on the Hugging Face Hub. 
 The website should be both desktop- and mobile-friendly.
 
-\section*{Document Content}
-
-This document first describes the user actions the website must support, then the GitHub Pages and Hugging Face structures that host the public website and benchmark artifacts.
-It then specifies the website mockup, routing hierarchy, page-level content, deployment workflow, generated data pipeline, downloads, and launch checklist.
-
-\begin{itemize}
-    \item User actions: inspect the leaderboard, download trajectories, and submit new results.
-    \item Hosting structure: GitHub Pages for the website and Hugging Face for benchmark data and artifacts.
-    \item Website mockup: global style, client-side routes, and page specifications.
-    \item Page hierarchy: Overview, Results, Environments, Get Started, and Authors.
-    \item Launch path: deployment, generated website data, Hugging Face downloads, and final checklist.
-\end{itemize}
 
 
-\section*{User actions}
+\phantomsection\label{sec:website-user-admin-actions}
+\subsection*{User and Admin actions}
+The user actions are
 \begin{itemize}
 \item Inspect the leaderboard.
-\item Download trajectories.
+\item Download trajectories, complete result tables, and benchmark datasets.
 \item Submit new results. 
 This works as follow:
 \begin{itemize}
@@ -45,143 +71,14 @@ This works as follow:
   \item website serves precomputed leaderboard data
 \end{itemize}
 \end{itemize}
-
-\section*{Admin actions}
+The admin actions are
 \begin{itemize}
-\item Backfilling the results
-\item Enter the \termSimulators
-\end{itemize}
-
-\subsection*{Github Page structure}
-\begin{DocCode}
-tsenv.github.io/
-  index.html
-  404.html
-  assets/
-    app.js
-    styles.css
-  public/
-    data/
-      summary.json
-      leaderboard.json
-      environments/
-        BallDrop/
-          description.json
-          data_1.json
-          data_2.json
-          ...
-      ...
-  scripts/
-    generate_website_data.py
-    validate_website_data.py
-  .github/
-    workflows/
-      deploy.yml
-\end{DocCode}
-The GitHub Pages is the public website host.
-
-These files are automatically generated
-\begin{DocCode}
-public/data/summary.json
-{
-  "num_simulators": 3,
-  "simulators": ["BallDrop", "BounceBall", "MassSlide"],
-  "task_modes": ["Code", "Direct"],
-  "axes": ["noise", "context", "examples"],
-  "canonical_scope": {
-    "task_mode": "Code",
-    "noise": "Low",
-    "context": "High",
-    "examples": "Three Examples",
-    "required_seeds_per_simulator": 5
-  }
-}
-\end{DocCode}
-\begin{DocCode}
-public/data/leaderboard.json
-  {
-    "rank": 1,
-    "submission_id": "agent-x-2026-05-01",
-    "agent": "Agent X",
-    "model": "Model Y",
-    "score": 0.82,
-    "date": "2026-05-01",
-    "submitter": "Lab Z",
-    "scope": {
-      "task_mode": "Code",
-      "noise": "Low",
-      "context": "High",
-      "examples": "Three Examples"
-    },
-    "complete": true
-  }
-\end{DocCode}
-
-
-For the cleanest URL, create a GitHub repository named:
-
-\begin{verbatim}
-tsenv.github.io
-\end{verbatim}
-
-
-
-
-\subsection*{Huggingface structure}
-\begin{DocCode}
-tsenv/tsenv-benchmark/
-  README.md
-  LICENSE
-  questions/
-  run_results.parquet
-  submissions/
-    <submission-id>.zip
-\end{DocCode}
-\begin{itemize}
-    \item \texttt{README.md}: Dataset card for the Hugging Face repository. 
-    It explains what TSENV is, how the benchmark questions are organized, how to load/use the files, how submissions are stored, and how to cite the benchmark.
-    \item \texttt{LICENSE}: License for the released benchmark data, question bundles, public results, and submission artifacts.
-    \item \texttt{questions/}: Public TSENV question bundles. 
-    This is the migrated benchmark dataset: each simulator/environment folder contains the exported questions used by agents, including \texttt{questions.json}, the corresponding Parquet time-series files, manifests, and any files needed to materialize the task.
-    See \hyperref[docstart:generate_question_stage]{Stage: Generate Question} for the exported bundle schema and generation workflow.
-    This is the part users download when they want to run or inspect the benchmark tasks.
-    \item \texttt{run\_results.parquet}: Canonical public results table. 
-    It contains one row per evaluated public run, usually identified by submission, agent/model, simulator, task condition, and seed. 
-    The website leaderboard JSON is generated from this file by grouping and filtering the rows, for example requiring five completed seeds for each simulator before showing a public leaderboard score.
-    \item \texttt{submissions/}: Archive of accepted public submissions. Each submission is stored as a zip file so that raw artifacts do not clutter the repository.
-    \item \texttt{submissions/<submission-id>.zip}: Raw auditable archive for one submitted result. It should contain the submitted run metadata, per-run/per-seed results, trajectory artifacts, logs, and any supporting files needed to reproduce or inspect the submitted score. 
+  \item Backfilling the results from the repository
+  \item Updating new \termSimulators
 \end{itemize}
 
 
-
-\section*{Website structure and routing}
-
-The website must be implemented as a single-page application (SPA), not as a collection of separate static HTML pages and not as a single long scrolling page with anchor sections.
-Each top-level navigation item should map to a client-side route handled by the SPA router:
-
-\begin{itemize}
-    \item \texttt{/}: \hyperref[sec:website-page-overview]{Overview}
-    \item \texttt{/results/}: \hyperref[sec:website-page-results]{Results}
-    \item \texttt{/environments/}: \hyperref[sec:website-page-environments]{Environments}
-    \item \texttt{/get-started/}: \hyperref[sec:website-page-get-started]{Get Started and Submit}
-    \item \texttt{/authors/}: \hyperref[sec:website-page-authors]{Authors, Citation, and Contact}
-\end{itemize}
-
-The website should not include a separate Explorer page or \texttt{/explorer/} route.
-Generated examples or demo visuals, if needed, should appear on the Overview page only.
-
-The SPA should also support result-detail routes for leaderboard records:
-
-\begin{itemize}
-    \item \texttt{/results/}: Results page with one filterable leaderboard
-    \item \texttt{/results/\textless submission-id\textgreater/}: detail page for one displayed leaderboard record
-\end{itemize}
-
-The navigation menu should link to these routes directly.
-Route changes should preserve the SPA shell and should not trigger full-page reloads.
-Internal anchor links may be used within a route for subsections, but the primary website structure must remain client-side routed.
-
-\section*{Website textual mockup}
+\phantomsection\label{sec:website-global-style}
 \subsection*{Global style}
 
 The intended style is minimalistic and simple. 
@@ -204,6 +101,7 @@ The website should use a restrained research-lab style:
     Section hierarchy should be communicated through headings, spacing, and thin divider lines rather than additional decorative labels.
 \end{itemize}
 
+\section*{Page specifications}
 \phantomsection\label{sec:website-page-overview}
 \subsection*{Page 1: Overview}
 
@@ -257,9 +155,9 @@ The \texttt{Design principles} section should appear near the bottom of the land
 
 \subsubsection*{Example task visual}
 
-
 The landing page should show a compact example task visual consisting of a full-width time-series plot with an intervention marker.
-The example time-series plot should be rendered from the generated environment JSON files under \texttt{public/data/environments/<environment>/}.
+
+The example time-series plot should be rendered from the generated environment JSON files under \code{public/data/environments/BallDrop/description.json} and \code{public/data/environments/BallDrop/data_0.json}.
 The selected environment JSON should include the intervention time, changed parameter, observed channels, candidate parameters, and decimated samples for the plotted channels.
 The layout should be single-column: compact controls above the plot, the plot across the full content width, and the prompt panel below.
 
@@ -316,19 +214,19 @@ Right now we have 3 simulators, we want 15 runs to appear with that.
 
 
 \subsubsection*{Table behavior}
-
-The table should support sorting by rank, score, agent, model, date and submitter.
-At the right there are two buttons, select (to select different experimental conditions) and compare. 
-when compare is clicked we have the ablation between two experimenetal conditions.
-
-Columns should emphasize leaderboard presentation: rank, agent, model, score, date, and submitter.
-Validation rules, generated JSON fields, and schema details should stay in the generated-data and deployment sections rather than being mixed into the visible Results page specification.
+The table should have five columns: rank, agent, model, score, date and submitter.
+The table should support sorting for each columns
+Above the table there should the different filters to select from.
+Next right to the filters there should e button called \code{Compare}
+When it's clicked it should open another row of filters and in score we get the results before and after the value.
+Above right there are two buttons, select (to select different experimental conditions) and compare. 
 
 
 \subsubsection*{Clickable leaderboard rows}
 
 Each leaderboard row should be clickable.
-Clicking a row should navigate to a result-detail route rather than expanding a panel in place.
+Clicking a row should navigate to a result-detail route.
+It should open by default the result corresponding to the filter chosen, however it would be possible again to select a different filter also in this page.
 
 For example:
 
@@ -352,22 +250,19 @@ The route should remain inside the single-page application and should not trigge
 
 
 \phantomsection\label{sec:website-page-environments}
+
 \subsection*{Page 3: Environments}
-The page should have a grid layout where each environment is a square. 
-When you click on the square you get to an environment-specific layout.
-The top of the page should show a plot of the time series, followed by the description.
-These are stored under \code{public/data/environments/<environment>/} as \code{description.json} and \code{data_<n>.json} files.
-These are generated from \code{description_levels.json} and also include five time series from real data.
-The use can choose between these
+The Environments page should present all simulators in a square-card grid. 
+Each card should show the simulator name and the one-line description from \code{description.json::short_one_line_description}. 
+Clicking a card should navigate within the single-page application to an environment-specific route, for example \code{/environments/BallDrop/}.
 
-
-
-
-\subsubsection*{Layout notes}
-
-The environment page should be easy to scan vertically.
-Plots should be large enough to be useful.
-Observed channels and candidate parameters should be aligned in labeled rows, not buried inside prose.
+\paragraph{Environment-specific page}
+Each environment-specific page should explain one simulator in more detail. 
+The page should begin with a full-width Plotly time-series plot, followed by the agent prompt for the selected task condition. 
+As on the homepage example visual, the user should be able to choose between task mode and condition-axis settings. 
+The page should also include a dropdown for selecting different samples from the generated environment JSON files. 
+Changing the controls should update the plotted sample and the displayed prompt without leaving the route.
+The environment-specific page should load its metadata from \code{public/data/environments/<environment>/description.json} and its plotted samples from \code{public/data/environments/<environment>/data_<n>.json}.
 
 \phantomsection\label{sec:website-page-get-started}
 \subsection*{Page 4: Get Started and Submit}
@@ -421,8 +316,7 @@ The page should also show how to submit a new result.
 \subsection*{Page 5: Authors, Citation, and Contact}
 
 The final page should make the website feel complete, citable, and easy to contact.
-It should include authors, citation information, resources, and contact links.
-It should not include an FAQ section.
+It should include authors, citation information, and contact links.
 
 \subsubsection*{Authors}
 
@@ -459,15 +353,274 @@ The short description should be:
 Questions, feedback, or collaboration.
 \end{quote}
 
-\subsubsection*{Resources}
+\phantomsection\label{sec:website-technical-brief}
+\section*{Technical Brief}
 
-The resources section should contain text links:
+\newcommand{\websiteTreeSummaryJson}{\hyperref[sec:website-summary-json]{summary.json}}
+\newcommand{\websiteTreeLeaderboardJson}{\hyperref[sec:website-leaderboard-json]{leaderboard.json}}
+\newcommand{\websiteTreeEnvironmentDescriptionJson}{\hyperref[sec:website-environment-description-json]{description.json}}
+\newcommand{\websiteTreeEnvironmentDataJson}{\hyperref[sec:website-environment-data-json]{\textless data\_1\textgreater.json}}
+\newcommand{\websiteTreeGenerateWebsiteData}{\hyperref[sec:website-generation-pipeline]{generate\_website\_data.py}}
+\newcommand{\websiteTreeValidateWebsiteData}{\hyperref[sec:website-validation-pipeline]{validate\_website\_data.py}}
+\newcommand{\websiteTreeDeployWorkflow}{\hyperref[sec:website-deployment]{deploy.yml}}
 
-\begin{center}
-\texttt{paper \quad code \quad dataset \quad results}
-\end{center}
+\phantomsection\label{sec:website-hosting-structure}
+\subsection*{Github Page structure}
+\begin{LinkedDocCode}
+tsenv.github.io/
+  index.html
+  404.html
+  assets/
+    app.js
+    styles.css
+  public/
+    data/
+      \websiteTreeSummaryJson
+      \websiteTreeLeaderboardJson
+      environments/
+        <enviroment_1>/
+          \websiteTreeEnvironmentDescriptionJson
+          \websiteTreeEnvironmentDataJson
+          ...
+      ...
+  scripts/
+    \websiteTreeGenerateWebsiteData
+    \websiteTreeValidateWebsiteData
+  .github/
+    workflows/
+      \websiteTreeDeployWorkflow
+\end{LinkedDocCode}
 
-If one of these artifacts is unavailable, the link should be visible but disabled or marked as ``coming soon''.
+\phantomsection\label{sec:website-generated-json}
+\subsection*{Generated JSON files}
+
+The website should load browser-ready JSON files generated by \code{scripts/generate_website_data.py}.
+These files define the public summary, leaderboard, environment metadata, plotted samples, and submission details used by the website.
+
+The expected generated files are:
+\begin{DocCode}
+public/data/summary.json
+public/data/leaderboard.json
+public/data/environments/BallDrop/description.json
+public/data/environments/BallDrop/data_<n>.json
+public/data/submissions/<submission-id>.json
+\end{DocCode}
+
+\phantomsection\label{sec:website-summary-json}
+\begin{DocCode}
+public/data/summary.json
+{
+  "num_simulators": 3,
+  "simulators": ["BallDrop", "BounceBall", "MassSlide"],
+  "task_modes": ["Code", "Direct"],
+  "axes": ["noise", "context", "examples"],
+  "canonical_scope": {
+    "task_mode": "Code",
+    "noise": "Low",
+    "context": "High",
+    "examples": "Three Examples",
+    "required_seeds_per_simulator": 5
+  }
+}
+\end{DocCode}
+\phantomsection\label{sec:website-leaderboard-json}
+\begin{DocCode}
+public/data/leaderboard.json
+{
+  "rank": 1,
+  "submission_id": "agent-x-2026-05-01",
+  "agent": "Agent X",
+  "model": "Model Y",
+  "score": 0.82,
+  "date": "2026-05-01",
+  "submitter": "Lab Z",
+  "scope": {
+    "task_mode": "Code",
+    "noise": "Low",
+    "context": "High",
+    "examples": "Three Examples"
+  },
+  "complete": true
+}
+\end{DocCode}
+\phantomsection\label{sec:website-environment-description-json}
+\begin{DocCode}
+public/data/environments/BallDrop/description.json
+{
+  "environment_id": "BallDrop",
+  "name": "BallDrop",
+  "short_one_line_description": "A ball is dropped from a height and observed over time.",
+  "prompt_combinations": [
+    {
+      "desc_level": "high",
+      "task_type": "direct",
+      "training_samples": "none",
+      "agent_instruction": "..."
+    },
+    {
+      "desc_level": "high",
+      "task_type": "code",
+      "training_samples": "none",
+      "agent_instruction": "..."
+    },
+    {
+      "desc_level": "high",
+      "task_type": "direct",
+      "training_samples": ">0",
+      "agent_instruction": "..."
+    },
+    {
+      "desc_level": "high",
+      "task_type": "code",
+      "training_samples": ">0",
+      "agent_instruction": "..."
+    },
+    {
+      "desc_level": "none",
+      "task_type": "direct",
+      "training_samples": ">0",
+      "agent_instruction": "..."
+    },
+    {
+      "desc_level": "none",
+      "task_type": "code",
+      "training_samples": ">0",
+      "agent_instruction": "..."
+    }
+  ],
+  "observed_channels": [
+    {"id": "Position", "label": "ball height", "unit": "m"},
+    {"id": "Velocity", "label": "ball velocity", "unit": "m/s"},
+    {"id": "Hard_Stop_f", "label": "contact impulse", "unit": "N*s"}
+  ],
+  "candidate_parameters": [
+    "coefficient of restitution",
+    "mass",
+    "drag coefficient",
+    "gravity acceleration"
+  ],
+  "downloads": {
+    "questions": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip",
+    "trajectories": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/trajectories/BallDrop.zip"
+  }
+}
+\end{DocCode}
+\phantomsection\label{sec:website-environment-data-json}
+\begin{DocCode}
+public/data/environments/BallDrop/data_1.json
+{
+  "run_id": "0f159f29c1004403a466c6bea03d7d02",
+  "source": "tsENV_questions/BallDrop/dataframes/0f159f29c1004403a466c6bea03d7d02.parquet",
+  "columns": ["Position", "Velocity", "Hard_Stop_f", "time"],
+  "rows": [
+    {
+      "Position": 10.882802,
+      "Velocity": 5.839008,
+      "Hard_Stop_f": 0.0,
+      "time": 0.0025
+    },
+    {
+      "Position": 10.897288,
+      "Velocity": 5.794273,
+      "Hard_Stop_f": 0.0,
+      "time": 0.005
+    },
+    {
+      "Position": 10.911662,
+      "Velocity": 5.749537,
+      "Hard_Stop_f": 0.0,
+      "time": 0.0075
+    }
+  ]
+}
+\end{DocCode}
+The \code{data_<n>.json} files are browser-ready JSON serializations of the Kaggle
+\code{tsENV_questions/<environment>/dataframes/<run_id>.parquet} files.
+They should contain the same time-series columns and numeric rows as the source
+Parquet file; prompts, labels, and intervention metadata belong in the exported
+\code{questions.json}, \code{sample_manifest.json}, and \code{model_record.json}
+files.
+
+\phantomsection\label{sec:website-generate-website-data}
+\subsection*{scripts/generate\_website\_data.py}
+
+\code{scripts/generate_website_data.py} converts consolidated benchmark artifacts into the small browser-ready JSON files consumed by the website.
+It should read the canonical benchmark results and generated question metadata, then write only the compact public data needed by the static site.
+
+The script should perform the following tasks:
+\begin{itemize}
+    \item write \code{public/data/summary.json} with the simulator list, task modes, condition axes, canonical scope, and required seed counts;
+    \item write \code{public/data/leaderboard.json} with precomputed display-ready leaderboard records;
+    \item compute leaderboard eligibility before publication, including the requirement that displayed public cells contain the required completed seeds;
+    \item distinguish aggregate Overall records from condition-level records;
+    \item write \code{public/data/environments/<environment>/description.json} with simulator metadata, observed channels, candidate parameters, prompt combinations, and downloads;
+    \item write \code{public/data/environments/<environment>/data_<n>.json} with decimated browser-ready time-series samples for plotting;
+    \item write \code{public/data/submissions/<submission-id>.json} with result-detail data, per-condition results, per-seed results, and artifact links;
+    \item avoid hardcoding final result values in \code{assets/app.js}.
+\end{itemize}
+
+The script should not run agents, recompute raw benchmark trajectories, or require the browser to fetch large Parquet files.
+
+\phantomsection\label{sec:website-validation-pipeline}
+\subsection*{Validation pipeline}
+
+\code{scripts/validate_website_data.py} should run after generation and before deployment.
+It should validate the generated JSON files, checking schema validity, required files, required fields, public leaderboard seed-completeness rules, and download links to the expected Hugging Face artifact locations.
+
+
+
+\subsection*{Huggingface structure}
+\begin{DocCode}
+tsenv/tsenv-benchmark/
+  README.md
+  LICENSE
+  questions/
+  run_results.parquet
+  submissions/
+    <submission-id>.zip
+\end{DocCode}
+\begin{itemize}
+    \item \texttt{README.md}: Dataset card for the Hugging Face repository. 
+    It explains what TSENV is, how the benchmark questions are organized, how to load/use the files, how submissions are stored, and how to cite the benchmark.
+    \item \texttt{LICENSE}: License for the released benchmark data, question bundles, public results, and submission artifacts.
+    \item \texttt{questions/}: Public TSENV question bundles. 
+    This is the migrated benchmark dataset: each simulator/environment folder contains the exported questions used by agents, including \texttt{questions.json}, the corresponding Parquet time-series files, manifests, and any files needed to materialize the task.
+    See \hyperref[docstart:generate_question_stage]{Stage: Generate Question} for the exported bundle schema and generation workflow.
+    This is the part users download when they want to run or inspect the benchmark tasks.
+    \item \texttt{run\_results.parquet}: Canonical public results table. 
+    It contains one row per evaluated public run, usually identified by submission, agent/model, simulator, task condition, and seed. 
+    The website leaderboard JSON is generated from this file by grouping and filtering the rows, for example requiring five completed seeds for each simulator before showing a public leaderboard score.
+    \item \texttt{submissions/}: Archive of accepted public submissions. Each submission is stored as a zip file so that raw artifacts do not clutter the repository.
+    \item \texttt{submissions/<submission-id>.zip}: Raw auditable archive for one submitted result. It should contain the submitted run metadata, per-run/per-seed results, trajectory artifacts, logs, and any supporting files needed to reproduce or inspect the submitted score. 
+\end{itemize}
+
+
+
+\phantomsection\label{sec:website-routing}
+\section*{Website structure and routing}
+
+The website must be implemented as a single-page application (SPA), not as a collection of separate static HTML pages and not as a single long scrolling page with anchor sections.
+Each top-level navigation item should map to a client-side route handled by the SPA router:
+
+\begin{itemize}
+    \item \texttt{/}: \hyperref[sec:website-page-overview]{Overview}
+    \item \texttt{/results/}: \hyperref[sec:website-page-results]{Results}
+    \item \texttt{/environments/}: \hyperref[sec:website-page-environments]{Environments}
+    \item \texttt{/get-started/}: \hyperref[sec:website-page-get-started]{Get Started and Submit}
+    \item \texttt{/authors/}: \hyperref[sec:website-page-authors]{Authors, Citation, and Contact}
+\end{itemize}
+
+The SPA should also support result-detail routes for leaderboard records:
+
+\begin{itemize}
+    \item \texttt{/results/}: Results page with one filterable leaderboard
+    \item \texttt{/results/\textless submission-id\textgreater/}: detail page for one displayed leaderboard record
+\end{itemize}
+
+The navigation menu should link to these routes directly.
+Route changes should preserve the SPA shell and should not trigger full-page reloads.
+Internal anchor links may be used within a route for subsections, but the primary website structure must remain client-side routed.
+
 
 
 
@@ -494,6 +647,7 @@ In GitHub, configure Pages to deploy through GitHub Actions:
 Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Actions
 \end{verbatim}
 
+\phantomsection\label{sec:website-deployment}
 \subsection*{Deployment workflow}
 
 Create:
@@ -558,52 +712,12 @@ Keep \texttt{404.html} so direct links and browser reloads on nested routes stil
 The current mockup already includes a \texttt{404.html} redirect.
 Later, improve this so nested-route reloads do not visibly show a ``404'' state before the SPA renders.
 
-\subsection*{Generated website data}
-
-The first deployed website may use mock data, but production result data should not stay hardcoded in \texttt{assets/app.js}.
-Move leaderboard and environment data into generated JSON files:
-
-\begin{verbatim}
-public/data/leaderboard.json
-public/data/summary.json
-public/data/environments/<environment>/description.json
-public/data/environments/<environment>/data_<n>.json
-public/data/submissions/<submission-id>.json
-\end{verbatim}
-
-Generated leaderboard data should distinguish aggregate Overall records from condition-level records.
-The generated data should include the full benchmark grid definition, the required seed set, per-condition five-seed checks, aggregate Overall scores for complete submissions only, and condition-level scores for complete condition cells only.
-The browser must not compute leaderboard eligibility.
-\texttt{scripts/generate\_website\_data.py} and \texttt{scripts/validate\_website\_data.py} should determine and enforce eligibility before the website is published.
-
-Then load the data from \texttt{assets/app.js} with \texttt{fetch()}:
-
-\begin{verbatim}
-const submissions = await fetch("/public/data/leaderboard.json")
-  .then((response) => response.json());
-\end{verbatim}
-
-The website should not manually copy final result values.
-All public result values should come from consolidated benchmark artifacts.
-The homepage example plot should follow the same principle: it should be generated from the environment JSON files under \texttt{public/data/environments/}.
-The browser should fetch these JSON files and render them directly; it should not load parquet files or depend on Hugging Face at runtime for the landing-page example.
-
+\phantomsection\label{sec:website-generation-pipeline}
 \subsection*{Generation pipeline}
+\begin{DocCode}
+scripts/generate_website_data.py
+\end{DocCode}
 
-Add data generation scripts:
-
-\begin{verbatim}
-scripts/
-  generate_website_data.py
-  validate_website_data.py
-\end{verbatim}
-
-The validation script must enforce that every accepted condition-level score has exactly five distinct required seeds.
-For ranked Overall records, it must enforce that the submission covers the full benchmark grid and that every ranked Overall grid cell has exactly five seeds.
-Duplicated, missing, malformed, or unexpected seed identifiers should fail validation.
-Incomplete submissions should not appear in the ranked Overall leaderboard.
-
-The deployment workflow should eventually generate and validate website data before publishing:
 
 \begin{verbatim}
 steps:
@@ -614,13 +728,8 @@ steps:
       python-version: "3.11"
 
   - run: pip install -r requirements.txt
-
   - run: python scripts/generate_website_data.py
-
-  - run: python scripts/validate_website_data.py
-
   - uses: actions/configure-pages@v5
-
   - uses: actions/upload-pages-artifact@v3
     with:
       path: .
@@ -640,6 +749,7 @@ If the website later migrates to Vite or React, add the Node build steps and dep
   - run: npm run build
 \end{verbatim}
 
+\phantomsection\label{sec:website-huggingface-downloads}
 \subsection*{Hugging Face downloads}
 
 The website repository should not store large trajectories or benchmark artifacts.
@@ -652,17 +762,5 @@ https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/trajectories/
 https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/results.parquet
 \end{verbatim}
 
-\subsection*{Launch checklist}
-
-Before making the website public, replace placeholder content:
-
-\begin{verbatim}
-TSENV Project Team
-Email coming soon
-paper coming soon
-https://arxiv.org/
-placeholder citation
-mock model names, if not real
-\end{verbatim}
 
 \end{document}

@@ -9,10 +9,15 @@
 \docTitle{Stage: Cheap Filter Metrics}
 \phantomsection\label{docstart:cheap_filter_metrics_stage}
 
+\subsection{Overview}
 This stage computes low-cost detectability, numerical-validity, and SNR metrics from materialized simulation runs.
 It rejects failed, non-detectable, numerically invalid, and low-SNR candidates.
-It does not prove distinguishability from all alternative root-cause classes and does not run optimized counterfactual search.
 Final benchmark selection is performed later by combining \code{cheap_filter_pass} with \code{surrogate_filter_pass}.
+\subsection{Target use case}
+This is used for validating generated candidates 
+\subsection{Requirements}
+The filters are fast to compute and reliable. 
+They allow for false positive, but have false negative of 100\%.
 
 \section*{Inputs}
 
@@ -27,8 +32,6 @@ For each \termSimulator, the stage reads:
 \item \code{noise_adder.py}: \termSimulator-specific noise profiles and SNR analysis.
 \item \code{detectability_specific_environment.py}: optional environment-specific detectability veto hook.
 \end{itemize}
-
-During migration, the stage may also read legacy \code{model_run_specs.json}, but new code should use the resolved run graph.
 
 \section*{Run Relationships}
 
@@ -94,15 +97,6 @@ The preferred output location is:
 
 \begin{DocCode}
 models/simulink/<simulator_id>/metrics/<policy_id>/cheap_filter_metrics.jsonl
-\end{DocCode}
-
-During migration, the same payload may also be written to \code{eligibility_metrics.jsonl} as a backward-compatible alias.
-New documentation and new code should use \code{cheap_filter_metrics.jsonl}.
-
-A legacy aggregate file may also be written during migration:
-
-\begin{DocCode}
-models/simulink/<simulator_id>/runs/eligibility_metrics.json
 \end{DocCode}
 
 \section*{Preferred JSON Lines Shape}

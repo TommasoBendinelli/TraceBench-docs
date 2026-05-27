@@ -125,7 +125,6 @@ env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.
   --row-slug gentle_01234-cloud
 \end{DocCode}
 
-\code{workflows/metrics/compute_metrics.py} is the legacy driver name for the Cheap Filter Metrics stage.
 If a dedicated \code{compute_cheap_filter_metrics.py} script exists, use that clearer name with the same arguments.
 
 \section*{Experimental Hypotheses}
@@ -303,7 +302,7 @@ Additionally, \code{<row_slug>_summary.json} contains:
 \end{itemize}
 And \code{<row_slug>.json} contains:
 \begin{itemize}
-  \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \code{sample_uuid} for entries that the model answers incorrectly.
+  \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \termRunID for entries that the model answers incorrectly.
   \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
 \end{itemize}
 
