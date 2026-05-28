@@ -34,16 +34,16 @@ All nodes in the group share the same \code{family_id}, which is \termRunID of t
 \item (\termTaskMode): The required form of the agent's final answer. 
 Its allowed values are \code{direct} and \code{code}. 
 In \code{direct} mode, the agent must directly write the predictions for the test samples. In \code{code} mode, the agent must write an interpretable \code{rule.py} file defining a prediction function that is evaluated on the test samples and held-out samples.
-\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample. 
-Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} returns the clean simulator output; \code{low} and \code{high} call the \termSimulator-specific \code{add_noise(...)} implementation and must satisfy the corresponding detectability SNR thresholds. 
-\code{high} has a scale of 4 compared to \code{low}.
-
+\item (\termNoiseLevel): The observation-noise profile applied when materializing a sample.
+Its allowed values are \code{none}, \code{low}, and \code{high}, and these values are passed to \code{NOISE_LEVEL_MULTIPLIER} which maps them to intergers that are then multiplied by NOISE_DICT.
+Currently: \code{none} -> \code{0}, \code{low} -> \code{1}, and \code{high} -> \code{4}.
+In the \code{low} noise regime each signal must have a signal to noise ratio higher than 30dB.
 \end{itemize}
 
 \section*{Common Utilities}
 
 \begin{algorithm}[H]
-\caption{\code{materialize(...)}}
+  \caption{\code{materialize(uuid_path, noise_level="none", seed, uuid_reference_path=None) -> (df, noise_analysis)}}
 \label{def:materialize-utility}
 \textbf{Purpose.} Loads a saved run artifact, optionally applies the requested observation-noise profile, anonymizes columns to \code{col1}, \code{col2}, \ldots, \code{colN}, and returns the agent-visible dataframe.
 
@@ -70,7 +70,6 @@ Its allowed values are \code{none}, \code{low}, and \code{high}. \code{none} ret
 
 Where \code{add_noise} is defined for each \termSimulator in \code{noise_adder.py}.
 
-\code{NOISE_LEVEL_MULTIPLIER} maps a noise-regime word to a multiplier, by default \code{none} -> \code{0}, \code{low} -> \code{1}, and \code{high} -> \code{4}.
 Each \termSimulator's \code{noise_adder.py} defines \code{NOISE_DICT}, whose values give the \termSimulator-specific base magnitudes for the low-noise regime.
 \begin{algorithm}[H]
 \caption{\code{add_noise(...)}}
@@ -128,9 +127,11 @@ Where
 \begin{DocCode}
     SNR_db(effect_signal, noise) = 20 log10(RMS(effect_signal) / RMS(noise))
 \end{DocCode}
-\code{effect_signal} is the intervention effect relative to the reference trajectory, not the raw signal amplitude.
-Note that the signals undergo preprocessing before the formula is applied, following \code{docs/overleaf_paper/src/appendix/appendix_environment.tex::*::Signal preprocessing}
-Note that \code{quantify_effect_snr} also accepts \textbf{list} for the input arguments \code{src}, \code{src_noisy}, \code{ref=None}, \code{ref_noisy=None}.
-In that case it returns the mean SNR. The mean SNR is computed by first taking the mean over the linear effect-to-noise ratios, where n is the number of the list.
-The SNRdb is then returned by computing \code{20*log10(mean effect-to-noise ratio)}.
+\begin{itemize}
+    \item \code{effect_signal} is the intervention effect relative to the reference trajectory, not the raw signal amplitude.
+    \item Signals undergo preprocessing before the formula is applied, following \code{docs/overleaf_paper/src/appendix/appendix_environment.tex::*::Signal preprocessing}.
+    \item \code{quantify_effect_snr} also accepts \textbf{list} inputs for \code{src}, \code{src_noisy}, \code{ref=None}, and \code{ref_noisy=None}.
+    \item For list inputs, it returns the mean SNR by first averaging the linear effect-to-noise ratios over the list.
+    \item The returned SNR in dB is then computed as \code{20*log10(mean effect-to-noise ratio)}.
+    \end{itemize}
 \end{document}
