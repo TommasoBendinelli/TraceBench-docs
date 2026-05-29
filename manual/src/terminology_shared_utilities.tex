@@ -6,7 +6,7 @@
 \docTitle{Terminology and Common Utilities}
 \phantomsection\label{docstart:terminology_common_utilities}
 
-\section*{Terminology}
+\section*{Documentation Terminology}
 \begin{itemize}
 \item (\termSRD) For values \(a\), \(b\), and \(\varepsilon\), \termSRD is defined as
 \[
@@ -35,9 +35,22 @@ All nodes in the group share the same \code{family_id}, which is \termRunID of t
 Its allowed values are \code{direct} and \code{code}. 
 In \code{direct} mode, the agent must directly write the predictions for the test samples. In \code{code} mode, the agent must write an interpretable \code{rule.py} file defining a prediction function that is evaluated on the test samples and held-out samples.
 \item (\termNoiseLevel): The observation-noise profile applied when materializing a sample.
-Its allowed values are \code{none}, \code{low}, and \code{high}, and these values are passed to \code{NOISE_LEVEL_MULTIPLIER} which maps them to intergers that are then multiplied by NOISE_DICT.
+Its allowed values are \code{none}, \code{low}, and \code{high}, and these values are passed to \code{NOISE_LEVEL_MULTIPLIER} which maps them to integers that are then multiplied by \code{NOISE_DICT}.
 Currently: \code{none} -> \code{0}, \code{low} -> \code{1}, and \code{high} -> \code{4}.
 In the \code{low} noise regime each signal must have a signal to noise ratio higher than 30dB.
+\end{itemize}
+
+\section*{General Terminology}
+\begin{itemize}
+    \item Root Cause Analysis: It's the task of determining what is cause for a given observation. You know already there is an issue and you what to understand what caused it.
+    Something went wrong, or performance changed, and we need to understand why.
+\end{itemize}
+
+\section*{General Concepts}
+\begin{itemize}
+    \item The paper task is change-point detection + root-cause/parameter attribution in a dynamical system.
+    The agent must first decide whether the observed trajectory is consistent with the normal bouncing-ball dynamics, given noise. 
+    Once a change is detected, the agent must infer whether the change was due to the coefficient of restitution, mass, drag coefficient, gravity, or another parameter.
 \end{itemize}
 
 \section*{Common Utilities}

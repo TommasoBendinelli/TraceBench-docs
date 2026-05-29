@@ -130,6 +130,9 @@
 }
 \definecolor{manualDocCodeBg}{RGB}{248,248,248}
 \definecolor{manualDocCodeBorder}{RGB}{210,210,210}
+\newenvironment{DocComment}
+  {\begin{quote}\small\color{gray}\itshape\textbf{Comment. }}
+  {\end{quote}}
 \makeatletter
 \newcommand{\manualDocBeginNumberedDocCode}{%
   \nolinenumbers
