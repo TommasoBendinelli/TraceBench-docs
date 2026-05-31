@@ -535,10 +535,7 @@ public/data/environments/BallDrop/description.json
     "drag coefficient",
     "gravity acceleration"
   ],
-  "downloads": {
-    "questions": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip",
-    "trajectories": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/trajectories/BallDrop.zip"
-  }
+  "download_link": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip",
 }
 \end{DocCode}
 \phantomsection\label{sec:website-environment-data-json}
@@ -636,6 +633,7 @@ The huggingface base script for generating the initial base from the paper resul
 \code{python3 generate_base_results.py}
 This script uploads \code{questions/}, \code{submissions/}, the public folders in \code{tsenv.github.io/}.
 Ideally this script should be only used once when we are updating things on the website.
+Note that the script only prepares locally the \code{ts.env.github.io} website, we still need to publish and set it up as described below.
 
 \phantomsection\label{sec:website-routing}
 \section*{Website structure and routing}
@@ -660,7 +658,7 @@ The SPA should also support result-detail routes for leaderboard records:
 
 The navigation menu should link to these routes directly.
 Route changes should preserve the SPA shell and should not trigger full-page reloads.
-\subsection*{Publishing the mockup}
+\subsection*{Publishing the website}
 
 From a local checkout of the website mockup:
 
@@ -790,17 +788,3 @@ steps:
     uses: actions/deploy-pages@v4
 \end{verbatim}
 
-\phantomsection\label{sec:website-huggingface-downloads}
-\subsection*{Hugging Face downloads}
-
-The website repository should not store large trajectories or benchmark artifacts.
-GitHub Pages should stay lightweight: HTML, CSS, JavaScript, small JSON files, and static figures.
-
-Leaderboard rows and download links should point to the Hugging Face dataset:
-
-\begin{verbatim}
-https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/trajectories/...
-https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/results.parquet
-\end{verbatim}
-
-\end{document}
