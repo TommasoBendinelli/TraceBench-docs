@@ -13,7 +13,9 @@
 
 \phantomsection\label{sec:website-document-contents}
 \section*{Document Contents}
-This document defines both the public-facing design of the TSENV website and the technical implementation needed to host, populate, validate, and deploy it.
+This document defines the public-facing design of the TSENV website, the browser data contract, and the production deployment flow needed to publish the site and benchmark artifacts.
+The website is a rendering layer, not a scoring layer. 
+Canonical benchmark data, public results, trajectories, and accepted submission artifacts are stored on the Hugging Face Hub and rendered by a static single-page application hosted through GitHub Pages.
 The document is divided into two parts:
 \newcommand{\websiteContentsEntry}[2]{\hyperref[#1]{#2\hfill\pageref*{#1}}}
 \begin{center}
@@ -52,9 +54,7 @@ This is the public website for tsENV. The goals of the website are to:
     \item Enable people to download results, trajectories, and datasets.
     \item Allow third parties to submit their agentic scores.
 \end{itemize}
-We draw inspiration from \code{TerminalBench} and \code{TeamBench} websites. 
 The website is hosted at \code{tsenv.github.io}.
-The website should be treated as a rendering layer, not a scoring layer.
 Results, complete result tables, trajectories, benchmark data, and downloadable artifacts are hosted on the Hugging Face Hub.
 The website should be both desktop- and mobile-friendly.
 
@@ -463,22 +463,30 @@ public/data/summary.json
 public/data/leaderboard.json
 {
   "generated_at": "2026-05-31T00:00:00Z",
-  "canonical_scope": {...},
-  "rows": [
-  "rank": 1,
-  "submission_id": "agent-x-2026-05-01",
-  "agent": "Agent X",
-  "model": "Model Y",
-  "score": 0.82,
-  "date": "2026-05-01",
-  "submitter": "Lab Z",
-  "scope": {
+  "canonical_scope": {
     "task_mode": "Code",
     "noise": "Low",
     "context": "High",
-    "examples": "Three Examples"
+    "examples": "Three Examples",
+    "required_seeds_per_simulator": 5
   },
-  "complete": true,
+  "rows": [
+    {
+      "rank": 1,
+      "submission_id": "agent-x-2026-05-01",
+      "agent": "Agent X",
+      "model": "Model Y",
+      "score": 0.82,
+      "date": "2026-05-01",
+      "submitter": "Lab Z",
+      "scope": {
+        "task_mode": "Code",
+        "noise": "Low",
+        "context": "High",
+        "examples": "Three Examples"
+      },
+      "complete": true
+    }
   ]
 }
 \end{DocCode}
@@ -538,7 +546,7 @@ public/data/environments/BallDrop/description.json
     "drag coefficient",
     "gravity acceleration"
   ],
-  "download_link": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip",
+  "download_link": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip"
 }
 \end{DocCode}
 \phantomsection\label{sec:website-environment-data-json}
@@ -549,7 +557,7 @@ public/data/environments/BallDrop/data_1.json
   "source": "tsENV_questions/BallDrop/dataframes/0f159f29c1004403a466c6bea03d7d02.parquet",
   "columns": ["Position", "Velocity", "Hard_Stop_f", "time"],
   "intervention_time": 5,
-  "intervention_parameter": "gravity"
+  "intervention_parameter": "gravity",
   "rows": [
     {
       "Position": 10.882802,
