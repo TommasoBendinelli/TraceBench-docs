@@ -86,6 +86,12 @@ Structured state-space models such as S4 and selective state-space models such a
 MambaSL is especially relevant because it studies a minimally redesigned single-layer Mamba architecture for time-series classification \cite{jung2026mambasl}. 
 In TSENV, these models are worth testing because the evidence for an intervention may be local at the intervention time, spread over the post-intervention window, or visible only through interactions among channels.
 
+Time-series foundation models provide a third, increasingly practical class of candidates.
+Forecasting-oriented models such as TimesFM, Chronos, and Lag-Llama pretrain transformer-style models on heterogeneous collections of time series and demonstrate zero-shot or few-shot transfer across datasets, while MOMENT targets more general time-series representation learning and limited-supervision downstream tasks \cite{das2023timesfm,ansari2024chronos,rasul2023lagllama,goswami2024moment}.
+For TSENV, these models are attractive less as off-the-shelf forecasters than as pretrained encoders or initialization schemes for the learned validity classifier: their cross-domain pretraining may improve sample efficiency when labeled validity judgments are scarce, and their representations may capture generic temporal motifs such as regime shifts, delayed responses, damping behavior, and noise structure.
+However, most current time-series foundation models are optimized primarily for forecasting, may make univariate or patched-token assumptions, and may have pretraining biases that are poorly matched to intervention-validity decisions.
+They should therefore be evaluated as ablations against task-trained InceptionTime, transformer, and state-space backbones under the same family-grouped splits, calibration procedure, and high-precision thresholding protocol.
+
 Because the learned filter affects which benchmark samples are released, the evaluation criterion should be more conservative than ordinary classification accuracy. 
 Modern neural networks can be miscalibrated, so confidence scores must be calibrated and thresholded rather than interpreted as raw probabilities \cite{guo2017calibration}.
 Robustness under distribution shift is also important: the selected samples should remain recognizable across held-out seeds, intervention magnitudes, noise levels, and ideally held-out simulator configurations \cite{ovadia2019can}. 
