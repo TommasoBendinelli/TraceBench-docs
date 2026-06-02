@@ -1,0 +1,378 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\begin{document}
+
+\begingroup
+\newgeometry{left=0.75in,right=0.75in,top=0.7in,bottom=0.85in}
+\pagestyle{plain}
+\sffamily
+\setlength{\parskip}{0.65em}
+\setlist[itemize,1]{leftmargin=1.45em,itemsep=0.15em,topsep=0.25em,parsep=0pt}
+\setlist[itemize,2]{leftmargin=2.1em,itemsep=0.08em,topsep=0.08em,parsep=0pt,font=\normalfont}
+\setlist[enumerate,1]{leftmargin=1.5em,itemsep=0.2em,topsep=0.25em,parsep=0pt}
+\setlist[enumerate,2]{leftmargin=2.1em,itemsep=0.08em,topsep=0.08em,parsep=0pt}
+\setlist[enumerate,3]{leftmargin=2.4em,itemsep=0.05em,topsep=0.05em,parsep=0pt}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+  {1.6ex plus .4ex minus .2ex}{0.8ex plus .2ex}%
+  {\normalfont\sffamily\Large\bfseries}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+  {1.2ex plus .3ex minus .2ex}{0.5ex plus .2ex}%
+  {\normalfont\sffamily\large\bfseries}}
+\makeatother
+\newcommand{\mtProjectHeaderImage}{%
+  \IfFileExists{manual/support/eth-siplab-thesis-header.png}{%
+    \pdfximage width\textwidth {manual/support/eth-siplab-thesis-header.png}%
+  }{%
+    \pdfximage width\textwidth {../support/eth-siplab-thesis-header.png}%
+  }%
+  \noindent\pdfrefximage\pdflastximage\par
+}
+\mtProjectHeaderImage
+\vspace{1.35em}
+{\raggedright\Huge\bfseries Deep-learning based filtering for TSENV\par}
+\vspace{0.45em}
+{\color{black!15}\hrule height 0.4pt}
+\vspace{1.05em}
+{\raggedright\large Semester project\par}
+\vspace{1.4em}
+\phantomsection\label{docstart:learned_validity_filtering_project}
+\section*{Research questions}
+
+\begin{itemize}
+    \item Can deep-learning time-series models determine which, if any, parameter in TSENV has been intervened?
+    \item If so, how many samples do we need to achieve performance with high accuracy? 
+    \item How much noise can deep learning network handle before breaking down? 
+    \item How many samples are disregard from the deep learning network in no noise conditions?
+\end{itemize}
+
+\subsection*{In practical terms}
+
+\begin{itemize}
+    \item Which deep-learning time-series model, for example InceptionTime, a Transformer-based network, or MambaSL, the best classification accuracy for different amount of training data/
+    \item Can we automate the tsenv filtering process reliably with deep learning models?
+\end{itemize}
+
+\section*{Introduction}
+
+TSENV is a benchmark for evaluating whether AI agents can reason over time-series observations in root-cause analysis tasks. It generates controlled tasks from physical simulators: a system evolves over time, and one parameter may change during the trajectory. 
+The agent must infer from the observed time series which parameter changed, or whether no intervention occurred.
+For such a benchmark to be reliable, generated samples must be valid. 
+A valid sample should contain an intervention that is visible in the time series and distinguishable from other plausible causes. 
+Invalid samples are problematic because they may be too subtle, ambiguous, simulator-specific, or indistinguishable from no intervention. 
+If invalid samples enter the benchmark, the benchmark may test noise, artifacts, or under-specified tasks rather than genuine time-series reasoning.
+The current TSENV pipeline addresses this with a validity-filtering procedure based on probe trajectories, distance-based criteria, and simulator-specific checks. 
+These rules are interpretable and useful, but they may require manual tuning and introduce human artifacts. 
+Additionally the only work on clean data.
+This semester project investigates a learning-based alternative. 
+Instead of relying only on hand-designed thresholds, the project will train time-series classifiers to score generated samples according to whether the intervention is detectable and distinguishable. 
+This time-series classifiers are trained on a pool of training data
+The resulting model should be compared against the current filter and, if successful, integrated into the TSENV benchmark-generation pipeline.
+
+\subsection*{Background}
+
+TSENV's learned validity-filtering problem sits at the intersection of benchmark construction, time-series reasoning, and multivariate time-series classification. 
+Generated candidates have reliable intervention labels by construction, but label correctness is not enough for a benchmark:
+the changed parameter must be visible in the observed trajectory, distinguishable from no-intervention behavior, and distinguishable from plausible alternative root causes. 
+A learned filter should therefore estimate whether the simulator ground-truth class is recoverable from the agent-visible time series, not merely whether a neural network can overfit labels in the generated pool.
+
+Recent time-series and language benchmarks show why this is a difficult setting. 
+Time-series reasoning resources such as TimeSeriesExam, TimeSeriesExamAgent, and the zero-shot reasoning study of Merrill et al. highlight that temporal patterns, noise, similarity, anomaly, and causality questions remain challenging for language models even when the task is fixed in advance \cite{cai2024timeseriesexam,gwiazda2026timeseriesexamagent,merrill2024language}. 
+Work on forecasting and time-series reasoning with language models shows that language priors can help in some regimes but can also mislead models when the numeric evidence is decisive \cite{gruver2024large,tan2024are,chow2024towards,wu2025scits}. 
+Multimodal and temporal-textual datasets, including MTBench, Time-MQA, TRQA, Time-MMD, Multi-Modal Forecaster, BEDTime, CaTS-Bench, DeepSQA, and SensorQA, further demonstrate the growing interest in combining temporal numeric observations with textual context \cite{chen2025mtbench,kong2025timemqa,jing2025trqa,liu2024timemmd,kim2024multimodalforecaster,sen2025bedtime,zhou2025catsbench,xing2021deepsqa,reichman2025sensorqa}. 
+These benchmarks motivate TSENV, but they mostly evaluate answering, forecasting, captioning, or description. 
+The filtering problem in this project is different: it is a data-selection problem for simulator-controlled intervention attribution, where the model must decide whether an example is suitable for later agent evaluation.
+
+The most direct technical foundation is supervised time-series classification (TSC). 
+Standard TSC benchmarks such as the UCR archive and broad bake-off studies provide the evaluation culture for comparing models across many datasets and reporting robustness rather than single-dataset accuracy \cite{dau2019ucr,bagnall2017bakeoff}.
+Deep TSC reviews and early convolutional baselines show that one-dimensional convolutional networks can be strong classifiers for raw time series \cite{ismailfawaz2019dlreview,wang2017timeseries}. 
+InceptionTime is especially relevant because it is a strong convolutional TSC architecture, uses multi-scale temporal filters, and has been competitive across many UCR-style datasets \cite{ismailfawaz2020inceptiontime}. 
+For TSENV, this makes InceptionTime a natural first learned-filter backbone: it can ingest multivariate trajectories directly, it is simpler to train than large sequence models, and its local filters are well matched to abrupt or delayed changes caused by parameter interventions.
+
+A learned TSENV filter should also be compared against strong lightweight and non-neural TSC baselines.  
+Feature sets such as catch22 provide compact, interpretable trajectory statistics \cite{lubba2019catch22}.
+Ensemble methods such as HIVE-COTE 2.0 represent a high-accuracy classical reference point, though they may be too expensive for large candidate pools \cite{middlehurst2021hivecote2}.
+The ROCKET family is particularly important for this project: ROCKET, MiniROCKET, and MultiROCKET transform time series with many convolutional kernels and then train simple linear classifiers, often achieving high accuracy with low training cost \cite{dempster2020rocket,dempster2021minirocket,tan2022multirocket}. 
+Hydra connects random convolutional kernels with dictionary-style methods and provides another fast, strong baseline \cite{dempster2023hydra}. 
+These methods are useful not only as baselines but also as sanity checks: if a simple kernel transform can match the learned filter, the project should prefer the simpler and more auditable model.
+
+Longer-range sequence models provide a second family of candidates. 
+Transformers introduced attention-based sequence modeling \cite{vaswani2017attention}, and transformer-based time-series representation learning has been adapted to multivariate time series \cite{zerveas2021transformer}. 
+More recent time-series architectures such as TimesNet and PatchTST emphasize multi-period structure and patch-based temporal representations \cite{wu2023timesnet,nie2023patchtst}.
+Structured state-space models such as S4 and selective state-space models such as Mamba offer an alternative route to long-context sequence modeling with more favorable scaling than full attention \cite{gu2022s4,gu2023mamba}. 
+MambaSL is especially relevant because it studies a minimally redesigned single-layer Mamba architecture for time-series classification \cite{jung2026mambasl}. 
+In TSENV, these models are worth testing because the evidence for an intervention may be local at the intervention time, spread over the post-intervention window, or visible only through interactions among channels.
+
+Because the learned filter affects which benchmark samples are released, the evaluation criterion should be more conservative than ordinary classification accuracy. 
+Modern neural networks can be miscalibrated, so confidence scores must be calibrated and thresholded rather than interpreted as raw probabilities \cite{guo2017calibration}.
+Robustness under distribution shift is also important: the selected samples should remain recognizable across held-out seeds, intervention magnitudes, noise levels, and ideally held-out simulator configurations \cite{ovadia2019can}. 
+The most appropriate protocol is therefore to train on a bootstrap candidate pool, use family-grouped train/validation/test splits to avoid leakage, tune thresholds for high precision on validation data, and evaluate both agreement and disagreement with the existing probe-trajectory and distance-based filter. 
+A successful learned filter should not simply maximize acceptance rate; it should reject subtle, ambiguous, low-SNR, numerically invalid, or no-intervention-confusable candidates while preserving a balanced and diverse set of examples for downstream TSENV agent evaluation.
+
+The main model families to investigate are:
+
+\begin{itemize}
+    \item \href{https://arxiv.org/abs/1909.04939}{InceptionTime}, a strong convolutional architecture for time-series classification.
+    \item \href{https://openreview.net/forum?id=YDl4vqQqGP}{MambaSL}, a single-layer Mamba-based framework for time-series classification.
+    \item Lightweight baselines such as feature-based classifiers, temporal CNNs, or simple multilayer perceptrons over engineered trajectory statistics.
+\end{itemize}
+
+The project should prioritize robustness and interpretability over model complexity. Since the learned filter will affect benchmark quality, calibration and failure-case analysis are important parts of the work.
+
+\section*{Task description: Validity filtering}
+
+The goal of this semester project is to design, implement, and evaluate a learning-based validity-filtering component for TSENV benchmark generation. The method should learn to decide whether generated time-series samples are suitable for inclusion in the benchmark, based on whether the intervention is detectable and distinguishable.
+
+The following tasks and milestones define the project:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Literature review and codebase familiarization}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Study TSENV and its benchmark-generation pipeline
+        \begin{itemize}
+            \item understand the simulator interface
+            \item understand intervention generation
+            \item understand labels, metadata, and no-intervention cases
+            \item understand the current validity-filtering pipeline
+        \end{itemize}
+        \item Review time-series classification methods
+        \begin{itemize}
+            \item InceptionTime
+            \item MambaSL
+            \item optional: temporal CNNs, Transformers, state-space models, or ROCKET-style baselines
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Dataset construction for learned filtering}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Define data splits: train, val and test. Different family must be in different splits.
+        \item Standardize the data format and explain it in the documentation.
+    \end{enumerate}
+
+    \item \textbf{Baselines}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Current TSENV validity filter
+        \begin{itemize}
+            \item treat the existing probe-trajectory and distance-based pipeline as the primary baseline
+            \item measure how many samples it accepts or rejects per simulator and intervention type
+        \end{itemize}
+        \item Simple feature-based baselines
+        \begin{itemize}
+            \item train logistic regression, random forest, or gradient-boosted classifiers
+        \end{itemize}
+        \item Distance-only baselines
+        \begin{itemize}
+            \item evaluate whether probe-trajectory distances alone can predict final validity decisions
+            \item compare fixed thresholds against learned thresholds
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Learned validity-filter model}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Implement generate class takes as input a time series tensor and returns the softmax.
+        \begin{itemize}
+            \item Train IncpeitonTime
+            \item Train MambaSL
+            \item Transformer based network
+        \end{itemize}
+        \item Analysise results with different checkpoint values and levels.
+    \end{enumerate}
+
+    \item \textbf{Validity scoring and integration into TSENV}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Convert model outputs into filtering decisions
+        \begin{itemize}
+            \item choose thresholds and caliabration high-precision filtering
+            \item support confidence-based ranking of generated candidates
+            \item optionally expose a continuous validity score instead of only a binary decision
+        \end{itemize}
+        \item Integrate the learned filter into the benchmark-generation pipeline
+        \begin{itemize}
+            \item implement a clean interface compatible with the current TSENV generator
+            \item support running the learned filter after candidate generation
+            \item support comparing learned and current filters side by side
+        \end{itemize}
+        \item Investigate hybrid filtering strategies
+        \begin{itemize}
+            \item current filter followed by learned filter
+            \item learned pre-filter followed by current filter
+            \item learned confidence score used to prioritize manual inspection or additional probing
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Evaluation}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Classification performance
+        \begin{itemize}
+            \item accuracy
+            \item precision
+            \item recall
+            \item F1 score
+            \item ROC--AUC and PR--AUC
+            \item confusion matrix
+            \item calibration error and reliability curves
+        \end{itemize}
+        \item Agreement with the current filter
+        \begin{itemize}
+            \item agreement rate
+            \item false positives relative to the current filter
+            \item false negatives relative to the current filter
+            \item analysis of samples where the learned filter disagrees with the current filter
+        \end{itemize}
+        \item Benchmark-generation quality
+        \begin{itemize}
+            \item number of retained samples per simulator and parameter
+            \item diversity of accepted samples
+            \item intervention detectability after filtering
+            \item distinguishability between possible changed parameters
+            \item effect on downstream agent evaluation, if feasible
+        \end{itemize}
+        \item Generalization tests
+        \begin{itemize}
+            \item held-out random seeds
+            \item held-out intervention magnitudes
+            \item held-out changed parameters
+            \item held-out simulator settings
+            \item held-out simulator as a stretch goal
+        \end{itemize}
+        \item Runtime and scalability
+        \begin{itemize}
+            \item filtering throughput
+            \item training time
+            \item inference time per candidate
+            \item memory usage
+            \item comparison against the cost of probe-trajectory-based filtering
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Analysis and ablations}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Model ablations
+        \begin{itemize}
+            \item InceptionTime vs. MambaSL
+            \item raw trajectories vs. normalized trajectories
+            \item full trajectory vs. pre/post-intervention windows
+            \item binary validity classification vs. multi-task learning
+            \item different threshold choices
+        \end{itemize}
+        \item Data ablations
+        \begin{itemize}
+            \item vary the number of training samples
+            \item vary the number of simulators
+            \item vary intervention magnitudes
+            \item vary trajectory length and sampling rate
+        \end{itemize}
+        \item Failure-case analysis
+        \begin{itemize}
+            \item inspect accepted invalid samples
+            \item inspect rejected valid samples
+            \item identify simulator-specific artifacts
+            \item identify ambiguity between changed parameters
+            \item identify no-intervention cases that look intervention-like
+        \end{itemize}
+        \item Interpretability
+        \begin{itemize}
+            \item visualize representative trajectories
+            \item visualize confidence distributions
+            \item optionally use saliency or occlusion analysis to identify influential time windows and variables
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Stretch goals}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item Active learning for validity filtering
+        \begin{itemize}
+            \item use model uncertainty to select candidates for additional probing or manual review
+        \end{itemize}
+        \item Self-supervised pretraining
+        \begin{itemize}
+            \item pretrain a time-series encoder on unlabeled TSENV trajectories
+            \item fine-tune it for validity classification
+        \end{itemize}
+        \item Cross-simulator transfer
+        \begin{itemize}
+            \item train on some simulators and evaluate on a held-out simulator
+            \item study whether a learned filter can transfer beyond the simulators seen during training
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Expected outcome}
+
+    The expected outcome is an implemented learned validity-filtering component for TSENV, together with a systematic evaluation against the current filtering procedure. The final result should clarify whether learned time-series classifiers can extend, complement, or partially replace the existing validity-filtering step in the TSENV benchmark-generation pipeline.
+
+    \item \textbf{Deliverables}
+    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
+        \item A written semester-project report
+        \begin{itemize}
+            \item describe TSENV and the validity-filtering problem
+            \item document dataset construction and labels
+            \item describe implemented models and baselines
+            \item report quantitative evaluation and ablations
+            \item discuss failure cases and recommendations for integration
+        \end{itemize}
+        \item A clean code repository
+        \begin{itemize}
+            \item dataset-generation scripts
+            \item preprocessing code
+            \item model training and evaluation code
+            \item integration code for the TSENV pipeline
+            \item configuration files and reproducibility instructions
+        \end{itemize}
+        \item A documented results notebook or Markdown report
+        \begin{itemize}
+            \item main tables
+            \item plots
+            \item confusion matrices
+            \item calibration curves
+            \item representative trajectory examples
+            \item disagreement analysis between current and learned filters
+        \end{itemize}
+        \item An oral presentation with interactive Q\&A (10-20 min)
+    \end{enumerate}
+\end{enumerate}
+
+\section*{Submission}
+
+\begin{enumerate}[label=\arabic*.]
+    \item A written report in the provided two-column template. We recommend adding references and comments on how they relate to the project as they are discovered.
+    \item A clean repository of all code, including dataset generation, training, evaluation, and TSENV integration.
+    \item A documented Jupyter Notebook or Markdown file with code, results, plots, and analysis.
+    \item An oral presentation with an interactive Q\&A completes the semester project.
+\end{enumerate}
+
+\section*{Grading scale}
+
+The project will be graded using the following scale:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{|p{0.12\textwidth}|p{0.78\textwidth}|}
+\hline
+\textbf{grade} & \textbf{description} \\
+\hline
+6.0 & Results and report quality exceptionally exceed the expectations laid out above, e.g., equivalent to publication quality at top-tier academic venues. \\
+\hline
+5.5 & Results and report quality significantly exceed expectations. \\
+\hline
+5.0 & Results and report quality meet expectations. \\
+\hline
+4.5 & Project partially meets expectations, with minor deficits. \\
+\hline
+4.0 & Project meets minimal quality requirements; it has major deficits and is clearly below expectations. \\
+\hline
+\end{tabular}
+\end{center}
+
+\section*{Mentors}
+
+\begin{itemize}
+    \item Prof. Christian Holz
+    \item Tommaso Bendinelli
+\end{itemize}
+
+\restoregeometry
+\pagestyle{fancy}
+\endgroup
+
+\end{document}

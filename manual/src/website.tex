@@ -788,3 +788,17 @@ steps:
     uses: actions/deploy-pages@v4
 \end{verbatim}
 
+\phantomsection\label{sec:website-huggingface-downloads}
+\subsection*{Hugging Face downloads}
+
+The website repository should not store large trajectories or benchmark artifacts.
+GitHub Pages should stay lightweight: HTML, CSS, JavaScript, small JSON files, and static figures.
+
+Leaderboard rows and download links should point to the Hugging Face dataset:
+
+\begin{verbatim}
+https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/trajectories/...
+https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/results.parquet
+\end{verbatim}
+
+\end{document}
