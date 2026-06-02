@@ -156,7 +156,7 @@ All the results by default are saved in three folders:
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
+\caption{Calibration condition evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
 
 \toprule
 \calibrationHeader
@@ -185,7 +185,7 @@ All the results by default are saved in three folders:
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
+\caption{Main paper conditions evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
 
 \toprule
 \experimentHeader
@@ -217,7 +217,7 @@ All the results by default are saved in three folders:
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
+\caption{Ablation conditions evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
 
 \toprule
 \experimentHeader
@@ -275,7 +275,7 @@ These json share the following attributes.
 \code{agent_id} & Agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id} \\
 \code{question_slug} & Question slug \\
 \code{recipe} & Question recipe metadata copied from \code{question.recipe_info.*} field \\
-\code{seed_numbers} & Int stating how many seeds have been collected with that specific question \\
+\code{seed_numbers} & Number of repetition seeds collected for this question. \\
 \bottomrule
 \end{tabular}
 \endgroup
@@ -283,9 +283,9 @@ These json share the following attributes.
 
 Additionally, \code{<row_slug>_summary.json} contains:
 \begin{itemize}
-  \item \code{score_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_test}. 
+  \item \code{score_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_test}.
   Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{score_other_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{score_other_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
   \item \code{trajectory_evaluation}: It is a list of dictionaries, where each dictionary has information directly from \code{trajectory_evaluation.json}
   \begin{itemize}
     \item \code{cost_usd}: \code{trajectory_evaluation.json::cost_usd}
@@ -352,7 +352,7 @@ Both the main number and the std.
 \item Model names and column names must all use \verb|\texttt{...}| and nothing else.
 \item Each word in the header should be capitalised.
 \item Group headers should be written as natural labels, e.g., \verb|\texttt{Low Noise}| and \verb|\texttt{High Noise}|.
-\item An entry is shown only if for each \termSimulator five seeds are present. 
+\item An entry is shown only if five repetition seeds are present for each \termSimulator.
 This holds also for the aggregate main paper tables.
 \end{itemize}
 The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
@@ -373,10 +373,10 @@ Additionally tables in the Appendix follow these stylistic rules:
   \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
   \item Successful Runs shows how many successful runs contributed to each visible cell.
-  Under the five-seed visibility rule, visible cells contain five successful runs.
+  Under the five-repetition-seed visibility rule, visible cells contain five successful runs.
   This table should contain integers rather than std.
   \end{itemize}
-  \item There is one stacked table for each experiment row. Note that if a value has more than four successful runs, then its entry cannot miss! 
+  \item There is one stacked table for each experiment-plan row. Note that if a value has more than four successful runs, then its entry cannot miss!
 \end{itemize}
    
 
@@ -384,7 +384,7 @@ In the following we show the generated result tables used by the paper in the sa
 Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
 \subsubsection*{Main paper result tables}
 
-These results are created with the experiments run from Table 2.
+These results are created from the main paper conditions listed in Table~\ref{tab:experiment-plan-main}.
 \par
 \textbf{Main experiment accuracy table}\par
 \input{overleaf_paper/generated/tables/main/acc_main_experiment_table}
@@ -395,7 +395,7 @@ These results are created with the experiments run from Table 2.
 
 \subsubsection*{Ablation paper result tables}
 \medskip
-These results are created with the experiments run from Table 3.
+These results are created from the ablation conditions listed in Table~\ref{tab:experiment-plan-ablation}.
 \medskip
 \par
 \textbf{Ablation experiment accuracy table}\par
@@ -457,7 +457,7 @@ The command also writes supporting single-panel plot and CSV artifacts from the 
 \end{DocCode}
 The script takes as input the run-level \code{results/consolidated/all_runs.csv}.
 The figure being generated is the following and it includes only the results in the main experiment table.
-It follows the same convention of the main experiment table, we are only showing a dot only if for each \termSimulator five seeds are present. 
+It follows the same convention of the main experiment table, we are only showing a dot only if five repetition seeds are present for each \termSimulator.
 
 \begin{figure}[ht]
 \centering
@@ -465,5 +465,180 @@ It follows the same convention of the main experiment table, we are only showing
 \caption{Top-1 accuracy as a function of cumulative token usage and Python calls for the results in the main experiment table.}
 \label{fig:experiment-plan-accuracy-vs-compute}
 \end{figure}
+
+\subsection{Statistical Significance}
+
+The statistical analysis is designed to support the main comparative claims made in the paper:
+\begin{enumerate}
+\item \textbf{Overall model ranking:} \code{gpt-5.5} performs best across the main experimental conditions, followed by \code{claude-opus-4.6} and \code{gemini-3.1-pro}.
+\item \textbf{Textual-context ablation:} removing textual context decreases performance for \code{gpt-5.5} and \code{gemini-3.1-pro}, averaged across direct and code settings.
+\item \textbf{Labeled-example ablation:} removing labeled time-series examples changes performance for \code{gpt-5.5} and \code{gemini-3.1-pro}, averaged across direct and code settings.
+\end{enumerate}
+
+We use paired bootstrap confidence intervals for all three claim families.
+The analysis is implemented by:
+\begin{DocCode}
+python generate_statistical_significance.py
+\end{DocCode}
+The script reads:
+\begin{itemize}
+  \item \code{results/consolidated/all_runs.csv}
+  \item \code{results/consolidated/tables/all_samples.csv}
+\end{itemize}
+and writes:
+\begin{itemize}
+  \item \code{results/consolidated/statistical_significance/statistical_tests.json}
+  \item \code{docs/overleaf_paper/generated/tables/statistical_significance_tests.tex}
+\end{itemize}
+
+\subsubsection{Technical Brief}
+\paragraph{Evaluation unit.}
+The bootstrap unit is a matched simulator--repetition-seed--setting episode, not an individual time-series sample.
+For each agent and experimental condition, the script aggregates the sample-level correctness values from \code{all_samples.csv} into an episode-level top-1 accuracy:
+\[
+\mathrm{acc}_{a,u}
+=
+\frac{1}{N_u}
+\sum_{i \in u}
+\mathbb{1}\{\hat{y}_{a,i}=y_i\},
+\]
+where \(a\) is the agent and \(u\) is a matched evaluation unit.
+A unit is identified by the simulator, repetition seed, experimental row, task mode, and split being evaluated.
+Timeouts and infrastructure failures are handled consistently with the main table-generation script: they are not imputed and are reported separately.
+
+\paragraph{Matched comparisons.}
+For every pre-specified comparison, the script first constructs the intersection of matched units available for both sides of the comparison.
+No missing runs are imputed.
+For two systems or conditions \(A\) and \(B\), the script computes a paired difference for each matched unit:
+\[
+d_u = \mathrm{acc}_{A,u} - \mathrm{acc}_{B,u}.
+\]
+The estimated effect size is the mean paired difference, reported in percentage points:
+\[
+\Delta = 100 \cdot \frac{1}{|U|}\sum_{u \in U} d_u .
+\]
+
+\paragraph{Paired bootstrap confidence interval.}
+For each comparison, the script performs paired bootstrap resampling over the matched units \(U\).
+Using a fixed random seed, it samples \(|U|\) units with replacement and recomputes \(\Delta\).
+This is repeated for 10,000 bootstrap replicates.
+The 95\% confidence interval is the 2.5th and 97.5th percentile of the resulting bootstrap distribution.
+A comparison is treated as statistically distinguishable when the 95\% confidence interval excludes zero.
+If the interval includes zero, the paper reports the numerical difference but does not describe it as statistically distinguishable.
+
+\paragraph{Claim 1: overall model ranking.}
+To test the overall model-ranking claim, the script uses the main experiment rows:
+\begin{DocCode}
+gentle_01234-cloud   low-noise direct
+gentle_01234-flame   low-noise code
+gentle_01234-pine    high-noise direct
+gentle_01234-orbit   high-noise code
+\end{DocCode}
+For each agent, the script computes macro-average accuracy across these matched main-condition units.
+The ranking is tested using adjacent pairwise comparisons:
+\begin{itemize}
+  \item \code{gpt-5.5} minus \code{claude-opus-4.6}
+  \item \code{claude-opus-4.6} minus \code{gemini-3.1-pro}
+\end{itemize}
+The first comparison supports the claim that \code{gpt-5.5} performs best if its confidence interval is entirely above zero.
+The second comparison supports the ordering of \code{claude-opus-4.6} ahead of \code{gemini-3.1-pro} if its confidence interval is entirely above zero.
+If the second interval includes zero, the paper should state that \code{claude-opus-4.6} and \code{gemini-3.1-pro} obtain the next-highest numerical accuracies, rather than claiming a statistically distinguishable ordering.
+
+\paragraph{Claim 2: textual-context ablation.}
+To test the effect of removing textual context, the script compares matched high-noise settings with and without the textual simulator description:
+\begin{DocCode}
+Direct: gentle_01234-pine  - gentle_01234-harbor
+Code:   gentle_01234-orbit - gentle_01234-tide
+\end{DocCode}
+The effect is computed separately for \code{gpt-5.5} and \code{gemini-3.1-pro}, then macro-averaged across direct and code settings.
+The signed effect is:
+\[
+\Delta_{\mathrm{text}}
+=
+100 \cdot
+\left(
+\mathrm{acc}_{\mathrm{with\ text}}
+-
+\mathrm{acc}_{\mathrm{without\ text}}
+\right).
+\]
+A positive value means that textual context improves performance.
+Therefore, removing textual context is said to decrease performance only when the 95\% confidence interval for \(\Delta_{\mathrm{text}}\) is entirely above zero.
+
+\paragraph{Claim 3: labeled-example ablation.}
+To test the effect of removing labeled time-series examples, the script compares matched high-noise settings with three labeled examples against zero labeled examples:
+\begin{DocCode}
+Direct: gentle_01234-pine  - frost_01234-pine
+Code:   gentle_01234-orbit - frost_01234-orbit
+\end{DocCode}
+The effect is computed separately for \code{gpt-5.5} and \code{gemini-3.1-pro}, then macro-averaged across direct and code settings.
+The signed effect is:
+\[
+\Delta_{\mathrm{examples}}
+=
+100 \cdot
+\left(
+\mathrm{acc}_{\mathrm{with\ examples}}
+-
+\mathrm{acc}_{\mathrm{without\ examples}}
+\right).
+\]
+Because the paper claim is that removing labeled examples \emph{changes} performance, this is treated as a two-sided comparison.
+If the 95\% confidence interval excludes zero, the effect is statistically distinguishable.
+If \(\Delta_{\mathrm{examples}}>0\), removing examples hurts performance.
+If \(\Delta_{\mathrm{examples}}<0\), removing examples improves performance.
+
+\paragraph{Output format.}
+The JSON output contains one record per pre-specified comparison with the following fields:
+\begin{DocCode}
+{
+  "claim_id": "...",
+  "comparison": "...",
+  "agent_a": "...",
+  "agent_b": "...",
+  "condition_a": "...",
+  "condition_b": "...",
+  "n_units": ...,
+  "effect_pp": ...,
+  "ci95_low_pp": ...,
+  "ci95_high_pp": ...,
+  "n_bootstrap": 10000,
+  "statistically_distinguishable": true
+}
+\end{DocCode}
+For ablation tests, \code{agent_a} and \code{agent_b} are the same and \code{condition_a}/\code{condition_b} define the compared settings.
+For model-ranking tests, \code{condition_a} and \code{condition_b} are the same matched main-condition set and \code{agent_a}/\code{agent_b} define the compared agents.
+
+The generated TeX table reports, for each comparison, the effect size in percentage points, the 95\% paired bootstrap confidence interval, the number of matched units, and whether the comparison supports the corresponding paper claim.
+
+\paragraph{How to run.}
+The statistical-significance artifacts are generated after the result-consolidation and CSV-generation steps have completed.
+Run:
+\begin{DocCode}
+python generate_statistical_significance.py
+\end{DocCode}
+from the repository root.
+
+By default, the script reads:
+\begin{DocCode}
+results/consolidated/all_runs.csv
+results/consolidated/tables/all_samples.csv
+\end{DocCode}
+and writes:
+\begin{DocCode}
+results/consolidated/statistical_significance/statistical_tests.json
+docs/overleaf_paper/generated/tables/statistical_significance_tests.tex
+\end{DocCode}
+
+The expected workflow is therefore:
+\begin{DocCode}
+python consolidate_trajectories.py [TAG ...]
+python consolidate_results.py [TAG ...]
+python generate_csv_tables.py [TAG ...]
+python generate_statistical_significance.py
+\end{DocCode}
+
+If the input CSV files are missing or stale, rerun the consolidation and CSV-generation steps before running the statistical-significance script.
+The script should fail loudly if any pre-specified comparison has no matched simulator--repetition-seed units, rather than silently producing an empty confidence interval.
 
 \end{document}

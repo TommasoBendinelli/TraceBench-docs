@@ -198,6 +198,11 @@ for tex_file in "${tex_files[@]}"; do
   if [ "${tex_name}" = "documentation_index.tex" ] || [ "${tex_name}" = "docs_combined_compact.tex" ] || [ "${tex_name}" = "$(basename "${LAYOUT_CONFIG_FILE}")" ]; then
     continue
   fi
+  case "${tex_name}" in
+    appendix_*.tex)
+      continue
+      ;;
+  esac
   if [[ "${indexed_tex_registry}" != *$'\n'"${tex_name}"$'\n'* ]]; then
     unindexed_tex_files+=("${tex_name}")
   fi

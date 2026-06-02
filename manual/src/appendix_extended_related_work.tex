@@ -1,0 +1,377 @@
+\ifdefined\tsenvDocsCombinedAppendixMode
+\def\tsenvAppendixExtendedRelatedWorkStart{%
+  \docTitle{Related Work}%
+  \phantomsection\label{docstart:appendix_extended_related_work}%
+  \section*{Related Work}%
+}
+\def\tsenvAppendixExtendedRelatedWorkEnd{}
+\else\ifdefined\tsenvCombinedAppendixMode
+\def\tsenvAppendixExtendedRelatedWorkStart{%
+  \section{Extended Related Work}%
+  \label{app:extended-related-work}%
+}
+\def\tsenvAppendixExtendedRelatedWorkEnd{}
+\else
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+
+\def\tsenvAppendixExtendedRelatedWorkStart{%
+  \begin{document}%
+  \docTitle{Related Work}%
+  \phantomsection\label{docstart:appendix_extended_related_work}%
+  \section*{Related Work}%
+}
+\def\tsenvAppendixExtendedRelatedWorkEnd{\end{document}}
+\fi\fi
+\newcommand{\relatedWorkMeta}[1]{%
+  \leavevmode\par
+  {\scriptsize\setlength{\parskip}{0pt}#1\par}%
+  \vspace{0.15em}%
+}
+\tsenvAppendixExtendedRelatedWorkStart
+
+This appendix provides additional discussion of recent agent-evaluation benchmarks that are methodologically adjacent to TSENV.
+Each paper is followed by a separate comparison to TSENV.
+
+\subsection{Notes regarding the citations and years}
+Citation counts were retrieved with Codex using Semantic Scholar.
+The month and year shown next to each paper title are based on the first arXiv submission date when available.
+When a citation count or month/year could not be found from those sources, the value was completed with ChatGPT and marked with an asterisk.
+Interpret starred values cautiously.
+
+\subsection*{Time-series and text benchmarks}
+
+\paragraph{\href{https://arxiv.org/abs/2503.16858}{\emph{MTBench} (Mar 2025)}.}
+\relatedWorkMeta{Citation: 41 (Date: June 2, 2026), Venue: arXiv preprint, \hyperref[app:related-work-dataset-example-mtbench]{Dataset Example}.}
+It is a multimodal time-series benchmark for temporal reasoning and question answering.
+It evaluates joint reasoning over paired time-series and text, making it one of the closest existing benchmarks to TSENV's interest in language-grounded time-series analysis.
+
+\paragraph{Difference from tsENV.}
+MTBench does not target TSENV's exact setting: simulator-controlled intervention diagnosis with reusable process descriptions and agentic root-cause analysis.
+TSENV asks agents to use tools to inspect observations from a known simulator family and decide which intervention, if any, caused the observed trajectory.
+
+\paragraph{\href{https://arxiv.org/abs/2503.01875}{\emph{Time-MQA} (Feb 2025)}.}
+\relatedWorkMeta{Citation: 65 (Date: June 2, 2026), Venue: ACL 2025 long paper, \hyperref[app:related-work-dataset-example-time-mqa]{Dataset Example}.}
+It introduces Time Series Multi-Task Question Answering and the TSQA dataset, a large collection of natural-language question-answer pairs over diverse time series.
+It is relevant because it broadens time-series QA beyond narrow numeric tasks and treats language as a first-class interface for temporal reasoning.
+
+\paragraph{Difference from tsENV.}
+Time-MQA and TSQA are high-quality time-series QA resources, but they do not combine controlled causal interventions, reusable simulator-level descriptions, and agentic root-cause evaluation.
+TSENV's tasks are generated from simulator interventions with known ground truth, and the agent must perform evidence-gathering RCA rather than answer a fixed QA item.
+
+\paragraph{\href{https://openreview.net/forum?id=ULQt51DRug}{\emph{TRQA} (Sep 2025*)}.}
+\relatedWorkMeta{Citation: \texttt{NaN} (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It is a time-series reasoning question-answering benchmark that unifies multiple task families, including anomaly detection, classification, characterization, comparison, transformation, and temporal relationship reasoning.
+It is relevant because it evaluates a broad set of temporal reasoning abilities in a QA format.
+
+\paragraph{Difference from tsENV.}
+TRQA differs from TSENV by task type and control structure, not by benchmark quality.
+TRQA evaluates broad time-series QA and reasoning over curated tasks, whereas TSENV evaluates agentic intervention diagnosis under simulator-controlled causal structure, reusable environment descriptions, and root-cause labels.
+
+\paragraph{\href{https://doi.org/10.1145/3715014.3722074}{\emph{SensorQA} (Jan 2025)}.}
+\relatedWorkMeta{Citation: \texttt{NaN} (Date: June 2, 2026), Venue: ACM SenSys 2025, \hyperref[app:related-work-dataset-example-sensorqa]{Dataset Example}.}
+It is a human-created question-answering benchmark for daily-life monitoring from long-term wearable and mobile sensor data.
+It builds on the ExtraSensory dataset and collects natural-language questions and answers about activity and context histories over time scales ranging from a single day to multiple weeks.
+It is relevant because it studies natural-language interaction with sensor time series, including questions about activity duration, frequency, existence, timing, and day-level comparisons.
+
+\paragraph{Difference from tsENV.}
+SensorQA evaluates question answering over observed sensor-derived activity histories.
+Its language interface is primarily used to query what happened in the recorded activity timeline.
+TSENV instead provides reusable process-level descriptions of a simulated environment, including observed channels and candidate root-cause parameters, and evaluates whether agents can diagnose hidden simulator-controlled interventions.
+Thus, SensorQA concerns natural-language access to long-term sensor observations, whereas TSENV concerns agentic root-cause analysis of the process that generated the observations.
+
+\paragraph{\href{https://dl.acm.org/doi/10.1145/3450268.3453529}{\emph{DeepSQA} (May 2021*)}.}
+\relatedWorkMeta{Citation: 12 (Date: June 2, 2026), Venue: ACM/IEEE IoTDI 2021, Dataset Example: \texttt{NaN}.}
+It introduces a sensory question-answering framework and the SQA-Gen pipeline for automatically generating QA datasets from labeled sensor data.
+Using SQA-Gen, the authors create OppQA from the OPPORTUNITY human-activity sensor dataset.
+The questions are generated from predefined functional templates over labeled activity windows, and the answers are computed from the corresponding ground-truth activity labels.
+It is relevant because it studies natural-language question answering over wearable-sensor time series, although there are no textual descriptions.
+
+\paragraph{Difference from tsENV.}
+Their context is the observed sensory window and its activity labels, not a reusable textual description of the underlying process.
+
+\paragraph{\href{https://arxiv.org/abs/2406.08627}{\emph{Time-MMD} (Jun 2024)}.}
+\relatedWorkMeta{Citation: 62 (Date: June 2, 2026), Venue: NeurIPS 2024 Datasets and Benchmarks Track, \hyperref[app:related-work-dataset-example-time-mmd]{Dataset Example}.}
+It is a multi-domain multimodal time-series dataset that aligns numerical time series with textual information for multimodal time-series analysis.
+It is relevant because it addresses the gap between numerical-only time-series modeling and real settings where text accompanies the series.
+
+\paragraph{Difference from tsENV.}
+Time-MMD aligns text and numerical time series mainly for multimodal time-series prediction and analysis.
+TSENV instead evaluates whether agents can use process descriptions and tool-mediated inspection to diagnose root-cause interventions in controlled simulator outputs.
+
+\paragraph{\href{https://arxiv.org/abs/2509.05215}{\emph{BEDTime} (Sep 2025)}.}
+\relatedWorkMeta{Citation: 6 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It is a benchmark for automatically describing time series through recognition, differentiation, and natural-language generation tasks.
+It is relevant because it evaluates whether models can verbalize structural properties of time-series signals.
+
+\paragraph{Difference from tsENV.}
+BEDTime focuses on describing or verbalizing time-series patterns.
+TSENV evaluates intervention diagnosis: agents must use observations and simulator context to decide which root-cause parameter changed, or whether no intervention is supported.
+
+\paragraph{\href{https://arxiv.org/abs/2509.20823}{\emph{CaTS-Bench} (Sep 2025)}.}
+\relatedWorkMeta{Citation: 1 (Date: June 2, 2026), Venue: arXiv preprint, \hyperref[app:related-work-dataset-example-cats-bench]{Dataset Example}.}
+It is a context-aware time-series captioning and reasoning benchmark.
+It combines numeric time-series segments, contextual metadata, line-chart images, and natural-language captions across diverse real-world domains.
+It is relevant because it evaluates whether language and vision-language models can translate temporal numeric patterns into grounded, human-interpretable descriptions, and it also includes diagnostic multiple-choice questions for time-series reasoning.
+
+\paragraph{Difference from tsENV.}
+CaTS-Bench focuses on captioning and descriptive understanding of observed time-series segments.
+TSENV instead evaluates agentic root-cause analysis under simulator-controlled interventions: the agent must use observations, tools, and reusable process descriptions to decide which candidate intervention caused the trajectory, or whether no intervention is supported.
+
+\paragraph{\href{https://github.com/y-kawagu/SUSHI}{\emph{SUSHI} (Sep 2024*)}.}
+\relatedWorkMeta{Citation: \texttt{NaN} (Date: June 2, 2026), Venue: Zenodo dataset release, \hyperref[app:related-work-dataset-example-sushi]{Dataset Example}.}
+It is a dataset of synthetic unichannel time-series signals paired with natural-language descriptions of signal characteristics.
+It is relevant because it supports text-to-signal retrieval and signal captioning, directly connecting time-series patterns with language.
+
+\paragraph{Difference from tsENV.}
+SUSHI's text describes sample-level signal shapes and characteristics.
+TSENV instead provides reusable environment-level causal and physical process descriptions, and evaluates whether tool-using agents can diagnose simulator-controlled root-cause interventions.
+
+\paragraph{\href{https://arxiv.org/abs/2411.06735}{\emph{Multi-Modal Forecaster} (Nov 2024)}.}
+\relatedWorkMeta{Citation: 26 (Date: June 2, 2026), Venue: arXiv preprint, \hyperref[app:related-work-dataset-example-multi-modal-forecaster]{Dataset Example}.}
+It introduces the TimeText Corpus (TTC), a timestamp-aligned collection of textual and numerical time-series data for multimodal forecasting.
+It is relevant because TTC represents the common setting where text is aligned to the time axis and may help forecast future numerical or textual values.
+
+\paragraph{Difference from tsENV.}
+TTC's text is time-aligned context for forecasting, not a reusable causal or physical process description.
+TSENV uses environment-level descriptions that persist across samples and define the simulator, observed channels, and candidate root causes for agentic RCA.
+
+\subsection*{Data Analysis and ML Engineering Agents}
+
+General data-analysis benchmarks often evaluate whether agents can load datasets, write analysis code, fit models, or answer questions about tables and plots.
+These benchmarks are valuable but often the skill being measured is coding proficiency rather than data analysis, especially when task instructions are explicit or when the dataset is sufficiently large that generic machine-learning models perform well out of the box.
+
+Moreover, many existing time-series datasets are poorly suited for evaluating whether agents can use a textual system description to guide direct inspection of time-series observations.
+Specifically, in some settings, the time series are short enough to be serialized directly into the prompt, so the benchmark primarily tests single-pass reasoning rather than tool-mediated exploration.
+In others, the accompanying text is timestamp-aligned, descriptive, or background context, rather than a reusable causal description of the data-generating system.
+This makes it difficult to isolate whether an agent used the textual description to form hypotheses, inspect the relevant temporal evidence, and ground its final decision in the observed signals.
+It thus remains unclear whether current tool-using agents can autonomously perform data analysis by combining textual descriptions with time-series observations.
+TSENV is a diagnostic framework designed to generate change-point and root-cause analysis tasks that can systematically assess agentic reasoning on time-series data.
+
+\paragraph{\href{https://arxiv.org/abs/2401.05507}{\emph{InfiAgent-DABench} (Jan 2024)}.}
+\relatedWorkMeta{Citation: 115 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It evaluates tool-using agents on data-analysis tasks in an execution environment.
+It is relevant because it measures whether agents can operate over data with tools rather than only answer static natural-language questions.
+
+\paragraph{Difference from tsENV.}
+InfiAgent-DABench focuses on general data-analysis task completion.
+TSENV instead fixes a simulator family, provides reusable process descriptions, and asks whether an agent can diagnose a hidden root-cause intervention from multivariate time-series observations.
+
+\paragraph{\href{https://arxiv.org/abs/2407.06423}{\emph{InsightBench} (Jul 2024)}.}
+\relatedWorkMeta{Citation: 22 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It evaluates business analytics agents through multi-step insight-generation scenarios.
+It is relevant because it studies whether agents can move from data inspection to useful analytical conclusions.
+
+\paragraph{Difference from tsENV.}
+InsightBench emphasizes open-ended business analytics and insight quality.
+TSENV emphasizes controlled causal diagnosis: the agent must decide whether observed time-series evidence supports a specific simulator intervention, or no intervention.
+
+\paragraph{\href{https://arxiv.org/abs/2409.07703}{\emph{DSBench} (Sep 2024)}.}
+\relatedWorkMeta{Citation: 90 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It benchmarks data-science agents on tasks intended to approximate expert data-science workflows.
+It is relevant because it evaluates end-to-end agent behavior across data preparation, modeling, and analysis.
+
+\paragraph{Difference from tsENV.}
+DSBench measures broad data-science workflow competence.
+TSENV narrows the evaluation to evidence-grounded root-cause analysis over controlled physical simulations, where success depends on interpreting temporal behavior using a reusable system description.
+
+\paragraph{\href{https://arxiv.org/abs/2403.02528}{\emph{DACO} (Mar 2024)}.}
+\relatedWorkMeta{Citation: 9 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It evaluates application-driven data analysis via code generation.
+It is relevant because it treats code as the mechanism by which agents perform concrete analysis steps over data.
+
+\paragraph{Difference from tsENV.}
+DACO focuses on generating code for application-oriented analysis tasks.
+TSENV's code-rule setting also uses executable artifacts, but those artifacts must express diagnostic rules that generalize across held-out simulator trajectories and root-cause labels.
+
+\paragraph{\href{https://arxiv.org/abs/2402.17453}{\emph{DS-Agent} (Feb 2024)}.}
+\relatedWorkMeta{Citation: 114 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It studies automated data science by augmenting language models with case-based reasoning.
+It is relevant because it explores how prior cases and structured workflows can guide agents through data-science tasks.
+
+\paragraph{Difference from tsENV.}
+DS-Agent targets automated data-science workflow construction.
+TSENV targets diagnostic reasoning over simulated time-series evidence, where examples and prior context must not replace direct inspection of the observed trajectory.
+
+\paragraph{\href{https://arxiv.org/abs/2410.07095}{\emph{MLE-bench} (Oct 2024)}.}
+\relatedWorkMeta{Citation: 241 (Date: June 2, 2026), Venue: arXiv preprint, Dataset Example: \texttt{NaN}.}
+It evaluates machine-learning agents on realistic ML engineering tasks.
+It is relevant because it measures whether agents can execute practical model-development workflows rather than only produce isolated predictions.
+
+\paragraph{Difference from tsENV.}
+MLE-bench focuses on machine-learning engineering performance in realistic development settings.
+TSENV focuses on controlled time-series root-cause analysis, where the primary question is whether the final decision is grounded in evidence from the simulated trajectory.
+
+\subsection*{Agentic coding benchmarks}
+
+\paragraph{\href{https://arxiv.org/abs/2605.07769}{\emph{Coding Agents Don't Know When to Act} (May 2026)}.}
+\relatedWorkMeta{Citation: 0 (Date: June 2, 2026), Venue: ICML 2026 AIWILD, Dataset Example: \texttt{NaN}.}
+It evaluates coding agents on stale bug reports where the correct response is often to make no code change.
+The benchmark is relevant because it tests whether an agent can resist an unsupported action rather than always producing an edit.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.12}
+\caption{Reported FixedBench run accounting for \emph{Coding Agents Don't Know When to Act}.
+The SORCAR total is shown as 200--400 because it is 200 for the directly comparable setup, or 400 if the extra SORCAR prompt comparison is counted separately.}
+\label{tab:coding_agents_act_fixedbench_runs}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.14\linewidth}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}p{0.21\linewidth}>{\raggedright\arraybackslash}p{0.17\linewidth}@{}}
+\hline
+\textbf{Model} &
+\textbf{Harness} &
+\shortstack[l]{\textbf{Main}\\\textbf{FixedBench}\\\textbf{runs}} &
+\shortstack[l]{\textbf{Extra Table 1}\\\textbf{ablations?}} &
+\shortstack[l]{\textbf{Total counted}\\\textbf{runs}} \\
+\hline
+Sonnet-4.6 & Claude Code & included & Yes & 1,700 \\
+GPT-5.4 mini & Codex & included & Yes & 1,700 \\
+GPT-5.3 Codex & Codex & 200 & No & 200 \\
+Gemini-3 Pro & Gemini-CLI & 200 & No & 200 \\
+Qwen3.5-122B & Qwen-Code & 200 & No & 200 \\
+GPT-5.3 Codex & SORCAR & 200 & No / limited comparison & 200--400 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Difference from tsENV.}
+TSENV includes an analogous no-intervention decision, but the evidence comes from simulated physical observations rather than repository state.
+The agent must decide whether the time-series evidence supports any changed root-cause parameter, not whether a software issue should receive a patch.
+
+\paragraph{\href{https://arxiv.org/abs/2602.11988}{\emph{Evaluating AGENTS.md} (Feb 2026)}.}
+\relatedWorkMeta{Citation: 7 (Date: June 2, 2026), Venue: Agentic AI in the Wild poster, ICLR 2026 RSI poster, and ICLR 2026 MemAgents oral, Dataset Example: \texttt{NaN}.}
+It evaluates whether repository-level instruction files improve coding-agent behavior.
+The paper is relevant because it studies how additional context changes agent performance, tool use, and decision quality.
+
+\paragraph{Difference from tsENV.}
+TSENV also varies contextual information, but the context is not repository guidance.
+It is a controlled description of the simulated physical system, observed channels, and candidate root-cause parameters, which lets TSENV test whether textual context helps agents ground their analysis in time-series evidence.
+
+\paragraph{\href{https://arxiv.org/abs/2603.04177}{\emph{CodeTaste} (Mar 2026)}.}
+\relatedWorkMeta{Citation: 0 (Date: June 2, 2026), Venue: Agentic AI in the Wild poster, Dataset Example: \texttt{NaN}.}
+It evaluates whether language models can perform human-level code refactorings in realistic codebases, including under weaker or less prescriptive task specifications.
+The benchmark is relevant because it probes whether an agent can move beyond following detailed instructions and produce a useful reusable change.
+
+\paragraph{Difference from tsENV.}
+TSENV's code-rule interface asks a related generalization question, but in a different domain.
+The rule must generalize over held-out physical time-series samples and root-cause labels, whereas CodeTaste focuses on software maintainability and refactoring quality.
+
+\subsection*{Dataset Examples}
+
+\phantomsection\label{app:related-work-dataset-example-mtbench}
+\paragraph{\emph{MTBench}.}
+\textbf{Q:}
+\begin{DocCode}
+Given the reported intense weather conditions on April 13th, including hail and blizzard scenarios, which of the following options about the expected temperature patterns on April 14th is most accurate?
+
+A) Following the blizzard conditions, a sudden increase in temperature is expected, leading to a rapid thaw and the potential for flooding due to melting snow.  
+B) After the hailstorm, temperatures are likely to stabilize around freezing with limited fluctuation, preventing any significant thawing.  
+C) The significant drop in temperature after April 13th indicates the likelihood of a second storm system moving in from the northwest, which could bring additional snowfall.  
+D) The temperature is expected to drop due to the high winds and blizzard conditions experienced on the previous day, leading to a continued sub-freezing environment.
+
+Context:
+The following events were reported: Hail. These occurred near station USW00003017, approximately 27.8164 km away, between 2018-04-13 00:45:00 and 2018-04-13 00:45:00. The events included records with hailstones measuring 0.75 inches.Thankfully, no injuries or fatalities were reported. No significant property or crop damage was reported. Episode Narrative: A powerful storm system moved over northeast Colorado on the 13th, then slowly exited into the Central Plains on the 14th. The storm produced blizzard conditions over the far northeastern plains of Colorado, with high winds elsewhere. Snow and blowing snow produced extensive drifting snow up to 7 feet deep, along with near zero visibility. The dangerous conditions made the roads impassable and stranded motorists over northeast Lincoln, Logan, Phillips, Sedgwick, and Washington counties. Consequently, I-76 east of Sterling, I-70 east of Limon and nearly all other roads and highways across Northeast and East-Central Colorado were closed due to hazardous driving conditions. In total, more than a dozen semi-trucks were blown over. Eight semi trucks west of Akron, along Colorado Highway 34 were blown over. Blizzard conditions made it nearly impossible to get tow trucks to accidents and rescue stranded motorists. The dangerous conditions also caused widespread power outages and strayed cattle. Some livestock was lost, mainly calves.||Numerous trees were snapped or uprooted in the Hugo and Limon areas. A large tree, 2.5 ft in diameter, was knocked over in Hugo. Peak wind gusts included:  78 mph at  Akron-Washington County Airport, 76 mph at Limon Municipal Airport, 72 mph in Hugo and Sterling, 71 mph near Bennett and Genoa, 65 mph at Briggsdale, 62 mph, 7 miles northwest of Boyero and Denver International Airport; 60 mph, 8 miles south of Holyoke and near Wiggins; 59 mph near Keenesburg, 12 miles east-northeast of Kiowa, 7 miles south of Shamrock and Woodlin School; 58 mph at Agate, Front Range Airport in Watkins, Kassler and 11 miles west-northwest of Westplains. Snowfall totals ranged from 4 to 10 inches. Event Narrative:
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+D
+\end{DocCode}
+
+\phantomsection\label{app:related-work-dataset-example-time-mqa}
+\paragraph{\emph{Time-MQA}.}
+\textbf{Q:}
+\begin{DocCode}
+Identify any anomalies within the data set [8.0, 8.0, 5.0, 13.0, 6.0, 10.0, 20.0, 24.0, 14.0, 2.0, 21.0, 16.0, 21.0, 6.0, 11.0, 14.0, 35.0, 23.0, 0.0, 0.0, 0.0, 10.0, 33.0, 5.0].
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+The sequence '0.0, 0.0, 0.0' is an anomaly considering the surrounding higher values in the dataset, indicating an unusual drop in the series.
+\end{DocCode}
+
+\phantomsection\label{app:related-work-dataset-example-sensorqa}
+\paragraph{\emph{SensorQA}.}
+\textbf{Q:}
+\begin{DocCode}
+What did I do outside?
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+You walked.
+\end{DocCode}
+
+\phantomsection\label{app:related-work-dataset-example-time-mmd}
+\paragraph{\emph{Time-MMD}.}
+\textbf{Q:}
+\begin{DocCode}
+Use the agriculture numerical time series and the paired market report to produce the short-term textual forecast.
+
+Context:
+Whole broiler/fryer prices are steady, and retail demand is light to moderate. Supplies of all sizes are light to moderate.
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+Based on the current situation, it is likely that the Monthly Retail broiler Composite will remain stable or experience a slight increase in the next 1-3 months.
+\end{DocCode}
+
+\phantomsection\label{app:related-work-dataset-example-cats-bench}
+\paragraph{\emph{CaTS-Bench}.}
+\textbf{Q:}
+\begin{DocCode}
+Here is a time series:
+37.00,37.00,37.00,37.00,37.00,40.57,40.57,40.57,40.57,40.57,40.57
+
+
+What caption best describes to this time series?
+(A) From May 1st to July 26th, 2024, the daily COVID-19 deaths in China show a fluctuating pattern, with values generally ranging between 0.29 and 2.86. There are periods of relative stability, such as the initial days of May with a consistent 0.86, interspersed with occasional spikes to 2.86, and dips to 0.29 towards the end of July. Compared to the general daily death statistics for China, where the mean is 73.0 and the maximum reaches 6812.0, this specific time series indicates a period of significantly lower daily deaths, suggesting a substantial improvement in the COVID-19 situation during this timeframe.
+
+(B) From October 24, 2023, to November 3, 2023, the daily COVID-19 cases in Luxembourg show a relatively stable pattern, beginning at 37.3 cases and rising to 40.57 cases by October 29, 2023, where it remains for the rest of the period. Compared to the country's general statistics, where the mean is 236, the daily cases during this period are significantly lower, suggesting a period of reduced viral transmission. This trend does not follow any expected seasonal patterns, as COVID-19 case numbers are known to fluctuate unpredictably.
+
+(C) From October 24, 2023, to November 3, 2023, the daily COVID-19 cases in Luxembourg show a relatively stable pattern, beginning at 37 cases and rising to 40.57 cases by October 29, 2023, where it remains for the rest of the period. Compared to the country's general statistics, where the mean is 236.0, the daily cases during this period are significantly lower, suggesting a period of reduced viral transmission. This trend does not follow any expected seasonal patterns, as COVID-19 case numbers are known to fluctuate unpredictably.
+
+(D) From October 24, 2023, to November 3, 2023, the daily COVID-19 cases in Luxembourg show a relatively unstable pattern, beginning at 37 cases and decreasing to 40.57 cases by October 29, 2023, where it remains for the rest of the period. Compared to the country's general statistics, where the mean is 236.0, the daily cases during this period are significantly lower, suggesting a period of reduced viral transmission. This trend does follow expected seasonal patterns, as COVID-19 case numbers are known to fluctuate unpredictably.
+
+
+You must respond only with valid JSON, and no extra text or markdown.
+The JSON schema is:
+{
+  "answer": <string>
+}
+<string> must be an answer string containing only A, B, C, or D.
+Ensure your output parses as JSON with exactly one top-level object containing the answer field.
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+C
+\end{DocCode}
+
+\phantomsection\label{app:related-work-dataset-example-sushi}
+\paragraph{\emph{SUSHI}.}
+\textbf{Q:}
+\begin{DocCode}
+Caption this unichannel synthetic time-series signal.
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+The trend remains constant, with no change from a specific value.
+\end{DocCode}
+
+\phantomsection\label{app:related-work-dataset-example-multi-modal-forecaster}
+\paragraph{\emph{Multi-Modal Forecaster}.}
+\textbf{Q:}
+\begin{DocCode}
+Given the first seven daily climate rows and their aligned forecast texts, forecast the next day numerical weather values.
+\end{DocCode}
+
+\textbf{A:}
+\begin{DocCode}
+{"date":"2014-01-08","temp":"22.2","precip":"0.0","humidity":"40.4","windspeed":"7.8"}
+\end{DocCode}
+
+\tsenvAppendixExtendedRelatedWorkEnd
