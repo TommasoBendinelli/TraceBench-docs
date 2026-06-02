@@ -41,6 +41,13 @@
 \docTitle{Experiment Plan}
 \phantomsection\label{docstart:experiment_plan}
 This document describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
+The experiments are designed to test the following hypotheses:
+\begin{itemize}
+\item Increasing observation noise decreases agent accuracy.
+\item Requiring reusable code-rule predictions decreases performance relative to direct prediction.
+\item Removing textual context decreases performance more than removing labeled examples.
+\item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
+\end{itemize}
 
 \section*{Two-Phase Dataset Generation Flow}
 
@@ -126,17 +133,6 @@ env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.
 \end{DocCode}
 
 If a dedicated \code{compute_cheap_filter_metrics.py} script exists, use that clearer name with the same arguments.
-
-\section*{Experimental Hypotheses}
-
-The experiments are designed to test the following hypotheses:
-
-\begin{itemize}
-\item Increasing observation noise decreases agent accuracy.
-\item Requiring reusable code-rule predictions decreases performance relative to direct prediction.
-\item Removing textual context decreases performance more than removing labeled examples.
-\item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
-\end{itemize}
 
 All the results by default are saved in three folders:
 \begin{itemize}

@@ -71,15 +71,6 @@ Per-trial scores are stored under each trial directory:
 terminal-bench/runs/<agentic_run_id>/<task_id>/<trial_name>/scores.json
 \end{DocCode}
 
-\section*{Paper Metric Convention}
-For each sample, predictions are interpreted as a ranked list of unique labels.
-The first label is the top-1 prediction.
-Top-1 accuracy is 1 when the first returned label equals the hidden ground-truth label and 0 otherwise.
-
-The secondary shortlist score rewards including the correct answer while penalizing hedging.
-If the returned list has length \code{m}, the sample receives \code{1/m} when the hidden label appears anywhere in the list, and \code{0} otherwise.
-Returning all labels therefore gives only chance-level shortlist credit, while a correct single-label prediction receives full credit.
-
 \section*{\code{scores.json} Schema}
 Each \code{scores.json} payload is validated by \code{shared/scores_schema.py}.
 The required top-level keys are:
