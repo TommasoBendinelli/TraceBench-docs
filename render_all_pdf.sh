@@ -17,6 +17,7 @@ COMBINED_NUMBERED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only${
 INDEX_SOURCE_FILE="${MANUAL_SRC_DIR}/documentation_index.tex"
 INDEX_OVERRIDES_FILE="${BUILD_DIR}/documentation_index_page_overrides.tex"
 DOC_ORDER_MANIFEST="${MANUAL_DIR}/docs_order_manifest.txt"
+STANDALONE_APPENDIX_FILE="appendix_extended_related_work.tex"
 COMBINED_INCLUDE_FILE="${BUILD_DIR}/docs_combined_manifest_inputs.tex"
 LAYOUT_CONFIG_FILE="${MANUAL_SUPPORT_DIR}/manual_docs_layout_config.tex"
 LEFT_PADDING_DELTA="0pt"
@@ -584,6 +585,7 @@ if [ "${#unindexed_tex_files[@]}" -gt 0 ]; then
     compile_tex_variants "${tex_name}"
   done
 fi
+compile_tex_variants "${STANDALONE_APPENDIX_FILE}"
 compile_tex_variants "documentation_index.tex"
 
 if [ "${BUILD_COMBINED}" != "true" ]; then

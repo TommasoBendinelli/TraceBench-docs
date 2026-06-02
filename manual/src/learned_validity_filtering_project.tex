@@ -150,24 +150,6 @@ The following tasks and milestones define the project:
         \item Standardize the data format and explain it in the documentation.
     \end{enumerate}
 
-    \item \textbf{Baselines}
-    \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Current TSENV validity filter
-        \begin{itemize}
-            \item treat the existing probe-trajectory and distance-based pipeline as the primary baseline
-            \item measure how many samples it accepts or rejects per simulator and intervention type
-        \end{itemize}
-        \item Simple feature-based baselines
-        \begin{itemize}
-            \item train logistic regression, random forest, or gradient-boosted classifiers
-        \end{itemize}
-        \item Distance-only baselines
-        \begin{itemize}
-            \item evaluate whether probe-trajectory distances alone can predict final validity decisions
-            \item compare fixed thresholds against learned thresholds
-        \end{itemize}
-    \end{enumerate}
-
     \item \textbf{Learned validity-filter model}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
         \item Implement generate class takes as input a time series tensor and returns the softmax.
@@ -203,16 +185,7 @@ The following tasks and milestones define the project:
 
     \item \textbf{Evaluation}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Classification performance
-        \begin{itemize}
-            \item accuracy
-            \item precision
-            \item recall
-            \item F1 score
-            \item ROC--AUC and PR--AUC
-            \item confusion matrix
-            \item calibration error and reliability curves
-        \end{itemize}
+        \item Classification performance in terms of accuracy, cross entropy loss and calibrated error.
         \item Agreement with the current filter
         \begin{itemize}
             \item agreement rate
@@ -228,41 +201,20 @@ The following tasks and milestones define the project:
             \item distinguishability between possible changed parameters
             \item effect on downstream agent evaluation, if feasible
         \end{itemize}
-        \item Generalization tests
+        \item Generalization tests (stretch goal)
         \begin{itemize}
             \item held-out random seeds
             \item held-out intervention magnitudes
             \item held-out changed parameters
             \item held-out simulator settings
-            \item held-out simulator as a stretch goal
-        \end{itemize}
-        \item Runtime and scalability
-        \begin{itemize}
-            \item filtering throughput
-            \item training time
-            \item inference time per candidate
-            \item memory usage
-            \item comparison against the cost of probe-trajectory-based filtering
+            \item held-out simulator 
         \end{itemize}
     \end{enumerate}
 
     \item \textbf{Analysis and ablations}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Model ablations
-        \begin{itemize}
-            \item InceptionTime vs. MambaSL
-            \item raw trajectories vs. normalized trajectories
-            \item full trajectory vs. pre/post-intervention windows
-            \item binary validity classification vs. multi-task learning
-            \item different threshold choices
-        \end{itemize}
-        \item Data ablations
-        \begin{itemize}
-            \item vary the number of training samples
-            \item vary the number of simulators
-            \item vary intervention magnitudes
-            \item vary trajectory length and sampling rate
-        \end{itemize}
+        \item Model ablations: model size and architecture
+        \item Data ablations: vary the number of training samples
         \item Failure-case analysis
         \begin{itemize}
             \item inspect accepted invalid samples
@@ -340,29 +292,6 @@ The following tasks and milestones define the project:
     \item A documented Jupyter Notebook or Markdown file with code, results, plots, and analysis.
     \item An oral presentation with an interactive Q\&A completes the semester project.
 \end{enumerate}
-
-\section*{Grading scale}
-
-The project will be graded using the following scale:
-
-\begin{center}
-\renewcommand{\arraystretch}{1.18}
-\begin{tabular}{|p{0.12\textwidth}|p{0.78\textwidth}|}
-\hline
-\textbf{grade} & \textbf{description} \\
-\hline
-6.0 & Results and report quality exceptionally exceed the expectations laid out above, e.g., equivalent to publication quality at top-tier academic venues. \\
-\hline
-5.5 & Results and report quality significantly exceed expectations. \\
-\hline
-5.0 & Results and report quality meet expectations. \\
-\hline
-4.5 & Project partially meets expectations, with minor deficits. \\
-\hline
-4.0 & Project meets minimal quality requirements; it has major deficits and is clearly below expectations. \\
-\hline
-\end{tabular}
-\end{center}
 
 \section*{Mentors}
 
