@@ -182,7 +182,7 @@ Axis: [NOISE] [CONTEXT] [EXAMPLES]
 
 The controls should update the plot or prompt just enough to demonstrate task mode and condition-axis changes.
 The interaction should stay minimal, with highlighted controls showing the active state.
-After the reveal action, a small agent message should say ``Gravity changed''.
+There should be a button below with written 'reveal answer' and then correct answer should pop up.
 
 After the example task visual, the homepage should include a section titled \texttt{Design principles}.
 
@@ -548,6 +548,8 @@ public/data/environments/BallDrop/data_1.json
   "run_id": "0f159f29c1004403a466c6bea03d7d02",
   "source": "tsENV_questions/BallDrop/dataframes/0f159f29c1004403a466c6bea03d7d02.parquet",
   "columns": ["Position", "Velocity", "Hard_Stop_f", "time"],
+  "intervention_time": 5,
+  "intervention_parameter": "gravity"
   "rows": [
     {
       "Position": 10.882802,
