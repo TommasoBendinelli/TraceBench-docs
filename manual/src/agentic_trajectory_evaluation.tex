@@ -7,12 +7,6 @@
 This stage is responsible for extracting quantitative insights from agent trajectories.
 The input artifact is \code{terminal-bench/runs/<run_id>/<task>/<trial>/agent_logs/atif_processed/atif_trajectory.json}.
 
-
-\begin{DocComment}
-TODO: ADD HERE THE MODAL ANALYSIS FOR THE PAPER!!! WE NEED THE exploitation vs exploration analaysis and number of raw numbers explored.
-Also we need to add the two different to address the comment in the paper.
-\end{DocComment}
-
 \begin{DocCode}
 python workflows/trajectory/trajectory_evaluation_programmatic.py <agentic_run_id> [--llm [--parallel N]] [--path PATH]
 \end{DocCode}

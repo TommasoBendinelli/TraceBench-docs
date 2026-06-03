@@ -30,14 +30,13 @@
 }
 \tsenvAppendixExtendedRelatedWorkStart
 
-This appendix provides additional discussion of recent agent-evaluation benchmarks that are methodologically adjacent to TSENV.
-Each paper is followed by a separate comparison to TSENV.
+This appendix provides an anylysis of dataset and benchmark papers that shares similary to \name{}.
+For each benchmark, we report its data source, dataset size, task formulation, text modality, text-time-series relationship, availability, and its methodological relationship to TSENV.
 
-\subsection*{Notes regarding the citations and years}
-Citation counts were retrieved with Codex using Semantic Scholar.
-The month and year shown next to each paper title are based on the first arXiv submission date when available.
-When a citation count or month/year could not be found from those sources, the value was completed with ChatGPT and marked with an asterisk.
-Interpret starred values cautiously.
+\subsection*{Notes regarding information}
+Citation counts were queried from Semantic Scholar, with the parenteshis reported the data of query. 
+Dates refer to the first arXiv submission when available. 
+Additional technical details of how this was done are provided in \hyperref[app:related-work-information-method]{Appendix: Information collection method}.
 
 \subsection*{Time-series and text benchmarks}
 
@@ -400,5 +399,15 @@ Given the first seven daily climate rows and their aligned forecast texts, forec
 \begin{DocCode}
 {"date":"2014-01-08","temp":"22.2","precip":"0.0","humidity":"40.4","windspeed":"7.8"}
 \end{DocCode}
+
+\phantomsection
+\subsection*{Appendix: Information collection method}
+\label{app:related-work-information-method}
+
+Citation counts were queried from Semantic Scholar.
+The date reported in parentheses next to each citation count records the query date.
+When a citation count was unavailable or not reliable, the entry uses \texttt{NaN}.
+Dates in benchmark headings use the first arXiv submission date when available; otherwise they use the most appropriate public release or publication date.
+Dataset examples were recorded only when a compact representative prompt, question, or example could be included without obscuring the comparison.
 
 \tsenvAppendixExtendedRelatedWorkEnd

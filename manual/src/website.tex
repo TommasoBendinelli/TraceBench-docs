@@ -13,9 +13,10 @@
 
 \phantomsection\label{sec:website-document-contents}
 \section*{Document Contents}
-This document defines the public-facing design of the TSENV website, the browser data contract, and the production deployment flow needed to publish the site and benchmark artifacts.
-The website is a rendering layer, not a scoring layer. 
-Canonical benchmark data, public results, trajectories, and accepted submission artifacts are stored on the Hugging Face Hub and rendered by a static single-page application hosted through GitHub Pages.
+This document defines the public-facing design and the technical contract of the TSENV website.
+It also describes the production deployment flow needed to publish the site and benchmark artifacts.
+Benchmark data, public results, trajectories, and accepted submission artifacts are stored on the Hugging Face Hub and rendered by a static single-page application hosted through GitHub Pages.
+The GitHub page is a rendering layer, not a scoring layer. 
 The document is divided into two parts:
 \newcommand{\websiteContentsEntry}[2]{\hyperref[#1]{#2\hfill\pageref*{#1}}}
 \begin{center}
@@ -32,13 +33,11 @@ The document is divided into two parts:
 \websiteContentsEntry{sec:website-global-style}{Global style} &
 \websiteContentsEntry{sec:website-routing}{Website structure and routing} \\
 \websiteContentsEntry{sec:website-page-overview}{Overview} &
-\websiteContentsEntry{sec:website-generated-json}{Generated JSON files} \\
-\websiteContentsEntry{sec:website-page-results}{Results} &
-\websiteContentsEntry{sec:website-validation-pipeline}{Validation pipeline} \\
-\websiteContentsEntry{sec:website-page-environments}{Environments} &
 \websiteContentsEntry{sec:website-deployment}{Deployment workflow} \\
-\websiteContentsEntry{sec:website-page-get-started}{Get Started and Submit} &
-\websiteContentsEntry{sec:website-huggingface-downloads}{Hugging Face downloads} \\
+\websiteContentsEntry{sec:website-page-results}{Results} &
+\websiteContentsEntry{sec:website-generated-json}{Generated JSON files} \\
+\websiteContentsEntry{sec:website-page-environments}{Environments} &
+\websiteContentsEntry{sec:website-page-get-started}{Get Started and Submit} \\
 \websiteContentsEntry{sec:website-page-authors}{Authors, Citation, and Contact} & \\
 \hline
 \end{tabular}
@@ -65,29 +64,30 @@ The website should be both desktop- and mobile-friendly.
 The user actions are
 \begin{itemize}
 \item Inspect the leaderboard.
-\item Download trajectories, complete result tables, and benchmark datasets.
+\item Download trajectories, complete result tables, and benchmark datasets stored in HuggingFace
 \item Submit new results. 
 This works as follows:
 \begin{itemize}
-  \item The submitter opens a GitHub pull request with a structured submission bundle described in the \hyperref[docstart:agentic_rollout]{Agentic Rollout} stage. 
-  The schema is described at: \hyperref[sec:website-raw-submission-bundle]{Raw submission bundle schema}.
-  \item An automated importer validates and preprocesses each accepted submission into website-ready records. 
-  Maintainers then manually inspect the generated outputs and artifacts the data is actually updated on HuggingFace and then the action for updating \code{tsenv.github.io} is updated.
-  
-  \item The importer computes compact leaderboard rows from accepted submissions.
-  \item The website serves precomputed leaderboard and result-detail data.
+  \item The submitter opens a GitHub pull request with a structured submission with schema \hyperref[sec:website-raw-submission-bundle]{Raw submission bundle schema}.
+  \item A maintainer-side submission importer validates the submission (format and coverage), reads the submitted scores and trajectories, and writes workflow artifact containing validation reports, canonical result rows, trajectory indexes, and the proposed accepted submission archive.
+   A maintainer then reviews this artifact (\hyperref[sec:website-admin-review-submissions]{Admin action})
+
 \end{itemize}
 \end{itemize}
 The admin actions are
 \begin{itemize}
-  \item Populate HuggingFace repository.
-  \item Regenerate the website automatically generated JSON from Hugging Face only.  
-  The generation step reads only from Hugging Face. 
-  \item Accept new submissions one agent/submission at a time through GitHub pull requests. 
-  After validation, accepted submission bundles are published to Hugging Face.
-  Then the website is updated: trigger website generation, validation, and deployment from GitHub Actions so the deployed site is always derived from Hugging Face.
-
-  \item Update new \termSimulators by uploading their question bundles and metadata to Hugging Face, then regenerating the website JSON from that canonical dataset state.
+  \item Populate the Hugging Face repository \code{tsenv/tsenv-benchmark} with the initial Hugging Face dataset state from the current TSENV repository state.
+  \item Regenerate the website JSON from Hugging Face with GitHub Actions  
+  \item \phantomsection\label{sec:website-admin-review-submissions}Inspect and accept/reject submissions: Maintainers access the submission artifact from the pull request's GitHub Actions run and inspect the validation report, proposed canonical result rows, trajectory index, artifact index, and proposed accepted submission archive.
+  If the submission is approved, a maintainer merges the pull request and triggers a separate maintainer-only GitHub Actions workflow for publication.
+  This publication workflow \code{publish-submission.yml} does:
+  \begin{itemize}
+    \item using an authenticated Hugging Face token, rebuilds the accepted submission archive from the merged repository state, appends the accepted canonical result rows to \texttt{results.parquet}, validates the updated dataset, and uploads \texttt{submissions/.zip} and the updated \texttt{results.parquet} to Hugging Face.
+    \item regenerates the browser JSON from Hugging Face. 
+  \end{itemize}
+  \item Add new \termSimulators by uploading their question bundles and metadata to Hugging Face, then regenerating the website JSON from that canonical dataset state.
+  This creates a new version of the catalogue
+  \item Make website content/style changes 
 \end{itemize}
 
 
@@ -130,6 +130,7 @@ The top navigation should contain the TSENV wordmark on the left and a horizonta
 
 The active page should be highlighted in blue.
 The header should have a thin horizontal rule below it, not a large navigation box.
+Paper and Code are external links in the same header
 
 \subsubsection*{Hero}
 
@@ -170,7 +171,7 @@ The \texttt{Design principles} section should appear near the bottom of the land
 
 The landing page should show a compact example task visual consisting of a full-width time-series plot with an intervention marker.
 
-The example time-series plot should be rendered from the generated environment JSON files under \code{public/data/environments/BallDrop/description.json} and \code{public/data/environments/BallDrop/data_0.json}.
+The example time-series plot should be rendered from the generated environment JSON files under \code{public/data/environments/BallDrop/description.json} and \code{public/data/environments/BallDrop/data_1.json}.
 The layout should be single-column: compact controls above the plot, the plot across the full content width, and the prompt panel below.
 
 The example visual should include compact controls grouped into two labelled rows:
@@ -216,13 +217,10 @@ The order should emphasize the benchmark structure first: simulators, then task 
 \phantomsection\label{sec:website-page-results}
 \subsection*{Page 2: Results}
 The Results page should start with one adjustable leaderboard where different filters can be selected. 
-By default it should open \textbf{Code, Low Noise, High Context, Three Examples}. 
-This is the canonical results, and if somebody update new results should include this.
-The other types are ablations.
-Each of these can be edited with filters.
-Only entries that have five seeds for each simulator will appear! 
-Right now we have 3 simulators, we want 15 runs to appear with that.
-
+By default it should open \textbf{Code, Low Noise, High Context, Three Examples}, which we consider the canonical result.
+The other experimental conditions can be accessed using filters.
+A submission is accepted and thus visualized in the a leaderboard view only if it includes exactly five completed seeds for each simulator under the selected condition. 
+With the current benchmark setup of three simulators, this means a submission must include 15 valid runs for that condition before it is displayed.
 
 
 \subsubsection*{Table behavior}
@@ -240,27 +238,19 @@ When Compare is enabled, the score column should display both scores for each ro
 The score display should make the direction of comparison clear, for example as primary score \(\rightarrow\) comparison score, or as two labeled values.
 
 \subsubsection*{Clickable leaderboard rows}
+Each leaderboard row should be clickable and should navigate to a result-detail route within the single-page application. 
+The route should preserve the active leaderboard filter, for example:
 
-Each leaderboard row should be clickable.
-Clicking a row should navigate to a result-detail route.
-It should open by default the result corresponding to the filter chosen, however it would be possible again to select a different filter also in this page.
+\begin{DocCode}
+/results/<submission-id>/?task_mode=Code&noise=Low&context=High&examples=Three
+\end{DocCode}
 
-For example:
+By default, the result-detail page should display the same condition that was active when the user clicked the leaderboard row.
+The page should also allow the user to change the task mode, noise level, context level, and number of examples without leaving the result-detail route.
 
-\begin{verbatim}
-/results/<submission-id>/
-\end{verbatim}
+The result-detail page should show the selected agent, date, submitter, displayed score, active filter scope, per-condition results, per-seed results, trajectory links, and downloadable artifact links. 
+A displayed score should appear only when the selected condition contains exactly five valid seeds for each required simulator.
 
-The result-detail page should show:
-
-\begin{itemize}
-    \item the selected agent, model, date, submitter, and displayed score;
-    \item the active filter scope;
-    \item confirmation that all displayed public cells contain exactly five distinct required seeds;
-    \item per-condition results for the selected scope;
-    \item per-seed results;
-    \item links to trajectories and downloadable artifacts.
-\end{itemize}
 
 The browser URL should update when a user opens a result-detail page.
 The route should remain inside the single-page application and should not trigger a full-page reload.
@@ -278,6 +268,7 @@ Each environment-specific page explains one simulator in detail.
 The page should begin with a full-width Plotly time-series plot, followed by the agent prompt for the selected task condition. 
 As on the homepage example visual, the user should be able to choose between task mode and condition-axis settings. 
 The page should also include a dropdown for selecting different samples from the generated environment JSON files. 
+The sampled are named 1, 2, 3, 4, 5 and are mapped to \code{data_<n>} where n is the number.
 Changing the controls should update the plotted sample and the displayed prompt without leaving the route.
 The data-loading contract for environment-specific pages is specified in the \hyperref[sec:website-generated-json]{Generated JSON files} section of the Technical Brief.
 
@@ -365,19 +356,32 @@ Questions, feedback, or collaboration.
 \phantomsection\label{sec:website-technical-brief}
 \section*{Technical Brief}
 
+\subsection*{Target destinations}
+The target destinations are:
+\begin{itemize}
+\item Website repository: https://github.com/tsenv/tsenv.github.io
+\item Deployed website: https://tsenv.github.io/
+\item Code repository: https://github.com/tsenv/tsENV
+\item Hugging Face dataset repository: https://huggingface.co/datasets/tsenv/tsenv-benchmark
+\end{itemize}
+The local website checkout for implementation should be a sibling repository \code{/Users/tbe/repos/tsenv.github.io}.
+
 \newcommand{\websiteTreeSummaryJson}{\hyperref[sec:website-summary-json]{summary.json}}
 \newcommand{\websiteTreeLeaderboardJson}{\hyperref[sec:website-leaderboard-json]{leaderboard.json}}
 \newcommand{\websiteTreeEnvironmentDescriptionJson}{\hyperref[sec:website-environment-description-json]{description.json}}
 \newcommand{\websiteTreeEnvironmentDataJson}{\hyperref[sec:website-environment-data-json]{\textless data\_1\textgreater.json}}
-\newcommand{\websiteTreeGenerateWebsiteData}{\hyperref[sec:website-generate-website-data]{generate\_website\_data.py}}
+\newcommand{\websiteTreeGenerateWebsiteData}{sync\_hf\_to\_website\_data.py}
 \newcommand{\websiteTreeDeployWorkflow}{\hyperref[sec:website-deployment]{deploy.yml}}
 
+
+\subsection*{Schema and Structure}
 \phantomsection\label{sec:website-hosting-structure}
-\subsection*{GitHub Pages structure}
+\subsubsection*{GitHub Pages structure}
 \begin{LinkedDocCode}
 tsenv.github.io/
   index.html
   404.html
+  .env
   assets/
     app.js
     styles.css
@@ -397,13 +401,32 @@ tsenv.github.io/
     workflows/
       \websiteTreeDeployWorkflow
 \end{LinkedDocCode}
+Note that:
+\begin{itemize}
+  \item .env contains public variables (no Hugging Face tokens or secrets).
+  \begin{DocCode}
+    TSENV_WEBSITE_URL=https://tsenv.github.io/
+    TSENV_CODE_URL=https://github.com/tsenv/tsENV
+    TSENV_HF_REPO=tsenv/tsenv-benchmark
+    TSENV_HF_DATASET_URL=https://huggingface.co/datasets/tsenv/tsenv-benchmark
+    TSENV_ISSUES_URL=https://github.com/tsenv/tsENV/issues
+    TSENV_AFFILIATION_URL=https://siplab.org/
+  \end{DocCode}
+
+  \item Files in \code{public/data/*} are generated by \code{scripts/sync_hf_to_website_data.py} which is triggered by the GitHub Action \code{deploy.yml}.
+  The detailed schema examples for these files are collected in \hyperref[sec:website-public-data-schema-appendix]{Appendix: public/data schema}.
+  \item Each environment-specific page loads its metadata from \code{public/data/environments/<environment>/description.json} and its plotted samples from \code{public/data/environments/<environment>/data_<n>.json}.
+\end{itemize}
+
+
+
 
 \phantomsection\label{sec:website-raw-submission-bundle}
-\subsection*{Raw submission bundle schema}
+\subsubsection*{Raw submission bundle schema}
 
 A submitted result should be a structured bundle committed through a GitHub pull request.
 Each submission bundle is scoped to one agent/submission at a time to keep validation and publication atomic.
-Each \code{\textless question\_id\textgreater} folder represents one submitted seed/run.
+Each \code{<question_id>} folder represents one submitted seed/run.
 
 \begin{DocCode}
 <submission_id>/
@@ -411,36 +434,178 @@ Each \code{\textless question\_id\textgreater} folder represents one submitted s
   <question_id>/
     scores.json
     atif_trajectory.json
-    artifact/
-      scripts/
-      plots/
-      logs/
-      generated_files/
+    artifact/*
   <question_id>/
     scores.json
     atif_trajectory.json
     artifact/
       ...
 \end{DocCode}
-These files are the result of running the rollout.
+These files are the result of running the rollout as defined in \hyperref[sec:agentic-rollout-materialized-output]{Agentic Rollout: Materialized Output}.
 
-\phantomsection\label{sec:website-generated-json}
-\subsection*{Generated JSON files}
 
-The website should load browser-ready JSON files generated by \code{scripts/update_submissions.py}.
-These files define the public summary, leaderboard, environment metadata, plotted samples, and submission details used by the website.
-
-The expected generated files are:
+\subsection*{Hugging Face structure}
 \begin{DocCode}
-public/data/summary.json
-public/data/leaderboard.json
-public/data/environments/BallDrop/description.json
-public/data/environments/BallDrop/data_<n>.json
-public/data/submissions/<submission-id>.json
+tsenv/tsenv-benchmark/
+  README.md
+  LICENSE
+  questions/
+  results.parquet
+  submissions/
+    <submission-id>.zip
+\end{DocCode}
+\begin{itemize}
+    \item \code{README.md}: Dataset card for the Hugging Face repository. 
+    It explains what TSENV is, how the benchmark questions are organized, how to load/use the files, how submissions are stored, and how to cite the benchmark.
+    The submission instructions should use the same public-facing message shown on the \hyperref[sec:website-page-get-started]{Get Started and Submit} page.
+    \item \code{LICENSE}: License for the released benchmark data, question bundles, public results, and submission artifacts.
+    \item \code{questions/}: Public TSENV question bundles. 
+    See \hyperref[docstart:generate_question_stage]{Stage: Generate Question} for the exported bundle schema and generation workflow.
+    \item \code{results.parquet}: Canonical public results table. 
+    It contains one row per evaluated public run, usually identified by submission, agent/model, simulator, task condition, and seed. 
+    The website leaderboard JSON is generated from this file by grouping and filtering the rows, for example requiring five completed seeds for each simulator before showing a public leaderboard score.
+    \item \code{submissions/}: Archive of accepted public submissions. 
+    Each submission is stored as a zip file. 
+    The schema of each of these is defined as \hyperref[sec:website-raw-submission-bundle]{Raw submission bundle schema}.
+    The zipping happens after validation.
+\end{itemize}
+
+\section{Scripts}
+\subsection*{\code{validate_submission.py}}
+This script validates the submission format and required seed coverage, reads the submitted scores and trajectory files, and produces a GitHub Actions review artifact containing the information needed for maintainer approval or rejection.
+
+\subsection*{\code{scripts/sync_hf_to_website_data.py}}
+
+\code{scripts/sync_hf_to_website_data.py} converts the canonical Hugging Face benchmark state into the small browser-ready JSON files consumed by the website.
+It should read only from Hugging Face: the public results table, generated question metadata, and accepted submission archives.
+It then writes only the compact public data needed by the static site.
+
+The script writes the files listed in \hyperref[sec:website-generated-json-file-list]{Generated JSON files}.
+
+\subsection*{\code{scripts/generate_base_results.py }}
+Takes as input a command \code{--output} to specify the folder where it's going to be created
+It's a one-time or maintainer-triggered publication script used to create the initial Hugging Face dataset state from the current TSENV repository state. 
+This script belongs to the TSENV repository or to a controlled maintainer publication environment.
+It is not part of the normal GitHub Pages deployment workflow
+\subsection*{\code{serve.py}}
+To serve the website locally
+
+\section{GitHub Actions}
+\subsection*{\code{validate-submission.yml}}
+   Trigger: pull request with a submitted result bundle
+   Purpose: validate the submission and create the review artifact
+\subsection*{\code{publish-submission.yml}}
+  Trigger: manual maintainer-only \code{workflow\_dispatch} after PR approval/merge
+  Purpose: publish accepted result artifacts to Hugging Face and triggers deploy.yml afterward
+\subsection*{\code{deploy.yml}}
+  Trigger: push to website main, manual \code{workflow\_dispatch}, or triggered by publish-submission.yml
+  Purpose: regenerate public/data/*.json from Hugging Face and deploy GitHub Pages
+
+\phantomsection\label{sec:website-routing}
+\section*{Website structure and routing}
+
+The website must be implemented as a single-page application (SPA), not as a collection of separate static HTML pages and not as a single long scrolling page with anchor sections.
+Each top-level navigation item should map to a client-side route handled by the SPA router:
+
+\begin{itemize}
+    \item \texttt{/}: \hyperref[sec:website-page-overview]{Overview}
+    \item \texttt{/results/}: \hyperref[sec:website-page-results]{Results}
+    \item \texttt{/environments/}: \hyperref[sec:website-page-environments]{Environments}
+    \item \texttt{/get-started/}: \hyperref[sec:website-page-get-started]{Get Started and Submit}
+    \item \texttt{/authors/}: \hyperref[sec:website-page-authors]{Authors, Citation, and Contact}
+\end{itemize}
+
+The SPA should also support result-detail routes for leaderboard records:
+
+\begin{itemize}
+    \item \texttt{/results/}: Results page with one filterable leaderboard
+    \item \texttt{/results/\textless submission-id\textgreater/}: detail page for one displayed leaderboard record
+\end{itemize}
+
+The navigation menu should link to these routes directly.
+Route changes should preserve the SPA shell and should not trigger full-page reloads.
+
+\subsection*{SPA deep links}
+
+\subsubsection*{Background of the problem}
+Because the website is a single-page application, client-side routes such as these must work when opened directly or refreshed in the browser and not just when we get there through the app. 
+Open directly is when the user types or pastes a nested URL into the browser address bar.
+Refreshed means the user is already the correct link, and then it clicks the refresh button.
+Specifically the website has only:
+\begin{DocCode}
+  index.html
+  404.html
+  assets/app.js
+  assets/styles.css
+\end{DocCode}
+So without proper handling, when somebody opens a URL such as \code{https://tsenv.github.io/results/gpt-55-agent-direct-20260501/}, GitHub Pages looks for a matching physical file. 
+Since that file does not exist, GitHub Pages serves \code{404.html}.
+
+
+\subsection*{Publishing the website}
+
+From a local checkout of the website mockup:
+
+\begin{verbatim}
+cd website_local_version
+
+git init
+git branch -M main
+git remote add origin git@github.com:tsenv/tsenv.github.io.git
+
+git add .
+git commit -m "Initial TSENV website"
+git push -u origin main
+\end{verbatim}
+
+In GitHub, configure Pages to deploy through GitHub Actions:
+
+\begin{verbatim}
+Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Actions
+\end{verbatim}
+
+\phantomsection\label{sec:website-deployment}
+
+\subsection*{Deployment}
+\subsubsection{Phase 1: publish the canonical Hugging Face dataset}
+Phase 1: publish the canonical Hugging Face dataset
+From the TSENV repository or controlled maintainer environment:
+\begin{DocCode}
+cd /Users/tbe/repos/tsENV
+# If needed, run the question export workflow first so tsENV_questions/ exists.
+python scripts/generate_base_results.py \
+--output /tmp/tsenv_hf_dataset
+\end{DocCode}
+Review the generated folder and then upload or synchronize that folder to:
+\code{tsenv/tsenv-benchmark}
+using Hugging Face tooling
+\subsubsection{Phase 2: prepare the website repository}
+copy or unzip the static site scaffold into the sibling website repository:
+\begin{DocCode}
+mkdir -p /Users/tbe/repos/tsenv.github.io
+unzip tsenv_website_mockup.zip -d /Users/tbe/repos/tsenv.github.io
+cd /Users/tbe/repos/tsenv.github.io
+\end{DocCode}
+Then trigger:
+\begin{DocCode}
+  python scripts/sync_hf_to_website_data.py --hf-repo tsenv/tsenv-benchmark
 \end{DocCode}
 
-Each environment-specific page should load its metadata from \code{public/data/environments/<environment>/description.json} and its plotted samples from \code{public/data/environments/<environment>/data_<n>.json}.
+Initialize and push the website repository if it is not already cloned:
+\begin{DocCode}
+git init
+git branch -M main
+git remote add origin git@github.com:tsenv/tsenv.github.io.git
+git add .
+git commit -m "Initial TSENV website"
+git push -u origin main
+\end{DocCode}
 
+\phantomsection
+\section*{Appendix: public/data schema}
+\label{sec:website-generated-json}\label{sec:website-generated-json-file-list}\label{sec:website-public-data-schema-appendix}
+
+In the following we describe the structure of each file in \code{public/data/*}.
 \phantomsection\label{sec:website-summary-json}
 \begin{DocCode}
 public/data/summary.json
@@ -463,13 +628,6 @@ public/data/summary.json
 public/data/leaderboard.json
 {
   "generated_at": "2026-05-31T00:00:00Z",
-  "canonical_scope": {
-    "task_mode": "Code",
-    "noise": "Low",
-    "context": "High",
-    "examples": "Three Examples",
-    "required_seeds_per_simulator": 5
-  },
   "rows": [
     {
       "rank": 1,
@@ -484,8 +642,7 @@ public/data/leaderboard.json
         "noise": "Low",
         "context": "High",
         "examples": "Three Examples"
-      },
-      "complete": true
+      }
     }
   ]
 }
@@ -494,8 +651,7 @@ public/data/leaderboard.json
 \begin{DocCode}
 public/data/environments/BallDrop/description.json
 {
-  "environment_id": "BallDrop",
-  "name": "BallDrop",
+  "name": "BallDrop", # comes from experiment_config.json::paper_facing_name, must match public/data/environments/<this>/description.json
   "short_one_line_description": "A ball is dropped from a height and observed over time.",
   "prompt_combinations": [
     {
@@ -549,6 +705,9 @@ public/data/environments/BallDrop/description.json
   "download_link": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip"
 }
 \end{DocCode}
+Note that for prompt-template selection, conditions with one or more examples may share prompt templates marked with \texttt{training\_samples = ">0"}.
+Noise does not influence prompt.
+
 \phantomsection\label{sec:website-environment-data-json}
 \begin{DocCode}
 public/data/environments/BallDrop/data_1.json
@@ -580,189 +739,14 @@ public/data/environments/BallDrop/data_1.json
   ]
 }
 \end{DocCode}
-The \code{data_<n>.json} files are browser-ready JSON serializations of the Huggingface
-\code{tsENV_questions/<environment>/dataframes/<run_id>.parquet} files.
-They should contain the same time-series columns and numeric rows as the source
-Parquet file; prompts, labels, and intervention metadata belong in the exported
-\code{questions.json}, \code{sample_manifest.json}, and \code{model_record.json}
-files.
-
-\phantomsection\label{sec:website-generate-website-data}
-\subsection*{\code{scripts/update_submissions.py}}
-
-\code{scripts/update_submissions.py} converts the canonical Hugging Face benchmark state into the small browser-ready JSON files consumed by the website.
-It should read only from Hugging Face: the public results table, generated question metadata, and accepted submission archives.
-It then writes only the compact public data needed by the static site.
-
-The script should overwrite the following files
-\begin{DocCode}
-    public/data/summary.json
-    public/data/leaderboard.json
-    public/data/submissions/<submission-id>.json
-\end{DocCode}
-
-
-
-
-\subsection*{Huggingface structure}
-\begin{DocCode}
-tsenv/tsenv-benchmark/
-  README.md
-  LICENSE
-  questions/
-  results.parquet
-  submissions/
-    <submission-id>.zip
-\end{DocCode}
+The \code{data_<n>.json} files are browser-ready JSON serializations of the Huggingface files.
+Specifically:
 \begin{itemize}
-    \item \code{README.md}: Dataset card for the Hugging Face repository. 
-    It explains what TSENV is, how the benchmark questions are organized, how to load/use the files, how submissions are stored, and how to cite the benchmark.
-    The submission instructions should use the same public-facing message shown on the \hyperref[sec:website-page-get-started]{Get Started and Submit} page.
-    \item \code{LICENSE}: License for the released benchmark data, question bundles, public results, and submission artifacts.
-    \item \code{questions/}: Public TSENV question bundles. 
-    See \hyperref[docstart:generate_question_stage]{Stage: Generate Question} for the exported bundle schema and generation workflow.
-    \item \code{results.parquet}: Canonical public results table. 
-    It contains one row per evaluated public run, usually identified by submission, agent/model, simulator, task condition, and seed. 
-    The website leaderboard JSON is generated from this file by grouping and filtering the rows, for example requiring five completed seeds for each simulator before showing a public leaderboard score.
-    \item \code{submissions/}: Archive of accepted public submissions. 
-    Each submission is stored as a zip file. 
-    The schema of each of these is defined as \hyperref[sec:website-raw-submission-bundle]{Raw submission bundle schema}.
-    The zipping happens after validation.
+  \item prompts, labels, and intervention metadata belong in the exported \code{questions.json}, \code{sample_manifest.json}, and \code{model_record.json} files.
+  \item \code{tsENV_questions/<environment>/dataframes/<run_id>.parquet} files.
 \end{itemize}
 
 
-\phantomsection\label{sec:website-routing}
-\section*{Website structure and routing}
-
-The website must be implemented as a single-page application (SPA), not as a collection of separate static HTML pages and not as a single long scrolling page with anchor sections.
-Each top-level navigation item should map to a client-side route handled by the SPA router:
-
-\begin{itemize}
-    \item \texttt{/}: \hyperref[sec:website-page-overview]{Overview}
-    \item \texttt{/results/}: \hyperref[sec:website-page-results]{Results}
-    \item \texttt{/environments/}: \hyperref[sec:website-page-environments]{Environments}
-    \item \texttt{/get-started/}: \hyperref[sec:website-page-get-started]{Get Started and Submit}
-    \item \texttt{/authors/}: \hyperref[sec:website-page-authors]{Authors, Citation, and Contact}
-\end{itemize}
-
-The SPA should also support result-detail routes for leaderboard records:
-
-\begin{itemize}
-    \item \texttt{/results/}: Results page with one filterable leaderboard
-    \item \texttt{/results/\textless submission-id\textgreater/}: detail page for one displayed leaderboard record
-\end{itemize}
-
-The navigation menu should link to these routes directly.
-Route changes should preserve the SPA shell and should not trigger full-page reloads.
-
-\subsection*{SPA deep links}
-
-\subsubsection*{Background of the problem}
-Because the website is a single-page application, client-side routes such as these must work when opened directly or refreshed in the browser and not just when we get there through the app. 
-Open directly is when the use types or pastes a nested URL into the browser address bar.
-Refreshed means the user is already the correct link, and then it clicks the refresh button.
-Specifically the website has only:
-\begin{DocCode}
-  index.html
-  404.html
-  assets/app.js
-  assets/styles.css
-\end{DocCode}
-So without proper handling, when somebody opens a URL such as \code{https://tsenv.github.io/results/gpt-55-agent-direct-20260501/}, GitHub Pages looks for a matching physical file. 
-Since that file does not exist, GitHub Pages serves \code{404.html}.
-
-
-\subsection*{Publishing the website}
-
-From a local checkout of the website mockup:
-
-\begin{verbatim}
-cd website_local_version
-
-git init
-git branch -M main
-git remote add origin git@github.com:tsenv/tsenv.github.io.git
-
-git add .
-git commit -m "Initial TSENV website"
-git push -u origin main
-\end{verbatim}
-
-In GitHub, configure Pages to deploy through GitHub Actions:
-
-\begin{verbatim}
-Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Actions
-\end{verbatim}
-
-\phantomsection\label{sec:website-deployment}
-
-\subsection{Uploading first batch on HuggingFace}
-The huggingface base script for generating the initial base from the paper result is \code{generate_base_results.py}.
-This script update the \subsection*{Huggingface structure} from the current experiments result on the local pc.
-This script should be only used once when we are updating things on the website.
-
-\subsection*{Deployment workflow}
-
-Create:
-
-\begin{verbatim}
-.github/workflows/deploy.yml
-\end{verbatim}
-
-For the current vanilla static site, the workflow should regenerate public JSON from Hugging Face, validate it, and then deploy:
-
-\begin{verbatim}
-name: Deploy website
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
-jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - run: pip install -r requirements.txt
-      - run: python scripts/update_submissions.py
-
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - id: deployment
-        uses: actions/deploy-pages@v4
-\end{verbatim}
-
-The \texttt{actions/deploy-pages} action deploys the Pages artifact uploaded by the workflow.
-
-\subsubsection*{Implementation}
-Our \code{404.html} is special: it loads the same SPA shell as \code{index.html}. 
-Then the SPA reads the current URL and renders the correct page. 
-So \code{404.html} is used as a fallback entry point, not only as an error page.
-All JavaScript and CSS assets should use root-relative paths, such as \code{/assets/app.js} and \code{/assets/styles.css}, so they still load correctly from nested routes.
 
 
 \end{document}
