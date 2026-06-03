@@ -566,30 +566,49 @@ Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Acti
 
 \phantomsection\label{sec:website-deployment}
 
+\subsection*{Required secrets}
+  The following GitHub Actions secrets are used by the publication and deployment workflows.
+  Secrets must not be stored in \code{.env}, committed files, or generated \code{public/data} files.
+  \begin{itemize}
+    \item \code{HF_TOKEN}: Hugging Face token with access to \code{tsenv/tsenv-benchmark}.
+    It is required in the TSENV repository for \code{publish-base-dataset.yml} and \code{publish-submission.yml}, where it must have write access.
+    It is also required in the \code{tsenv.github.io} repository if \code{deploy.yml} reads from a private Hugging Face dataset.
+    If the Hugging Face dataset is public, \code{deploy.yml} may read without \code{HF_TOKEN}.
+    \item \code{TSENV_GITHUB_TOKEN}: Optional GitHub token used only if maintainer publication workflows should automatically trigger \code{deploy.yml} in the separate \code{tsenv.github.io} repository.
+    If maintainers trigger the website deployment manually, this secret is not required.
+  \end{itemize}
+
 \subsection*{Deployment}
 \subsubsection{Phase 1: publish the canonical Hugging Face dataset}
-Phase 1: publish the canonical Hugging Face dataset
 From the TSENV repository or controlled maintainer environment:
 \begin{DocCode}
 cd /Users/tbe/repos/tsENV
 # If needed, run the question export workflow first so tsENV_questions/ exists.
 python scripts/generate_base_results.py \
---output /tmp/tsenv_hf_dataset
+  --output /tmp/tsenv_hf_dataset
 \end{DocCode}
-Review the generated folder and then upload or synchronize that folder to:
-\code{tsenv/tsenv-benchmark}
-using Hugging Face tooling
+
+Create the Hugging Face repository \code{tsenv/tsenv-benchmark}.
+Create an \code{HF_TOKEN} with read and write access to this dataset repository.
+Upload the generated folder in \code{/tmp/tsenv_hf_dataset} to \code{tsenv/tsenv-benchmark} using Hugging Face tooling.
+
+If the upload is performed through GitHub Actions, configure \code{HF_TOKEN} as a repository secret in the TSENV GitHub repository.
+
 \subsubsection{Phase 2: prepare the website repository}
-copy or unzip the static site scaffold into the sibling website repository:
+Copy or unzip the static site scaffold into the sibling website repository:
 \begin{DocCode}
 mkdir -p /Users/tbe/repos/tsenv.github.io
 unzip tsenv_website_mockup.zip -d /Users/tbe/repos/tsenv.github.io
 cd /Users/tbe/repos/tsenv.github.io
 \end{DocCode}
+
 Then trigger:
 \begin{DocCode}
-  python scripts/sync_hf_to_website_data.py --hf-repo tsenv/tsenv-benchmark
+python scripts/sync_hf_to_website_data.py --hf-repo tsenv/tsenv-benchmark
 \end{DocCode}
+
+If \code{tsenv/tsenv-benchmark} is private, configure \code{HF_TOKEN} as a repository secret in the \code{tsenv.github.io} GitHub repository so \code{deploy.yml} can read from Hugging Face.
+If the Hugging Face dataset is public, \code{deploy.yml} may read the website data without \code{HF_TOKEN}.
 
 Initialize and push the website repository if it is not already cloned:
 \begin{DocCode}
