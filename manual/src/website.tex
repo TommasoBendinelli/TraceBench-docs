@@ -76,7 +76,7 @@ This works as follows:
 \end{itemize}
 The admin actions are
 \begin{itemize}
-  \item Populate the Hugging Face repository \code{tsenv/tsenv-benchmark} with the initial Hugging Face dataset state from the current TSENV repository state.
+  \item Populate the Hugging Face repository \code{TommasoBendinelli/tsenv-benchmark} with the initial Hugging Face dataset state from the current TSENV repository state.
   \item Regenerate the website JSON from Hugging Face with GitHub Actions  
   \item \phantomsection\label{sec:website-admin-review-submissions}Inspect and accept/reject submissions: Maintainers access the submission artifact from the pull request's GitHub Actions run and inspect the validation report, proposed canonical result rows, trajectory index, artifact index, and proposed accepted submission archive.
   If the submission is approved, a maintainer merges the pull request and triggers a separate maintainer-only GitHub Actions workflow for publication.
@@ -362,7 +362,7 @@ The target destinations are:
 \item Website repository: https://github.com/tsenv/tsenv.github.io
 \item Deployed website: https://tsenv.github.io/
 \item Code repository: https://github.com/tsenv/tsENV
-\item Hugging Face dataset repository: https://huggingface.co/datasets/tsenv/tsenv-benchmark
+\item Hugging Face dataset repository: https://huggingface.co/datasets/TommasoBendinelli/tsenv-benchmark
 \end{itemize}
 The local website checkout for implementation should be a sibling repository \code{/Users/tbe/repos/tsenv.github.io}.
 
@@ -407,8 +407,8 @@ Note that:
   \begin{DocCode}
     TSENV_WEBSITE_URL=https://tsenv.github.io/
     TSENV_CODE_URL=https://github.com/tsenv/tsENV
-    TSENV_HF_REPO=tsenv/tsenv-benchmark
-    TSENV_HF_DATASET_URL=https://huggingface.co/datasets/tsenv/tsenv-benchmark
+    TSENV_HF_REPO=TommasoBendinelli/tsenv-benchmark
+    TSENV_HF_DATASET_URL=https://huggingface.co/datasets/TommasoBendinelli/tsenv-benchmark
     TSENV_ISSUES_URL=https://github.com/tsenv/tsENV/issues
     TSENV_AFFILIATION_URL=https://siplab.org/
   \end{DocCode}
@@ -446,7 +446,7 @@ These files are the result of running the rollout as defined in \hyperref[sec:ag
 
 \subsection*{Hugging Face structure}
 \begin{DocCode}
-tsenv/tsenv-benchmark/
+TommasoBendinelli/tsenv-benchmark/
   README.md
   LICENSE
   questions/
@@ -570,7 +570,7 @@ Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Acti
   The following GitHub Actions secrets are used by the publication and deployment workflows.
   Secrets must not be stored in \code{.env}, committed files, or generated \code{public/data} files.
   \begin{itemize}
-    \item \code{HF_TOKEN}: Hugging Face token with access to \code{tsenv/tsenv-benchmark}.
+    \item \code{HF_TOKEN}: Hugging Face token with access to \code{TommasoBendinelli/tsenv-benchmark}.
     It is required in the TSENV repository for \code{publish-base-dataset.yml} and \code{publish-submission.yml}, where it must have write access.
     It is also required in the \code{tsenv.github.io} repository if \code{deploy.yml} reads from a private Hugging Face dataset.
     If the Hugging Face dataset is public, \code{deploy.yml} may read without \code{HF_TOKEN}.
@@ -588,9 +588,9 @@ python scripts/generate_base_results.py \
   --output /tmp/tsenv_hf_dataset
 \end{DocCode}
 
-Create the Hugging Face repository \code{tsenv/tsenv-benchmark}.
+Create the Hugging Face repository \code{TommasoBendinelli/tsenv-benchmark}.
 Create an \code{HF_TOKEN} with read and write access to this dataset repository.
-Upload the generated folder in \code{/tmp/tsenv_hf_dataset} to \code{tsenv/tsenv-benchmark} using Hugging Face tooling.
+Upload the generated folder in \code{/tmp/tsenv_hf_dataset} to \code{TommasoBendinelli/tsenv-benchmark} using Hugging Face tooling.
 
 If the upload is performed through GitHub Actions, configure \code{HF_TOKEN} as a repository secret in the TSENV GitHub repository.
 
@@ -604,10 +604,10 @@ cd /Users/tbe/repos/tsenv.github.io
 
 Then trigger:
 \begin{DocCode}
-python scripts/sync_hf_to_website_data.py --hf-repo tsenv/tsenv-benchmark
+python scripts/sync_hf_to_website_data.py --hf-repo TommasoBendinelli/tsenv-benchmark
 \end{DocCode}
 
-If \code{tsenv/tsenv-benchmark} is private, configure \code{HF_TOKEN} as a repository secret in the \code{tsenv.github.io} GitHub repository so \code{deploy.yml} can read from Hugging Face.
+If \code{TommasoBendinelli/tsenv-benchmark} is private, configure \code{HF_TOKEN} as a repository secret in the \code{tsenv.github.io} GitHub repository so \code{deploy.yml} can read from Hugging Face.
 If the Hugging Face dataset is public, \code{deploy.yml} may read the website data without \code{HF_TOKEN}.
 
 Initialize and push the website repository if it is not already cloned:
@@ -721,7 +721,7 @@ public/data/environments/BallDrop/description.json
     "drag coefficient",
     "gravity acceleration"
   ],
-  "download_link": "https://huggingface.co/datasets/tsenv/tsenv-benchmark/resolve/main/questions/BallDrop.zip"
+  "download_link": "https://huggingface.co/datasets/TommasoBendinelli/tsenv-benchmark/resolve/main/questions/BallDrop.zip"
 }
 \end{DocCode}
 Note that for prompt-template selection, conditions with one or more examples may share prompt templates marked with \texttt{training\_samples = ">0"}.
