@@ -2,6 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RENDER_DATE="$(date +%Y%m%d)"
+PROJECT_NAME="$(basename "${SCRIPT_DIR}")"
+PROJECT_NAME="${PROJECT_NAME#docs-}"
 MANUAL_DIR="${SCRIPT_DIR}/manual"
 MANUAL_SRC_DIR="${MANUAL_DIR}/src"
 MANUAL_SUPPORT_DIR="${MANUAL_DIR}/support"
@@ -10,9 +13,9 @@ WRAPPER_DIR="${SCRIPT_DIR}/.render_wrappers"
 OUTPUT_DIR="${SCRIPT_DIR}/pdf"
 LATEX_TEXINPUTS="${MANUAL_SUPPORT_DIR}//:${MANUAL_SRC_DIR}//:${SCRIPT_DIR}//:"
 NUMBERED_SUFFIX="_numbered"
-COMBINED_OUTPUT_FILE="${OUTPUT_DIR}/docs_combined_compact.pdf"
+COMBINED_OUTPUT_FILE="${OUTPUT_DIR}/${RENDER_DATE}_${PROJECT_NAME}_docs_combined_compact.pdf"
 COMBINED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only.pdf"
-COMBINED_NUMBERED_OUTPUT_FILE="${OUTPUT_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf"
+COMBINED_NUMBERED_OUTPUT_FILE="${OUTPUT_DIR}/${RENDER_DATE}_${PROJECT_NAME}_docs_combined_compact${NUMBERED_SUFFIX}.pdf"
 COMBINED_NUMBERED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only${NUMBERED_SUFFIX}.pdf"
 INDEX_SOURCE_FILE="${MANUAL_SRC_DIR}/documentation_index.tex"
 INDEX_OVERRIDES_FILE="${BUILD_DIR}/documentation_index_page_overrides.tex"
@@ -42,21 +45,21 @@ Options:
   --right-padding <delta>  Relative adjustment from the default 1in right margin.
   --nips-left-padding <delta>   Relative adjustment for the NIPS manuscript left margin.
   --nips-right-padding <delta>  Relative adjustment for the NIPS manuscript right margin.
-  --combined               Rebuild and merge the combined manual PDFs.
+  --combine                Rebuild and merge the combined manual PDFs.
   --skip-paper             Build only the standalone docs and never invoke the NIPS build.
   --force                  Delete target build artifacts before compiling.
-  --all                    Shortcut for --combined --force.
+  --all                    Shortcut for --combine --force.
   --help                   Show this help message.
 
 Examples:
   bash docs/render_all_pdf.sh
   bash docs/render_all_pdf.sh --skip-paper
-  bash docs/render_all_pdf.sh --combined
-  bash docs/render_all_pdf.sh --skip-paper --combined
+  bash docs/render_all_pdf.sh --combine
+  bash docs/render_all_pdf.sh --skip-paper --combine
   bash docs/render_all_pdf.sh --all
   bash docs/render_all_pdf.sh --left-padding +0.2in --right-padding 0pt
   bash docs/render_all_pdf.sh --left-padding -6pt --right-padding +12pt
-  bash docs/render_all_pdf.sh --combined --left-padding -25mm --right-padding +25mm --nips-left-padding 0pt --nips-right-padding +10mm
+  bash docs/render_all_pdf.sh --combine --left-padding -25mm --right-padding +25mm --nips-left-padding 0pt --nips-right-padding +10mm
 EOF
 }
 
@@ -98,7 +101,7 @@ while [ "$#" -gt 0 ]; do
       NIPS_RIGHT_PADDING_DELTA="$2"
       shift 2
       ;;
-    --combined)
+    --combine)
       BUILD_COMBINED=true
       shift
       ;;
@@ -310,7 +313,7 @@ compile_tex() {
   local stem="${source_file##*/}"
   local display_source="${source_file}"
   stem="${stem%.tex}"
-  local output_file="${OUTPUT_DIR}/${output_stem}.pdf"
+  local output_file="${OUTPUT_DIR}/${RENDER_DATE}_${PROJECT_NAME}_${output_stem}.pdf"
   if [[ "${display_source}" == "${SCRIPT_DIR}/"* ]]; then
     display_source="${display_source#${SCRIPT_DIR}/}"
   fi
@@ -589,7 +592,7 @@ compile_tex_variants "${STANDALONE_APPENDIX_FILE}"
 compile_tex_variants "documentation_index.tex"
 
 if [ "${BUILD_COMBINED}" != "true" ]; then
-  echo "Skipping combined manual PDFs. Pass --combined to rebuild merged outputs."
+  echo "Skipping combined manual PDFs. Pass --combine to rebuild merged outputs."
   exit 0
 fi
 

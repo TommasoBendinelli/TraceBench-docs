@@ -9,12 +9,12 @@
 \docTitle{Stage: Simulate}
 \phantomsection\label{docstart:simulation_stage}
 
-This stage converts resolved Simulink run recipes into materialized run artifacts.
-This step is computationally heavy that's why it supports running multiple runs in parallels, and allows to restart it midway through. 
-We use this data generation for generating the large batches of data need to generate the training dataset for the deep learning base validity filter.
-Hence, it requires handling generation in the order of ~10k or more samples with data above 50GB.
-It consists in a single script that can be run by the user
+This stage converts resolved Simulink run recipes into materialized run artifacts. 
+Because this step is computationally expensive, it supports parallel execution across multiple runs and can be resumed after interruption.
+We use this data-generation stage to produce the large batches of simulations needed to train the deep-learning-based validity filter. 
+As a result, the stage must handle workloads on the order of 10,000 or more samples, with total generated data exceeding 50 GB.
 
+The stage is implemented as a single user-facing script.
 
 \section*{Invocation}
 

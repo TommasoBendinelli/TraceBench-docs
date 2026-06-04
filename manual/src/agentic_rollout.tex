@@ -6,7 +6,9 @@
 \docTitle{Stage: Agentic Rollout}
 \phantomsection\label{docstart:agentic_rollout}
 
-The responsibility of this stage is to run the agentic experiments.
+This stage runs the agentic experiments. 
+It creates the artifacts that are later submitted for evaluation or used for additional post-processing. 
+It also provides a convenient way to manage, resume, and inspect rollout runs.
 
 There are two main scripts and a third ancillary one:
 \begin{itemize}
@@ -45,6 +47,7 @@ Note that:
 Internal steps:
 \begin{enumerate}
   \item Validate that arguments are valid.
+  \phantomsection\label{sec:agentic-rollout-run-configurations}
   \item Build a json configuration file saved at \code{run_configurations/name.json}, with top keys  \code{timestamp}, \code{name}, \code{models}, \code{number_of_runs_in_parallel_per_agent}, \code{total_runs} and then a \code{runs} list with the following entries. The \code{models} key contains \termSimulator identifiers.
   \begin{itemize}
     \item \code{question_schema}: \code{question_schema} from \code{tsENV_questions/<simulator_id>/questions.json::question}

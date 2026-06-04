@@ -1,0 +1,5 @@
+{
+  "files.exclude": {
+    "**/.render_wrappers": true
+  }
+}

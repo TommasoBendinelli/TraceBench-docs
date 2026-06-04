@@ -41,7 +41,7 @@
 
 \docTitle{Experiment Plan}
 \phantomsection\label{docstart:experiment_plan}
-This document describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
+This document describes how to use the outputs of the previous stages to create the artifacts shown in the paper, as well as those used for human analysis and debugging.
 The experiments are designed to test the following hypotheses:
 \begin{itemize}
 \item Increasing observation noise decreases agent accuracy.
@@ -49,94 +49,21 @@ The experiments are designed to test the following hypotheses:
 \item Removing textual context decreases performance more than removing labeled examples.
 \item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
 \end{itemize}
+We also explore what happens as observation noise increases. 
+In particular, we analyze the most common types of errors made by the agents. 
+For example, do agents more frequently confuse intervention cases with non-intervention cases, or do they make other types of mistakes?
 
-\paragraph{GRPO training experiments.}
-At minimum, GRPO should be trained across the same simulator and condition axes defined in the \hyperref[sec:experimental-setup]{experimental setup of the paper}: noise regime, task interface, number of labeled examples, textual-context level, simulator, and repetition seed.
+This stage contains a series of scripts that follow a collect, consolidate and visualise strategy. 
+The idea is to first use a script that collects the necessary information from all runs and stores it in a specific folder.
+These outputs are then consolidated into single .csv files, which are subsequently used to generate the .tex tables, plots, detailed analysis and spotting errors/debugging.
+This structure also ensure lineage and traceability.
 
-\section*{Two-Phase Dataset Generation Flow}
+We observed that ChatGPT is very effective at analyzing individual files. 
+Empirically, we found that providing ChatGPT with the entire folder of trajectories is an effective way to obtain insights and identify potential errors.
 
-The simulation-candidate workflow separates bootstrap data for surrogate training from production data for benchmark selection:
+Everything is done programmatically to ensure lineage and tracking. 
 
-\begin{DocCode}
-Bootstrap phase:
-generation_policies/<bootstrap_policy_id>.json
-  -> plans/<bootstrap_policy_id>/run_nodes.jsonl + run_edges.jsonl
-  -> runs/<run_id>/data.parquet
-  -> metrics/<bootstrap_policy_id>/cheap_filter_metrics.jsonl
-  -> surrogates/<surrogate_id>/
 
-Production phase:
-generation_policies/<production_policy_id>.json
-  -> plans/<production_policy_id>/run_nodes.jsonl + run_edges.jsonl
-  -> runs/<run_id>/data.parquet
-  -> metrics/<production_policy_id>/cheap_filter_metrics.jsonl
-  -> metrics/<production_policy_id>/surrogate_scores/<surrogate_id>.jsonl
-  -> datasets/<dataset_id>/sample_manifest.json
-  -> tsENV_questions/<simulator_id>/questions.json
-\end{DocCode}
-
-A typical command sequence is:
-
-\begin{DocCode}
-# Bootstrap pool
-python workflows/generate_runs/compile_run_graph.py \
-  --model BallDrop \
-  --policy bootstrap_v1 \
-  --overwrite
-
-python workflows/simulate/run_pending_sims.py \
-  --model BallDrop \
-  --policy bootstrap_v1 \
-  --matlab-workers 8 \
-  --compute-features
-
-env/bin/python workflows/metrics/compute_metrics.py \
-  --model BallDrop \
-  --policy bootstrap_v1 \
-  --jobs 8
-
-env/bin/python workflows/surrogate/train_surrogate.py \
-  --model BallDrop \
-  --policy bootstrap_v1 \
-  --surrogate-id surrogate_ball_drop_v1 \
-  --noise-level all
-
-# Production pool
-python workflows/generate_runs/compile_run_graph.py \
-  --model BallDrop \
-  --policy production_v1 \
-  --overwrite
-
-python workflows/simulate/run_pending_sims.py \
-  --model BallDrop \
-  --policy production_v1 \
-  --matlab-workers 8 \
-  --compute-features
-
-env/bin/python workflows/metrics/compute_metrics.py \
-  --model BallDrop \
-  --policy production_v1 \
-  --jobs 8
-
-env/bin/python workflows/surrogate/score_surrogate.py \
-  --model BallDrop \
-  --policy production_v1 \
-  --surrogate-id surrogate_ball_drop_v1 \
-  --noise-level all
-
-env/bin/python workflows/generate/select_dataset.py \
-  --model BallDrop \
-  --policy production_v1 \
-  --dataset paper_main_v2 \
-  --surrogate-id surrogate_ball_drop_v1
-
-env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py \
-  --model BallDrop \
-  --dataset paper_main_v2 \
-  --row-slug gentle_01234-cloud
-\end{DocCode}
-
-If a dedicated \code{compute_cheap_filter_metrics.py} script exists, use that clearer name with the same arguments.
 
 All the results by default are saved in three folders:
 \begin{itemize}
@@ -256,7 +183,7 @@ This script collects all the \code{atif_trajectory.json}, optionally filtered by
 \begin{DocCode}
   python consolidate_results.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
-This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generates two files in \code{FOLDER}, set by default at \code{results_large_artifacts/consolidated_numerical_results}.
+This script takes as input all \hyperref[sec:agentic-rollout-run-configurations]{\code{run_configurations/*.json}}, optionally filters them by tag, and generates two files in \code{FOLDER}, set by default at \code{results_large_artifacts/consolidated_numerical_results}.
 \begin{itemize}
   \item \code{<row_slug>_summary.json} 
   \item \code{<row_slug>.json}
@@ -294,10 +221,13 @@ Additionally, \code{<row_slug>_summary.json} contains:
   \begin{itemize}
     \item \code{cost_usd}: \code{trajectory_evaluation.json::cost_usd}
     \item \code{tokens}: \code{trajectory_evaluation.json::tokens}
-    \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
-    \item \code{number_of_tool_calls}: It is equal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
-    \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} 
-    \item \code{plot_inspected}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots}, i.e. plot that are ispected by the agent, not only generated. 
+    \item \code{total_steps} 
+    \item \code{number_of_tool_calls}
+    \item \code{python_calls} 
+    \item \code{plot_generated}: number of plot that are generted by the agent 
+    \item \code{plot_inspected}: number of plot that are insepected by the agent 
+    \item \code{number_of_semantically_relevant_numbers}: 
+    \item \code{intent_class}
   \end{itemize}
 \end{itemize}
 And \code{<row_slug>.json} contains:
@@ -306,15 +236,13 @@ And \code{<row_slug>.json} contains:
   \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
 \end{itemize}
 
-
-In case there are multiple combinations of \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, where \code{model} is the \termSimulator identifier, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
-If any of these two files would be empty, then it's not created.
+If multiple entries share the same \code{(agent_id, model, question_slug)} combination across different \code{run_configurations/*.json} files, where \code{model} is the \termSimulator identifier, the newest entry is returned based on the \code{configuration_name::} value.
 
 \section{Generate final artifacts}
 \subsection{CSV Tables}
-This script works with the output from all \code{<row_slug>.json}
+This script converts the consolidated row-level JSON artifacts into CSV files used for analysis and paper-table generation.
 \begin{DocCode}
-  python generate_csv_tables.py [TAG ...]
+python generate_csv_tables.py [TAG …]
 \end{DocCode}
 Where [TAG] if passed only includes results from the previous script with that corresponding tag.
 
@@ -324,17 +252,7 @@ The output of this second script consists of two CSV artifact types (for direct 
   \item \code{results/consolidated/tables/all_samples.csv}
 \end{itemize}
 
-These CSVs have the following columns
-
-\paragraph{Run-level consolidated CSV.}
-Each row in \code{results/consolidated/all_runs.csv} describes one consolidated run:
-
-\allRunsCsvSchemaTable
-
-\paragraph{Sample-level consolidated CSV.}
-Each row in \code{results/consolidated/tables/all_samples.csv} describes one evaluated sample:
-
-\allSamplesCsvSchemaTable
+The schemas of these CSV outputs are documented in \hyperref[sec:experiment-plan-consolidated-csv-schema-appendix]{Appendix: Consolidated CSV schemas}.
 
 \FloatBarrier
 \subsection{Generate TeX tables}
@@ -384,71 +302,41 @@ Additionally tables in the Appendix follow these stylistic rules:
 \end{itemize}
    
 
-In the following we show the generated result tables used by the paper in the same order as they appear in the paper.
-Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
+The generated result tables are rendered in the paper and appendix, rather than duplicated here.
+If a requested result is not present, the generated table renders \code{-}.
+
 \subsubsection*{Main paper result tables}
-
 These results are created from the main paper conditions listed in Table~\ref{tab:experiment-plan-main}.
-\par
-\textbf{Main experiment accuracy table}\par
-\input{overleaf_paper/generated/tables/main/acc_main_experiment_table}
-
-\medskip
-\textbf{Main experiment cumulative-token table}\par
-\input{overleaf_paper/generated/tables/main/cum_main_experiment_table}
+\begin{itemize}
+  \item \hyperref[tab:acc_main_experiment_table]{Main experiment accuracy table}
+  \item \hyperref[tab:cum-main-experiment-table]{Main experiment cumulative-token table}
+\end{itemize}
 
 \subsubsection*{Ablation paper result tables}
-\medskip
 These results are created from the ablation conditions listed in Table~\ref{tab:experiment-plan-ablation}.
-\medskip
-\par
-\textbf{Ablation experiment accuracy table}\par
-\input{overleaf_paper/generated/tables/main/acc_ablation_training_examples}
+\begin{itemize}
+  \item \hyperref[tab:acc_ablation_training_examples]{Ablation experiment accuracy table}
+  \item \hyperref[tab:cum-ablation-training-examples]{Ablation experiment cumulative-token table}
+\end{itemize}
 
-\medskip
-\textbf{Ablation experiment cumulative-token table}\par
-\input{overleaf_paper/generated/tables/main/cum_ablation_training_examples}
-
-\clearpage
-\subsubsection*{Appendix A summary tables}
+\subsubsection*{Appendix summary tables}
 These generated tables summarize the main and ablation rows from Tables~\ref{tab:experiment-plan-main} and~\ref{tab:experiment-plan-ablation}.
+\begin{itemize}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-cloud]{Main experiment direct low-noise table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-flame]{Main experiment code low-noise table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-pine]{Main experiment direct high-noise table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-orbit]{Main experiment code high-noise table}
+  \item \hyperref[tab:app-per-simulator-frost-01234-pine]{Ablation zero-example direct table}
+  \item \hyperref[tab:app-per-simulator-frost-01234-orbit]{Ablation zero-example code table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-harbor]{Ablation no-textual-context direct table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-tide]{Ablation no-textual-context code table}
+\end{itemize}
 
-\textbf{Main experiment direct low-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-cloud}
-
-\medskip
-\textbf{Main experiment code low-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-flame}
-
-\medskip
-\textbf{Main experiment direct high-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-pine}
-
-\medskip
-\textbf{Main experiment code high-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-orbit}
-
-\medskip
-\textbf{Ablation zero-example direct table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-pine}
-
-\medskip
-\textbf{Ablation zero-example code table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-orbit}
-
-\medskip
-\textbf{Ablation no-textual-context direct table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-harbor}
-
-\medskip
-\textbf{Ablation no-textual-context code table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-tide}
-
-\subsubsection*{Appendix B no-noise summary tables}
+\subsubsection*{Appendix no-noise summary tables}
 These generated tables summarize the no-noise results from Table~\ref{tab:experiment-plan-calibration}.
-
-\textbf{No-noise direct results table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-anchor}
+\begin{itemize}
+  \item \hyperref[tab:app-calibration-frost-01234-anchor]{No-noise direct results table}
+\end{itemize}
 
 
 \subsection{Plots}
@@ -644,5 +532,20 @@ python generate_statistical_significance.py
 
 If the input CSV files are missing or stale, rerun the consolidation and CSV-generation steps before running the statistical-significance script.
 The script should fail loudly if any pre-specified comparison has no matched simulator--repetition-seed units, rather than silently producing an empty confidence interval.
+
+\FloatBarrier
+\appendix
+\section{Consolidated CSV schemas}
+\phantomsection\label{sec:experiment-plan-consolidated-csv-schema-appendix}
+
+\paragraph{Run-level consolidated CSV.}
+Each row in \code{results/consolidated/all_runs.csv} describes one consolidated run:
+
+\allRunsCsvSchemaTable
+
+\paragraph{Sample-level consolidated CSV.}
+Each row in \code{results/consolidated/tables/all_samples.csv} describes one evaluated sample:
+
+\allSamplesCsvSchemaTable
 
 \end{document}

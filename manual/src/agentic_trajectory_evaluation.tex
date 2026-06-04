@@ -1,14 +1,22 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\externaldocument{build/atif_transcription}[atif_transcription.pdf]
 
 \begin{document}
 \docTitle{Stage: Agentic Trajectory Evaluation}
 \phantomsection\label{docstart:agentic_trajectory_evaluation}
-This stage is responsible for extracting quantitative insights from agent trajectories.
+This stage is responsible for extracting quantitative insights from agent trajectories in the \hyperref[docstart:atif_transcription]{ATIF trajectory format}.
+Specifically, we are interested in python call, number of tokens used, whether a step is explorative or exploitative, and how many raw numbers are taken as input, and how long is the average printed output in numbers.
+This script is called automatically whenever we are doing the agentic rollout, however without the LLM call as this introduce other issues about reliability that we want to avoid.
+The llm is triggered manually by the user in a second stage.
+
 The input artifact is \code{terminal-bench/runs/<run_id>/<task>/<trial>/agent_logs/atif_processed/atif_trajectory.json}.
 
 \begin{DocCode}
-python workflows/trajectory/trajectory_evaluation_programmatic.py <agentic_run_id> [--llm [--parallel N]] [--path PATH]
+python workflows/trajectory/trajectory_evaluation_programmatic.py \
+[<agentic_run_id>] \ 
+[--llm [--parallel N]] \ 
+[--path PATH]
 \end{DocCode}
 Note that only one of \code{<agentic_run_id>} or \code{--path} may be passed.
 The \code{agentic_run_id} resolves to:
@@ -16,28 +24,9 @@ The \code{agentic_run_id} resolves to:
 terminal-bench/runs/<agentic_run_id>
 \end{DocCode}
 
-It requires \code{tree_sitter} and \code{tree_sitter_bash} to be installed
-
 \section*{Output Schema}
 
 The emitted value is one JSON object with name \code{trajectory_evaluation.json} inside the run folder with the following keys:
-
-\begin{itemize}
-\item \code{agentic_run_id}: the CLI argument
-\item \code{agent_id}: resolved agent profile id
-\item \code{atif_trajectory_path}: Relative path of the analyzed trajectory file
-\item \code{tokens.total_prompt_tokens}: total tokens in input
-\item \code{tokens.total_completion_tokens}: total tokens as output
-\item \code{tokens.avg_prompt_tokens_per_iteration}
-\item \code{tokens.avg_completion_tokens_per_iteration}
-\item \code{cost_usd}: numeric run cost. It is computed from \code{atif_trajectory.final_metrics.total_*} and the token pricing stored in the resolved agent profile, using the formula defined in the Agent Trajectory Schema
-\item \code{number_of_interactions}: object keyed by source
-\item \code{tool_calls}: object keyed by allowed tool name, as defined in the \code{agents.json} profile
-\item \code{subcommand_analysis}: object keyed by parsed shell subcommand family
-\end{itemize}
-
-Minimal shape:
-
 
 \begin{DocCode}
 {

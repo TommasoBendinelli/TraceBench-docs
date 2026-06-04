@@ -53,6 +53,20 @@ In the \code{low} noise regime each signal must have a signal to noise ratio hig
     Once a change is detected, the agent must infer whether the change was due to the coefficient of restitution, mass, drag coefficient, gravity, or another parameter.
 \end{itemize}
 
+\section*{Repository Structure}
+\begin{DocCode}
+pyproject.toml      # project metadata + dependencies1
+uv.lock             # exact locked dependency versions
+tsENV/
+models/simulink/
+workflows/
+terminal-bench/
+simscape_custom/
+\end{DocCode}
+
+
+
+
 \section*{Common Utilities}
 
 \begin{algorithm}[H]

@@ -7,11 +7,18 @@
 
 \begin{document}
 
-\docTitle{Stage: Cheap Filter Metrics}
+\docTitle{Stage: Fast filter calculations}
 \phantomsection\label{docstart:cheap_filter_metrics_stage}
 
 \subsection*{Overview}
 This stage computes low-cost detectability filters.
+Specifically, for each intervention we measure RMS againt the baseline and another baseline where the initial value is the value of the intervention.
+We also compute some other enviroment specific features to detect other possible issues. 
+The key of all of these that are cheap to compute and essentially get rid of cases that bad, altough many could still be there.
+We then use enviroment specific threshold to determine if this detectable or not.
+To tune the filters we can apply some sanity checks, such as before the change they must be exactly the same.
+We first compute the differences.
+The filters here are only applied to intervention runs!!
 Motivation for this can be found in the paper section on \hyperref[sec:detectability]{detectability and distinguishability}.
 
 \section*{Inputs}
@@ -24,7 +31,6 @@ For each \termSimulator, the stage reads:
 \item \code{runs/model_record.json}: runtime status and recipe hashes.
 \item \code{runs/<run_id>/data.parquet}: materialized trajectories.
 \item \code{experiment_config.json}: observed signals, signal types, and detectability thresholds.
-\item \code{noise_adder.py}: \termSimulator-specific noise profiles and SNR analysis.
 \item \code{detectability_specific_environment.py}: optional environment-specific detectability veto hook.
 \end{itemize}
 
@@ -41,25 +47,15 @@ For each intervention node, the stage uses \code{run_edges.jsonl} to find:
 
 These relationships are not inferred from filename or identifier structure.
 
-\section*{Distance Computation}
 
-For each successful intervention run, compute detectability using RMS.
 
-The generic output includes:
-
-\begin{itemize}
-\item \code{mean_rms_distance_clean_dirty}
-\item \code{mean_rms_distance_clean_baseline}
-\item \code{mean_SNR}
-\item \code{first_diff}
-\item \code{detectable}: \code{"yes"}, \code{"no"}, or \code{"error"}
-\end{itemize}
-
-For the comparison against the no-intervention baseline, the stage may additionally call:
-
+\section*{Detectability}
+We use this 
 \begin{DocCode}
 detectability_specific_environment.py::is_detectable(...)
 \end{DocCode}
+
+
 
 If this hook returns \code{"no"}, the intervention fails the cheap filter even if the generic RMS/SRD checks pass.
 
@@ -105,52 +101,13 @@ Example intervention record:
   "time0_run_id": "run_time0_...",
   "changed_parameter": "gravity",
   "cheap_filter_pass": true,
-  "detectability": {
-    "vs_baseline": {"detectable": "yes"},
-    "vs_time0_baseline": {"detectable": "yes"}
-  },
-  "snr": {
-    "none": null,
-    "low": {"mean_snr_db": 18.2},
-    "high": {"mean_snr_db": 9.7}
-  },
+  "baseline_rms_difference": {"channel1": x, "channel2" ..}
+  "time0_rms_difference": {"channel1": x, "channel2" ..}
   "failure_reasons": []
 }
+
 \end{DocCode}
 
-Example baseline or no-intervention record:
-
-\begin{DocCode}
-{
-  "record_type": "run",
-  "policy_id": "production_v1",
-  "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
-  "run_id": "run_baseline_...",
-  "kind": "baseline",
-  "ground_truth_label": "no_intervention",
-  "cheap_filter_pass": true,
-  "detectability": null,
-  "snr": {
-    "none": null,
-    "low": {"mean_snr_db": 22.4},
-    "high": {"mean_snr_db": 12.1}
-  },
-  "failure_reasons": []
-}
-\end{DocCode}
-
-Example family record:
-
-\begin{DocCode}
-{
-  "record_type": "family",
-  "policy_id": "production_v1",
-  "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
-  "baseline_run_id": "run_baseline_...",
-  "family_cheap_filter_pass": true,
-  "cheap_filter_pass_parameters": ["gravity", "mass", "drag_coeff"]
-}
-\end{DocCode}
 
 \section*{Validation Rules}
 
