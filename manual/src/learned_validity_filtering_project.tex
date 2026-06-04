@@ -31,7 +31,7 @@
 }
 \mtProjectHeaderImage
 \vspace{1.35em}
-{\raggedright\Huge\bfseries Deep-learning based filtering for TSENV\par}
+{\raggedright\Huge\bfseries Deep learning based filtering for \name{}\par}
 \vspace{0.45em}
 {\color{black!15}\hrule height 0.4pt}
 \vspace{1.05em}
@@ -41,42 +41,40 @@
 \section*{Research questions}
 
 \begin{itemize}
-    \item How much training data do deep-learning time-series models to obtain high accuracy in TSENV?
-    \item How much noise do deep-learning time-series handle before breaking down? 
-    \item Is the output probability of the model reliable?
+    \item How much training data do deep-learning time-series models need to obtain high accuracy in \name{}?
+    \item How much noise can deep-learning time-series models handle before breaking down?
+    \item After calibration, do the model's predicted probabilities accurately reflect empirical correctness?
 \end{itemize}
 
 \subsection*{In practical terms}
 
 \begin{itemize}
-    \item Can we automate the tsenv filtering process reliably with deep learning models?
-    \item How many samples are disregard from the deep learning network in noisy condition?
-    \item Can we use the output of the softmax to characterise sample complexity?
+    \item Can we automate \name{} filtering process reliably with deep learning models?
+    \item How many samples are rejected by the deep-learning network under noisy conditions?
+    \item Can the model’s calibrated softmax confidence be used as a proxy for sample difficulty?
 \end{itemize}
 
 \section*{Introduction}
-TSENV is a framework to generate root-cause analsis task.
-These task can be used to evaluate whether LLM agents can reason over time-series observations in root-cause analysis tasks. 
+TSENV is a framework to generate root-cause analsis tasks.
+These tasks can be used to evaluate whether LLM agents can reason over time-series observations in root-cause analysis tasks. 
 It generates controlled tasks from physical simulators: a system evolves over time, and one parameter may change during the trajectory. 
 The agent must infer from the observed time series which parameter changed, or whether no intervention occurred.
-To ensure the benchmark fairness, it should be possible to determine the correct intervention parameter from the time-series alone.
-A valid sample should contain an intervention that is visible in the time series and distinguishable from other plausible causes. 
-Invalid samples are problematic because they may be too subtle, ambiguous, simulator-specific, or indistinguishable from no intervention. 
-If invalid samples enter the benchmark, the benchmark may test noise, artifacts, or under-specified tasks rather than genuine time-series reasoning.
+To ensure benchmark fairness and 100\% accuracy can be achieved, each intervention should be detectable effect and its effect must be distinguishable from changes to other root-cause parameters.
 The current TSENV pipeline addresses this with a validity-filtering procedure based on probe trajectories, distance-based criteria, and simulator-specific checks. 
-These rules are interpretable and useful, but they may require manual tuning and introduce human artifacts. 
-Additionally the only work on clean data.
+These rules are interpretable and useful, but they may require manual tuning and introduce human artifacts and do not allow to characterise how much noise we can add before distinguishable and detectable are no longer there.
 This semester project investigates a learning-based alternative. 
 Instead of relying only on hand-designed thresholds, the project will train time-series classifiers to score generated samples according to whether the intervention is detectable and distinguishable. 
-This time-series classifiers are trained on a pool of training data
+The training data comes from the same \name{} pipeline, and thus it contains also examples where the intervention is not visible.
+Hence, the challenge is also to understand whether training on noisy samples can create a reliable classifier.
+We use a curated clean test set for testing. 
+
 The resulting model should be compared against the current filter and, if successful, integrated into the TSENV benchmark-generation pipeline.
 
 \subsection*{Background}
 
-TSENV's learned validity-filtering can be cast a time series classification (TSC) problem.
-
-Deep TSC reviews and early convolutional baselines show that one-dimensional convolutional networks can be strong classifiers for raw time series \cite{ismailfawaz2019dlreview,wang2017timeseries}. 
-InceptionTime is especially relevant because it is a strong convolutional TSC architecture, uses multi-scale temporal filters, and has been competitive across many UCR-style datasets \cite{ismailfawaz2020inceptiontime}. 
+TSENV's learned validity-filtering can be cast as a time-series classification (TSC) problem.
+Prior work on deep learning for time-series classification shows that one-dimensional convolutional networks can be strong classifiers for raw time series \cite{ismailfawaz2019dlreview,wang2017timeseries}. 
+Architectures such as InceptionTime have been shown to be competitive across many time-series classification dataset collections \cite{ismailfawaz2020inceptiontime}. 
 For TSENV, this makes InceptionTime a natural first learned-filter backbone: it can ingest multivariate trajectories directly, it is simpler to train than large sequence models, and its local filters are well matched to abrupt or delayed changes caused by parameter interventions.
 
 Longer-range sequence models provide a second family of candidates. 
@@ -88,16 +86,12 @@ In TSENV, these models are worth testing because the evidence for an interventio
 
 Time-series foundation models provide a third, increasingly practical class of candidates.
 Forecasting-oriented models such as TimesFM, Chronos, and Lag-Llama pretrain transformer-style models on heterogeneous collections of time series and demonstrate zero-shot or few-shot transfer across datasets, while MOMENT targets more general time-series representation learning and limited-supervision downstream tasks \cite{das2023timesfm,ansari2024chronos,rasul2023lagllama,goswami2024moment}.
-For TSENV, these models are attractive less as off-the-shelf forecasters than as pretrained encoders or initialization schemes for the learned validity classifier: their cross-domain pretraining may improve sample efficiency when labeled validity judgments are scarce, and their representations may capture generic temporal motifs such as regime shifts, delayed responses, damping behavior, and noise structure.
+For this project, these models can be used pretrained encoders as their representations may capture generic temporal motifs such as regime shifts, delayed responses, damping behavior, and noise structure.
 However, most current time-series foundation models are optimized primarily for forecasting, may make univariate or patched-token assumptions, and may have pretraining biases that are poorly matched to intervention-validity decisions.
 They should therefore be evaluated as ablations against task-trained InceptionTime, transformer, and state-space backbones under the same family-grouped splits, calibration procedure, and high-precision thresholding protocol.
 
 Because the learned filter affects which benchmark samples are released, the evaluation criterion should be more conservative than ordinary classification accuracy. 
-Modern neural networks can be miscalibrated, so confidence scores must be calibrated and thresholded rather than interpreted as raw probabilities \cite{guo2017calibration}.
-Robustness under distribution shift is also important: the selected samples should remain recognizable across held-out seeds, intervention magnitudes, noise levels, and ideally held-out simulator configurations \cite{ovadia2019can}. 
-The most appropriate protocol is therefore to train on a bootstrap candidate pool, use family-grouped train/validation/test splits to avoid leakage, tune thresholds for high precision on validation data, and evaluate both agreement and disagreement with the existing probe-trajectory and distance-based filter. 
-A successful learned filter should not simply maximize acceptance rate; it should reject subtle, ambiguous, low-SNR, numerically invalid, or no-intervention-confusable candidates while preserving a balanced and diverse set of examples for downstream TSENV agent evaluation.
-
+Modern neural networks can be miscalibrated, so confidence scores must be calibrated and thresholded rather than interpreted as raw probabilities \cite{guo2017calibration}, with methods such as temperature scaling.
 
 
 \section*{Task description: Validity filtering}
@@ -120,60 +114,44 @@ The following tasks and milestones define the project:
         \begin{itemize}
             \item InceptionTime
             \item MambaSL
-            \item Transformers,
+            \item Transformers
         \end{itemize}
     \end{enumerate}
 
     \item \textbf{Dataset construction for learned filtering}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Define data splits: train, val and test. Different family must be in different splits.
+        \item Define data splits: train, val and test. 
+        Different families must be in different splits.
         \item Standardize the data format and explain it in the documentation.
     \end{enumerate}
 
     \item \textbf{Learned validity-filter model}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Implement generate class takes as input a time series tensor and returns the softmax.
+        \item Implement deep learning classifier that takes a time-series tensor as input and returns calibrated class logits
         \begin{itemize}
-            \item Train IncpeitonTime
+            \item Train InceptionTime
             \item Train MambaSL
             \item Transformer based network
         \end{itemize}
-        \item Analysise results with different checkpoint values and levels.
-        \item Results should be kept on WandB for tracking and lineage. Each experiment should be reproducible
+        \item Analyze results across checkpoints and noise levels.
+        \item Log results to Weights \& Biases (wandb) for experiment tracking and lineage.
+        Each experiment should be reproducible
     \end{enumerate}
 
     \item \textbf{Validity scoring and integration into TSENV}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
         \item Convert model outputs into filtering decisions
         \begin{itemize}
-            \item choose thresholds and caliabration high-precision filtering
-            \item support confidence-based ranking of generated candidates
-            \item optionally expose a continuous validity score instead of only a binary decision
+            \item Generate a curve with  y-axis remaining samples and x-axis threshold value per simulator
+            \item Generate a curve with accuracy on y-axis and x-axis threshold per simulator
+            \item Compare this across
         \end{itemize}
-        \item Integrate the learned filter into the benchmark-generation pipeline
-        \begin{itemize}
-            \item implement a clean interface compatible with the current TSENV generator
-            \item support running the learned filter after candidate generation
-            \item support comparing learned and current filters side by side
-        \end{itemize}
-        \item Investigate hybrid filtering strategies
-        \begin{itemize}
-            \item current filter followed by learned filter
-            \item learned pre-filter followed by current filter
-            \item learned confidence score used to prioritize manual inspection or additional probing
-        \end{itemize}
+        \item Compare against current threshold based solution.
     \end{enumerate}
 
     \item \textbf{Evaluation}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Classification performance in terms of accuracy, cross entropy loss and calibrated error.
-        \item Agreement with the current filter
-        \begin{itemize}
-            \item agreement rate
-            \item false positives relative to the current filter
-            \item false negatives relative to the current filter
-            \item analysis of samples where the learned filter disagrees with the current filter
-        \end{itemize}
+        \item Classification performance in terms of accuracy, calibration error, precision/recall.
         \item Benchmark-generation quality
         \begin{itemize}
             \item number of retained samples per simulator and parameter
@@ -182,27 +160,20 @@ The following tasks and milestones define the project:
             \item distinguishability between possible changed parameters
             \item effect on downstream agent evaluation, if feasible
         \end{itemize}
-        \item Generalization tests (stretch goal)
-        \begin{itemize}
-            \item held-out random seeds
-            \item held-out intervention magnitudes
-            \item held-out changed parameters
-            \item held-out simulator settings
-            \item held-out simulator 
-        \end{itemize}
     \end{enumerate}
 
     \item \textbf{Analysis and ablations}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Model ablations: model size and architecture
+        \item Model ablations:
+        \begin{itemize}
+            \item What model is the best?
+            \item Do we need more parameters?
+        \end{itemize}
         \item Data ablations: vary the number of training samples
         \item Failure-case analysis
         \begin{itemize}
-            \item inspect accepted invalid samples
-            \item inspect rejected valid samples
-            \item identify simulator-specific artifacts
-            \item identify ambiguity between changed parameters
-            \item identify no-intervention cases that look intervention-like
+            \item inspect accepted invalid samples (relative to the test set)
+            \item inspect rejected valid samples (relative to the test set)
         \end{itemize}
         \item Interpretability
         \begin{itemize}
@@ -214,26 +185,10 @@ The following tasks and milestones define the project:
 
     \item \textbf{Stretch goals}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
-        \item Active learning for validity filtering
-        \begin{itemize}
-            \item use model uncertainty to select candidates for additional probing or manual review
-        \end{itemize}
+        \item Foundation model finetuning
         \item Self-supervised pretraining
-        \begin{itemize}
-            \item pretrain a time-series encoder on unlabeled TSENV trajectories
-            \item fine-tune it for validity classification
-        \end{itemize}
         \item Cross-simulator transfer
-        \begin{itemize}
-            \item train on some simulators and evaluate on a held-out simulator
-            \item study whether a learned filter can transfer beyond the simulators seen during training
-        \end{itemize}
     \end{enumerate}
-
-    \item \textbf{Expected outcome}
-
-    The expected outcome is an implemented learned validity-filtering component for TSENV, together with a systematic evaluation against the current filtering procedure. The final result should clarify whether learned time-series classifiers can extend, complement, or partially replace the existing validity-filtering step in the TSENV benchmark-generation pipeline.
-
     \item \textbf{Deliverables}
     \begin{enumerate}[label=\arabic{enumi}.\arabic*.]
         \item A written semester-project report

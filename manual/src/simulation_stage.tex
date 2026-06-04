@@ -1,5 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\usepackage{booktabs}
 \externaldocument{build/environment_profiles}[environment_profiles.pdf]
 \externaldocument{build/candidate_generation}[candidate_generation.pdf]
 
@@ -9,20 +10,22 @@
 \phantomsection\label{docstart:simulation_stage}
 
 This stage converts resolved Simulink run recipes into materialized run artifacts.
+This step is computationally heavy that's why it supports running multiple runs in parallels, and allows to restart it midway through. 
+We use this data generation for generating the large batches of data need to generate the training dataset for the deep learning base validity filter.
+Hence, it requires handling generation in the order of ~10k or more samples with data above 50GB.
+It consists in a single script that can be run by the user
 
-The main driver is \code{workflows/simulate/run_pending_sims.py}.
-It reads a resolved run graph from \code{plans/<policy_id>/run_nodes.jsonl} and \code{plans/<policy_id>/run_edges.jsonl}, checks the extracted \termSimulator metadata, reconciles the requested run nodes with the runtime inventory on disk, and launches MATLAB only for runs that are pending, failed, or stale.
-Stale means that status says success, but the artifact is missing or was produced for an older/different recipe/parameters hash.
-
-A resolved run graph is the concrete output of the candidate-generation stage: all random sampling decisions have already been made, every run has a stable \code{run_id}, and every baseline/intervention/time-zero relationship is explicit.
-Stage: Simulate does not sample new runs; it only materializes these resolved recipes.
-
-The stage can be launched concurrently for different \termSimulators.
-Additionally, if MATLAB's Parallel Computing Toolbox is installed, the script supports running multiple runs in parallel within the same \termSimulator by starting a MATLAB \code{parpool} with \code{N} workers.
 
 \section*{Invocation}
 
+The script is \code{workflows/simulate/run_pending_sims.py}.
+It reads a resolved run graph from \code{plans/<policy_id>/run_nodes.jsonl} and \code{plans/<policy_id>/run_edges.jsonl}, checks the extracted \termSimulator metadata, reconciles the requested run nodes with the runtime inventory on disk, and launches MATLAB only for runs that are pending, failed, or stale.
+Stale means that status says success, but the artifact is missing or was produced for an older/different recipe/parameters hash.
+The script supports running multiple runs in parallel within the same \termSimulator by starting a MATLAB \code{parpool} with \code{N} workers and can be launched concurrently for different \termSimulators.
+
+
 \begin{DocCode}
+SIMSCAPE_CUSTOM_PATH=... \
 python workflows/simulate/run_pending_sims.py \
   [--model SIMULATOR] \
   [--matlab-workers N] \
@@ -40,21 +43,23 @@ python workflows/simulate/run_pending_sims.py \
 
 \begin{itemize}
 \item \code{--model}: selected \termSimulator. If omitted, the script iterates over \hyperref[sec:allowed-tsenv-models]{all allowed \name{} \termSimulators}.
-\item \code{--matlab-workers}: number of MATLAB \code{parpool} workers. The default is \code{1}, which runs one simulation at a time and does not start an explicit parallel pool. Values greater than \code{1} require MATLAB's Parallel Computing Toolbox; \code{0} is invalid.
+\item \code{--matlab-workers}: number of MATLAB \code{parpool} workers. 
+The default is \code{1}, which runs one simulation at a time and does not start an explicit parallel pool. 
+Values greater than \code{1} require MATLAB's Parallel Computing Toolbox; \code{0} is invalid.
+It uses MATLAB's Parallel Computing Toolbox.
 \item \code{--policy}: policy identifier. The script reads the resolved run graph under \code{models/simulink/<simulator_id>/plans/<policy_id>/}.
 \item \code{--overwrite}: mark all selected runs as \code{not_run} and materialize them again.
 \item \code{--rerun-failed}: mark only selected runs currently recorded as \code{failed} as \code{not_run} and materialize them again.
 \item \code{--raise-on-errors}: fail immediately instead of recording \code{failed} status.
 \item \code{--debug}: create an additional folder \code{runs/<run_id>/debug/} containing \code{input_signals.mat} and \code{raw_simulation.pickle}.
 \item \code{--run-id}: materialize only the specified \code{RUN_ID}. The run must appear in the resolved run graph for the selected \code{--policy}.
-\item \code{--runs-root}: optional base directory for run artifacts. When set, each \termSimulator writes to \code{RUNS_ROOT/<simulator_id>/runs/} instead of \code{models/simulink/<simulator_id>/runs/}. This is intended for local NVMe scratch storage.
+\item \code{--runs-root}: optional base directory for run artifacts. When set, each \termSimulator writes to \code{RUNS_ROOT/<simulator_id>/runs/} instead of \code{models/simulink/<simulator_id>/runs/}.
 \item \code{--matlab-cache-root}: optional base directory for MATLAB/Simulink generated cache files. If omitted, MATLAB uses its normal cache and preference locations.
 \item \code{--profile-timing}: write per-phase timing records to \code{profile_timing.jsonl} in the selected run root.
 \item \code{--compute-features}: compute \code{features.json}. If feature names are provided, they must match the feature names defined by the \termSimulator-specific \code{features.py}.  By default, no features are computed.
 \end{itemize}
 
-The environment variable \code{SIMSCAPE_CUSTOM_PATH} must also be defined to the custom Simscape blocks.
-For example:
+\code{SIMSCAPE_CUSTOM_PATH} must be set to the path containing the custom simscape blocks
 
 \begin{DocCode}
 SIMSCAPE_CUSTOM_PATH=/csem/divr/users/tbe/repo/tsENV/simscape_custom
@@ -63,36 +68,20 @@ SIMSCAPE_CUSTOM_PATH=/csem/divr/users/tbe/repo/tsENV/simscape_custom
 \section*{Inputs and Source of Truth}
 
 For each \termSimulator under \code{models/simulink/<simulator_id>/}, the script requires:
-
-\begin{itemize}
-\item \code{plans/<policy_id>/run_nodes.jsonl}: the resolved list of runnable run recipes. It is the source of truth for \code{run_id}, \code{recipe_hash}, \code{kind}, \code{family_id}, \code{baseline_parameters}, changed parameter, intervention value, and intervention time.
-\item \code{plans/<policy_id>/run_edges.jsonl}: the resolved graph relationships among runs. It is the source of truth for which intervention belongs to which baseline and which time-zero/static-change run belongs to which intervention.
-\item \code{simulink_model_original.mdl}
-\item \code{generated/metadata.json}: generated Simulink metadata, including the exposed parameter set and intervention block map.
-\item \code{experiment_config.json}: source of truth for \code{sampling_rate_hz}, \code{end_time_input_s}, \code{observable_signals}, \code{signal_type}, and legal exposed-variable domains used for final validation before simulation.
-\item \code{features.py}: optional. Used only when \code{--compute-features} is passed.
-\item \phantomsection\label{sec:model-record-json-schema}\code{runs/model_record.json}: runtime inventory of materialized, pending, or failed runs. It is a flat object keyed by \code{run_id}. Each entry represents one materialized run node from a resolved run graph.
-\end{itemize}
-
-Schema:
-
-\begin{DocCode}
-{
-  "<run_id>": {
-    "run_type": "baseline|intervention|time0_baseline",
-    "family_id": "<family_id>",
-    "recipe_hash": "<32-hex-hash>",
-    "status": "not_run|success|failed",
-    "timestamp": "...",
-    "last_policy_id": "<policy_id>",
-    "class_internal": "gravity|mass|...|no_intervention|",
-    "class_agent_facing_name": "gravity|mass|...|no intervention|"
-  }
-}
-\end{DocCode}
-
-The \code{recipe_hash} field is copied from \code{run_nodes.jsonl}.
-The runtime inventory does not define the recipe; it only records the materialization status of a recipe whose canonical definition lives in the resolved run graph.
+\begin{center}
+\begin{tabular}{@{}p{0.38\linewidth}p{0.54\linewidth}@{}}
+\toprule
+Required file & Purpose \\
+\midrule
+\code{plans/<policy_id>/run_nodes.jsonl} & Resolved run nodes and run recipes. \\
+\code{plans/<policy_id>/run_edges.jsonl} & Resolved run graph edges. \\
+\code{simulink_model_original.mdl} & Source Simulink model copied for each run. \\
+\code{generated/metadata.json} & Extracted simulator metadata. \\
+\code{experiment_config.json} & Experiment-level configuration. \\
+\hyperref[sec:simulation-model-record-schema]{\code{runs/model_record.json}} & Entry represents a materialized run node; see schema. \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 \section*{Internal Steps}
 
@@ -156,32 +145,10 @@ The first timestamp is expected to be \code{dt = 1/sampling_rate_hz}; the last p
 \item \code{validate(run_id)} reloads the saved artifact and checks timestamp spacing, column order, \code{float32} storage, minimum length, expected sample count, and absence of \code{NaN} or \code{inf} values.
 \end{enumerate}
 
-\subsection*{MATLAB Parallel Execution and Logging}
-
-When \code{--matlab-workers 1} is used, Stage: Simulate starts one MATLAB engine session and materializes pending runs serially.
-The console prints one \code{Simulating <kind> <run_id>...} line before each run.
-
-When \code{--matlab-workers N} is greater than \code{1}, Stage: Simulate starts one MATLAB engine session, creates or reuses a MATLAB \code{parpool} with up to \code{N} workers, and dispatches prepared run jobs to the pool.
-This is MATLAB worker parallelism, not Python process parallelism.
-It requires MATLAB's Parallel Computing Toolbox and uses the active MATLAB local cluster profile.
-If MATLAB reports that the profile has a smaller \code{NumWorkers} limit than the requested \code{N}, the run fails before simulations start.
-For example, a \code{Processes} profile with \code{NumWorkers = 10} rejects \code{--matlab-workers 20}.
-The configured limit can be inspected in MATLAB with:
-
-\begin{DocCode}
-c = parcluster("Processes");
-c.NumWorkers
-\end{DocCode}
-
-and changed, if the local machine and license can support it, with:
-
-\begin{DocCode}
-c = parcluster("Processes");
-c.NumWorkers = 20;
-saveProfile(c);
-\end{DocCode}
-
-The stage first prepares isolated temporary workspaces for all pending runs, each containing a rewritten \code{simulink_model.mdl}, \code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
+\subsection*{Parallel Execution}
+When matlab workers is set to 1, runs are materialized serially.
+When matlab worker is greated than 1, we start one MATLAB engine session, create a parpool with \code{N} workers and dispatch jobs there.
+We first prepares isolated temporary workspaces for all pending runs, each containing a rewritten \code{simulink_model.mdl}, \code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
 It then submits those jobs to MATLAB in chunks.
 By default the chunk size is \code{10 * --matlab-workers}; it can be overridden with:
 
@@ -189,36 +156,9 @@ By default the chunk size is \code{10 * --matlab-workers}; it can be overridden 
 TSENV_MATLAB_PARPOOL_CHUNK_SIZE=20
 \end{DocCode}
 
-Chunking is used because MATLAB returns simulation result objects to Python only after a submitted MATLAB batch returns.
-Without chunks, a long run may look silent even though MATLAB workers are busy.
-The MATLAB helper stores the chunk return as a cell array of scalar job-result structs so MATLAB Engine can transfer the results back to Python.
-Python mirrors MATLAB \code{stdout} and \code{stderr} through \code{io.StringIO}-compatible streams, which is required by MATLAB Engine and allows the terminal to show MATLAB progress messages.
-With chunks enabled, the expected console output is:
 
-\begin{DocCode}
-Running 1374 simulations with MATLAB parpool (10 workers).
-Using MATLAB parpool with 10 workers.
-Preparing 1374 MATLAB parpool job workspaces...
-Prepared 1374 MATLAB parpool jobs; submitting 14 chunks of up to 100.
-Submitting MATLAB parpool chunk 1/14 (100 jobs; completed 0/1374).
-Submitted 100 MATLAB parpool jobs (0/1374 already complete before this chunk).
-completed 1/1374 chunk 1/100 run_id=<run_id> status=success
-...
-Finished MATLAB parpool chunk 1/14; processed 100/1374 jobs.
-\end{DocCode}
 
-The \code{completed X/Y} lines are emitted by MATLAB as \code{fetchNext} receives worker results.
-After a chunk returns, Python extracts signals, resamples, serializes \code{data.parquet}, validates, applies the status to \code{model_record.json}, and persists the registry.
-Therefore \code{data.parquet} counts and \code{model_record.json} advance chunk-by-chunk, not at every individual MATLAB worker completion.
-If the terminal shows no per-run output while \code{MATLAB -parallelserver} workers are consuming CPU, MATLAB is still inside the currently submitted chunk.
-Use a smaller \code{TSENV_MATLAB_PARPOOL_CHUNK_SIZE} when faster visible registry/artifact progress is more important than submission overhead.
 
-More workers are not expected to produce a linear speedup.
-Only the MATLAB simulation batch is parallelized; Python preparation, workspace rewriting, signal extraction, resampling, serialization, validation, registry persistence, MATLAB startup, parpool startup, and worker coordination still cost wall-clock time.
-Short simulations are especially sensitive to that fixed overhead.
-In practice, small benchmark subsets may show faster MATLAB chunk execution but similar or slower end-to-end wall time.
-Large policies amortize the fixed overhead better, so a stable low worker count such as \code{--matlab-workers 2} can be faster for a full policy even when it is not faster on a 20-run smoke test.
-Very high worker counts can become slower or unstable because MATLAB workers compete for memory, disk/cache access, Simulink/Simscape initialization, and license/profile resources.
 
 Use \code{--profile-timing} to compare worker counts on the target machine.
 The end-to-end wall time should be compared together with \code{profile_timing.jsonl} phases:
@@ -294,5 +234,26 @@ Specifically
 
 On the previous recovery, new credential keys appeared after login and \code{~/.MathWorks/licensing/licenses/license_mhkokgon.mwlicx} appeared afterward.
 Once those files exist, retry the simulate stage.
+
+\phantomsection\label{sec:simulation-model-record-schema}
+\section*{\code{model_record.json} Schema}
+
+\begin{DocCode}
+{
+  "<run_id>": {
+    "run_type": "baseline|intervention|time0_baseline",
+    "family_id": "<family_id>",
+    "recipe_hash": "<32-hex-hash>",
+    "status": "not_run|success|failed",
+    "timestamp": "...",
+    "last_policy_id": "<policy_id>",
+    "class_internal": "gravity|mass|...|no_intervention|",
+    "class_agent_facing_name": "gravity|mass|...|no intervention|"
+  }
+}
+\end{DocCode}
+
+The \code{recipe_hash} field is copied from \code{run_nodes.jsonl}.
+The runtime inventory does not define the recipe; it only records the materialization status of a recipe whose canonical definition lives in the resolved run graph.
 
 \end{document}

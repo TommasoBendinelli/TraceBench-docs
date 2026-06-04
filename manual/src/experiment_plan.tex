@@ -12,6 +12,7 @@
 \usepackage{caption}
 \usepackage{placeins}
 \usepackage{tabularx}
+\externaldocument{overleaf_paper/build/main}[overleaf_paper/archive/compiled/main.pdf]
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 \newcolumntype{S}{>{\raggedright\arraybackslash}p{1.9cm}}
@@ -48,6 +49,9 @@ The experiments are designed to test the following hypotheses:
 \item Removing textual context decreases performance more than removing labeled examples.
 \item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
 \end{itemize}
+
+\paragraph{GRPO training experiments.}
+At minimum, GRPO should be trained across the same simulator and condition axes defined in the \hyperref[sec:experimental-setup]{experimental setup of the paper}: noise regime, task interface, number of labeled examples, textual-context level, simulator, and repetition seed.
 
 \section*{Two-Phase Dataset Generation Flow}
 

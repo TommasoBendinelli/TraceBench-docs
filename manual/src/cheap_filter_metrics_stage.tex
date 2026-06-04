@@ -3,21 +3,16 @@
 \externaldocument{build/environment_profiles}[environment_profiles.pdf]
 \externaldocument{build/candidate_generation}[candidate_generation.pdf]
 \externaldocument{build/simulation_stage}[simulation_stage.pdf]
+\externaldocument{overleaf_paper/build/main}[overleaf_paper/archive/compiled/main.pdf]
 
 \begin{document}
 
 \docTitle{Stage: Cheap Filter Metrics}
 \phantomsection\label{docstart:cheap_filter_metrics_stage}
 
-\subsection{Overview}
-This stage computes low-cost detectability, numerical-validity, and SNR metrics from materialized simulation runs.
-It rejects failed, non-detectable, numerically invalid, and low-SNR candidates.
-Final benchmark selection is performed later by combining \code{cheap_filter_pass} with \code{surrogate_filter_pass}.
-\subsection{Target use case}
-This is used for validating generated candidates 
-\subsection{Requirements}
-The filters are fast to compute and reliable. 
-They allow for false positive, but have false negative of 100\%.
+\subsection*{Overview}
+This stage computes low-cost detectability filters.
+Motivation for this can be found in the paper section on \hyperref[sec:detectability]{detectability and distinguishability}.
 
 \section*{Inputs}
 
@@ -46,16 +41,9 @@ For each intervention node, the stage uses \code{run_edges.jsonl} to find:
 
 These relationships are not inferred from filename or identifier structure.
 
-\section*{Cheap-Filter Computation}
+\section*{Distance Computation}
 
-For each successful intervention run, compute detectability against:
-
-\begin{itemize}
-\item its matched baseline run;
-\item its matched time-zero/static-change run.
-\end{itemize}
-
-Both comparisons load the dataframes, assert aligned timestamps, apply \termSimulator-specific noise when requested, preprocess channels according to the environment and paper appendix, compute SRD threshold crossings, compute RMS distances, and compute effect-to-noise SNR values.
+For each successful intervention run, compute detectability using RMS.
 
 The generic output includes:
 
