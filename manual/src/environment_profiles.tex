@@ -5,16 +5,30 @@
 
 \begin{document}
 
+\newcommand{\environmentBuildMetadataStageLink}{%
+  \ifdefined\tsenvDocsCombinedManualMode
+    \hyperref[sec:simulink-build-metadata-stage]{build metadata stage}%
+  \else
+    \href{simulink_generated_metadata_schema.pdf}{build metadata stage}%
+  \fi
+}
+
 \docTitle{Environments}
 \phantomsection\label{docstart:environment_profiles}
 
 \section*{Overview}
 
 This document describes the manually created files under \code{models/simulink/<simulator_id>/} that define a \name{} \termSimulator.
-These files define a simulator environment and are required to generate candidate runs, simulate them, add noise, and render prompts. 
-A \termSimulator becomes usable once the required files exist, \code{build_metadata.py} has been run for \code{simulink_model_original.mdl}, and the \termSimulator has been added to \code{shared/benchmark_utils.py::ALLOWED_TSENV_MODELS}.
-
+These files, together with  \code{simulink_model_original.mdl}, define a simulator environment and are necessary to generate candidate runs, simulate them, add noise, and render prompts. 
 \phantomsection\label{sec:allowed-tsenv-models}
+Additionally, \termSimulator needs to be added to \hyperref[sec:allowed-tsenv-models]{\code{shared/benchmark_utils.py::ALLOWED_TSENV_MODELS}} and the \environmentBuildMetadataStageLink{} needs to be run.
+
+
+\paragraph{Policy Generation}
+The runs are sampled a generation policy.
+Since this way of sampling was introduced after the first public released of the dataset, we have a 10k version for each of the \termSimulator in the first version in distribution with the test set. 
+
+
 The files are located in \code{models/simulink/<simulator_id>/}.
 \newcommand{\environmentTreeSimulinkModelOriginal}{\hyperref[sec:environment-simulink-model-original]{simulink\_model\_original.mdl}}
 \newcommand{\environmentTreeDescriptionLevels}{\hyperref[sec:environment-description-levels]{description\_levels.json}}
@@ -138,16 +152,7 @@ The sampler must respect all \code{allowed_intervals} defined in \code{experimen
 \item \code{baseline_min_distance_scale}: optional non-negative number. If present, generated baselines should be separated from one another according to the policy's diversity constraint.
 \end{itemize}
 
-Allowed variable-level distributions are:
-
-\begin{itemize}
-\item \code{uniform}: sample uniformly in the legal interval.
-\item \code{loguniform}: sample log-uniformly in the legal interval. The legal interval must be strictly positive.
-\item \code{boundary_biased}: sample with extra mass near the lower and upper legal bounds.
-\item \code{fixed}: use a fixed value. Requires a \code{value} field.
-\end{itemize}
-
-A fixed value must still lie inside the variable's \code{allowed_intervals}.
+Allowed variable-level distributions are \code{uniform,loguniform,fixed}
 
 \subsubsection*{\texorpdfstring{\titlecode{intervention_sampler}}{intervention\_sampler}}
 

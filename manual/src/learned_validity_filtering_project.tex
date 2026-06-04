@@ -236,8 +236,11 @@ The following tasks and milestones define the project:
     \item Tommaso Bendinelli
 \end{itemize}
 
-\bibliographystyle{plain}
-\bibliography{overleaf_paper/references}
+\ifdefined\tsenvDocsCombinedManualMode
+\else
+  \bibliographystyle{plain}
+  \bibliography{overleaf_paper/references}
+\fi
 
 \restoregeometry
 \pagestyle{fancy}
