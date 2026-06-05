@@ -12,7 +12,11 @@ This document describes the local web explorers used to inspect \name{} runs and
 
 \section*{Model Explorer}
 
-The Web Model Explorer is a local, read-only browser for inspecting resolved run graphs, materialized Simulink runs, cheap-filter metrics, surrogate confidence records, and generated candidate pools.
+The Web Model Explorer is a local, read-only browser for inspecting  materialized Simulink runs.
+The registry is loaded with a paged approach to handle large policy (i.e. the design principle is that we fetch only what is needed).
+The first page contains 50 families, and additional pages are fetched on demand (by clicking next page)
+Full family details, including intervention and probe runs, are loaded when a family is expanded (i.e. when we are clicking on a family)
+Deep links are supported and can open a selected run without requiring the full policy registry to be loaded up front.
 
 Start it from the repository with:
 
@@ -28,7 +32,8 @@ It uses \code{0.0.0.0:3001} by default.
 
 The sidebar lists allowed \name{} \termSimulators that exist under \code{models/simulink/}.
 \termSimulators with missing required files remain listed but show a warning badge.
-The header shows the selected \termSimulator, selected \code{policy_id}, active runs folder name, and a reload button that re-reads registry and distribution files from disk.
+The header shows the selected \termSimulator, selected \code{policy_id}, active runs folder name, and a reload button. 
+The reload button reloads the visible page of families and any expanded rows.
 
 The main table is organized by \code{family_id} from the resolved run graph.
 Each family can be expanded to show its baseline run, intervention runs, and matched time-zero/static-change probe runs.
@@ -67,8 +72,8 @@ Controls include:
 If two runs are selected and noise is enabled, the UI may show per-signal SNR values using the \termSimulator noise-adder utilities.
 
 \section*{Deep Links}
-
 Deep links can preselect a \termSimulator, policy, run, and optional comparator.
+When a deep link targets a run, the explorer resolves the run and fetches only the containing family needed to display it, rather than loading the full policy registry.
 Supported query parameters include:
 
 \begin{DocCode}
@@ -91,7 +96,11 @@ opens the matching run directly if it can be located.
 \begin{itemize}
 \item \code{GET /api/models}: read allowed \termSimulators and validation warnings.
 \item \code{GET /api/policies?model=<simulator_id>}: list available resolved plans under \code{plans/}.
-\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>}: load resolved run graph, runtime status, cheap-filter metrics, surrogate confidence records, signal display names, noise profiles, and metadata.
+\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>}: load the first page of family summaries for the selected policy.
+\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>&page=<N>&page_size=<N>}: load a specific page of family summaries.
+\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>&family_id=<FAMILY_ID>}: load full details for one family, including baseline, intervention, and probe runs.
+\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>&run=<RUN_ID>}: resolve a run within a policy and load the containing family for deep-link display.
+\item \code{GET /api/registry?model=<simulator_id>&policy=<POLICY_ID>&mode=full}: explicitly load the full registry for debugging or compatibility.
 \item \code{GET /api/distribution?model=<simulator_id>}: load \code{experiment_config.json} and generated metadata used for legal domains and sampling details.
 \item \code{GET /api/locate-run?run=<RUN_ID>}: resolve a deep-linked run identifier to \termSimulator and policy.
 \item \code{GET /api/data?model=<simulator_id>&run=<RUN_ID>&max_rows=<N>&noise_profile=<PROFILE>&noise_seed=<SEED>}: load a run artifact for plotting.
