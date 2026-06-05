@@ -62,13 +62,12 @@ env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.
 It materializes the canonical exported bundle as:
 \begin{DocCode}
   tsENV_questions/<simulator_id>/
-  |-- questions.json
-  |-- dataframes/
-  |   `-- *.parquet
-  |-- noise_adder.py
-  |-- sample_manifest.json
-  |-- model_record.json
-  `-- selection_provenance.jsonl
+    questions.json
+    dataframes/
+      `-- *.parquet
+    noise_adder.py
+    sample_manifest.json
+    model_record.json
 \end{DocCode}
 Where:
 \section*{\texorpdfstring{\titlecode{sample_manifest.json}}{sample\_manifest.json}}

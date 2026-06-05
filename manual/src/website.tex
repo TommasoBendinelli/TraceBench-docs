@@ -14,7 +14,7 @@
 \phantomsection\label{sec:website-document-contents}
 \section*{Document Contents}
 This document defines the public-facing design and the technical contract of the TSENV website.
-It also describes the production deployment flow needed to publish the site and benchmark artifacts.
+It also describes the \hyperref[sec:website-deployment]{production deployment flow} needed to publish the site and benchmark artifacts.
 Benchmark data, public results, trajectories, and accepted submission artifacts are stored on the Hugging Face Hub and rendered by a static single-page application hosted through GitHub Pages.
 The GitHub page is a rendering layer, not a scoring layer. 
 The document is divided into two parts:
@@ -565,7 +565,12 @@ In GitHub, configure Pages to deploy through GitHub Actions:
 Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Actions
 \end{verbatim}
 
+
+
+
+\subsection*{Deployment}
 \phantomsection\label{sec:website-deployment}
+
 
 \subsection*{Required secrets}
   The following GitHub Actions secrets are used by the publication and deployment workflows.
@@ -578,14 +583,15 @@ Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Acti
     If maintainers trigger the website deployment manually, this secret is not required.
   \end{itemize}
 
-\subsection*{Deployment}
 \subsubsection{Phase 1: publish the canonical Hugging Face dataset}
+Prerequisite: a local public question-bundle directory containing \code{BallDrop/}, \code{BounceBall/}, and \code{MassSlide/}, with each bundle matching the schema of \hyperref[docstart:generate_question_stage]{Stage: Generate Question}.
+
 From the TSENV repository or controlled maintainer environment:
 \begin{DocCode}
 cd /Users/tbe/repos/tsENV
-# If needed, run the question export workflow first so tsENV_questions/ exists.
 python scripts/generate_base_results.py \
-  --output /tmp/tsenv_hf_dataset
+    --question-bundles-dir /path/to/public/question/bundles \
+    --output /tmp/tsenv_hf_dataset
 \end{DocCode}
 
 Create the Hugging Face repository \code{TommasoBendinelli/tsenv-benchmark}.

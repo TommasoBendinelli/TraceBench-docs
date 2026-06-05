@@ -8,39 +8,42 @@
 
 \docTitle{Stage: Simulate}
 \phantomsection\label{docstart:simulation_stage}
+This stage converts resolved Simulink run recipes into materialized time-series artifacts using the Simulink/Simscape engine.
+The step is computationally expensive: a resolved policy may contain tens or hundreds of thousands of runs, and the resulting artifacts can occupy many tens of gigabytes.
+To speed up data generation, the stage supports parallel execution with MATLAB's Parallel Computing Toolbox and partial regeneration of only missing, failed, or stale runs.
+The stage is exposed as a single script, however internally has two main steps.
+First, it reconciles the resolved plan with the runtime inventory in \code{model_record.json}, so it only simulates runs that are pending, failed, or stale.
+Second it runs the simulations. 
+Note that when MATLAB parallelism is enabled, it prepares isolated per-run MATLAB workspaces and submits them to a MATLAB \code{parpool}.
+Each workspace contains a \code{simulink_model.mdl} with the initial parameters, the simulation entrypoint, and the time-varying parameter payload for one run.
+Prepared workspaces are operational scratch state, not final benchmark artifacts.
+They can be large and can create heavy small-file I/O, so large batches should place them on scratch storage via \code{TMPDIR} or an explicit prepared workspace root.
+The final artifacts are written separately under \code{models/simulink/<simulator_id>/runs/<run_id>/}.
 
-This stage converts resolved Simulink run recipes into materialized run artifacts.
-Because this step is computationally expensive, it supports parallel execution across multiple runs and can be resumed after interruption.
-We use this data-generation stage to produce the large batches of simulations required to train the deep-learning-based validity filter.
-As a result, the stage must handle workloads of 10,000 or more samples, with total generated data exceeding 50 GB.
-During parallel MATLAB execution, the script prepares temporary per-run workspaces before submitting jobs to the \code{parpool}.
-These temporary workspaces requires substantial storage and can generate heavy small-file I/O, in case the run recipe is large.
-The temporary workspace root follows Python's temporary-directory selection; if \code{TMPDIR} is set, temporary workspaces are created under that directory, otherwise the system default temporary directory is used.
-The final artifacts are saved separately under \code{models/simulink/<simulator_id>/runs/<run_id>/data.parquet}.
+\subsection*{Prepared Workspace Cost and Reuse}
+For large policies, workspace preparation can dominate startup time.
+In one BallDrop run, preparing 128,806 per-run MATLAB workspaces took roughly 125 minutes, about 17.2 prepared runs per second.
+This cost is separate from MATLAB simulation time.
 
-\subsection*{Current speed}
-Currently regarding the speed we have the following statistics:
-we can do 17.2 runs/s to be processed. 
-Hence  128,806 takes ~125 minutes jsut for the preprocessing.
-
-
-The stage is implemented as a single user-facing script.
+To avoid repeating this work after an interrupted or stuck MATLAB job, the runner can preserve or reuse prepared workspaces; see \hyperref[sec:simulate-cli-options]{the command-line options}.
 
 \section*{Invocation}
 
 The script is \code{workflows/simulate/run_pending_sims.py}.
-It reads a resolved run graph from \code{plans/<policy_id>/run_nodes.jsonl} and \code{plans/<policy_id>/run_edges.jsonl}, checks the extracted \termSimulator metadata, reconciles the requested run nodes with the runtime inventory on disk, and launches MATLAB only for runs that are pending, failed, or stale.
-Stale means that status says success, but the artifact is missing or was produced for an older/different recipe/parameters hash.
-The script supports running multiple runs in parallel within the same \termSimulator by starting a MATLAB \code{parpool} with \code{N} workers and can be launched concurrently for different \termSimulators.
-
+It reads a resolved run graph from \code{plans/<policy_id>/run_nodes.jsonl} and \code{plans/<policy_id>/run_edges.jsonl}, validates the extracted \termSimulator metadata, reconciles the requested run nodes with \code{model_record.json}, and launches MATLAB only for runs that are pending, failed, or stale.
+A run is stale when it is marked \code{success}, but its artifact is missing or its stored recipe/parameter hash no longer matches the selected resolved plan.
+The script can run multiple runs in parallel for one \termSimulator by starting a MATLAB \code{parpool}; separate \termSimulators may be launched as separate jobs.
 
 \begin{DocCode}
 SIMSCAPE_CUSTOM_PATH=... \
 TMPDIR=... \
+TSENV_MATLAB_PARPOOL_CHUNK_SIZE=... \
+TSENV_MATLAB_FUTURE_TIMEOUT_S=... \
+TSENV_MATLAB_WORKER_START_STAGGER_S=... \
 python workflows/simulate/run_pending_sims.py \
   [--model SIMULATOR] \
-  [--matlab-workers N] \
   --policy POLICY_ID \
+  [--matlab-workers N] \
   [--overwrite] \
   [--rerun-failed] \
   [--raise-on-errors] \
@@ -48,33 +51,57 @@ python workflows/simulate/run_pending_sims.py \
   [--run-id RUN_ID] \
   [--runs-root RUNS_ROOT] \
   [--matlab-cache-root MATLAB_CACHE_ROOT] \
+  [--prepared-workspace-root PREPARED_WORKSPACE_ROOT] \
+  [--keep-prepared-workspace] \
   [--profile-timing] \
-  [--compute-features [FEATURES1 ...]]
+  [--compute-features [FEATURE1 ...]]
 \end{DocCode}
 
+\phantomsection\label{sec:simulate-cli-options}
 \begin{itemize}
-\item \code{--model}: selected \termSimulator. If omitted, the script iterates over \hyperref[sec:allowed-tsenv-models]{all allowed \name{} \termSimulators}.
-\item \code{--matlab-workers}: number of MATLAB \code{parpool} workers. 
-The default is \code{1}, which runs one simulation at a time and does not start an explicit parallel pool. 
-Values greater than \code{1} require MATLAB's Parallel Computing Toolbox; \code{0} is invalid.
-It uses MATLAB's Parallel Computing Toolbox.
-\item \code{--policy}: policy identifier. The script reads the resolved run graph under \code{models/simulink/<simulator_id>/plans/<policy_id>/}.
+\item \code{--model}: selected \termSimulator. If omitted, the script iterates over \hyperref[sec:allowed-tsenv-models]{all
+allowed \name{} \termSimulators}.
+\item \code{--policy}: policy identifier. The script reads the resolved run graph under \code{models/simulink/<simulator_id>/
+plans/<policy_id>/}.
+\item \code{--matlab-workers}: number of MATLAB \code{parpool} workers. The default is \code{1}. Values greater than \code{1}
+require MATLAB's Parallel Computing Toolbox.
 \item \code{--overwrite}: mark all selected runs as \code{not_run} and materialize them again.
-\item \code{--rerun-failed}: mark only selected runs currently recorded as \code{failed} as \code{not_run} and materialize them again.
+\item \code{--rerun-failed}: mark only selected runs currently recorded as \code{failed} as \code{not_run} and materialize them
+again.
 \item \code{--raise-on-errors}: fail immediately instead of recording \code{failed} status.
-\item \code{--debug}: create an additional folder \code{runs/<run_id>/debug/} containing \code{input_signals.mat} and \code{raw_simulation.pickle}.
-\item \code{--run-id}: materialize only the specified \code{RUN_ID}. The run must appear in the resolved run graph for the selected \code{--policy}.
-\item \code{--runs-root}: optional base directory for run artifacts. When set, each \termSimulator writes to \code{RUNS_ROOT/<simulator_id>/runs/} instead of \code{models/simulink/<simulator_id>/runs/}.
-\item \code{--matlab-cache-root}: optional base directory for MATLAB/Simulink generated cache files. If omitted, MATLAB uses its normal cache and preference locations.
+\item \code{--debug}: persist per-run debug artifacts under \code{runs/<run_id>/debug/}.
+\item \code{--run-id}: materialize only the specified \code{RUN_ID}. The run must appear in the selected \code{--policy}.
+\item \code{--runs-root}: optional base directory for final run artifacts. When set, each \termSimulator writes to
+\code{RUNS_ROOT/<simulator_id>/runs/}.
+\item \code{--matlab-cache-root}: optional base directory for MATLAB/Simulink generated cache files. If omitted, MATLAB uses its
+normal cache and preference locations.
+\item \code{--prepared-workspace-root}: prepared MATLAB workspace root to use now. If it already contains prepared jobs,
+preparation is skipped; otherwise the runner prepares into this root and preserves it.
+\item \code{--keep-prepared-workspace}: preserve an automatically created prepared workspace root after the run, so it can be
+reused later with \code{--prepared-workspace-root}.
 \item \code{--profile-timing}: write per-phase timing records to \code{profile_timing.jsonl} in the selected run root.
-\item \code{--compute-features}: compute \code{features.json}. If feature names are provided, they must match the feature names defined by the \termSimulator-specific \code{features.py}.  By default, no features are computed.
+\item \code{--compute-features}: compute \code{features.json}. Optional feature names must match the \termSimulator-specific
+\code{features.py}. By default, no features are computed.
 \end{itemize}
 
-\code{SIMSCAPE_CUSTOM_PATH} must be set to the path containing the custom simscape blocks
+\code{SIMSCAPE_CUSTOM_PATH} must point to the directory containing custom Simscape blocks.
+For large parallel batches, set \code{TMPDIR} to node-local scratch so prepared MATLAB workspaces are not created under a small
+system temporary directory.
 
 \begin{DocCode}
 SIMSCAPE_CUSTOM_PATH=/csem/divr/users/tbe/repo/tsENV/simscape_custom
+TMPDIR=/scratch/tbe/tsenv_tmp
 \end{DocCode}
+
+The parallel MATLAB runner also accepts these environment variables:
+
+\begin{itemize}
+\item \code{TSENV_MATLAB_PARPOOL_CHUNK_SIZE}: number of jobs submitted to MATLAB per chunk.
+\item \code{TSENV_MATLAB_FUTURE_TIMEOUT_S}: per-running-future timeout. A timed-out future is canceled and recorded as failed
+instead of blocking the entire chunk.
+\item \code{TSENV_MATLAB_WORKER_START_STAGGER_S}: small per-worker-slot delay before simulation starts, used to reduce
+simultaneous Simulink/Simscape initialization pressure.
+\end{itemize}
 
 \section*{Inputs and Source of Truth}
 
@@ -128,49 +155,98 @@ If no selected run remains in \code{not_run}, the stage rewrites \code{model_rec
 \subsection*{Simulation Flow}
 
 After reconciliation, the stage executes every selected run marked as \code{not_run}.
-The simulation pipeline consists of five main steps, all defined in \code{shared/simulation.py}:
+Serial and parallel execution share the same logical pipeline, but differ in how the MATLAB simulation is launched.
+Serial mode materializes one run at a time.
+Parallel mode prepares per-run MATLAB workspaces, runs MATLAB jobs through a \code{parpool}, and then finalizes each completed chunk in Python.
 
 \begin{enumerate}
-\item Simulink simulation: \code{raw_simulation = simulate_recipe(recipe, observable_signals)}.
-The resolved node supplies:
-\begin{itemize}
-\item \code{kind}: one of \code{baseline}, \code{intervention}, or \code{time0_baseline}.
-\item \code{baseline_parameters}: required simulator workspace values.
-\item \code{intervention}: object with \code{parameter}, \code{value}, and \code{time}.
-\item \code{end_time_input_s}: copied from \code{experiment_config.json::end_time_input_s}.
-\end{itemize}
+\item Prepare the canonical runtime recipe for the run.
+The resolved node supplies \code{kind}, \code{baseline_parameters}, optional intervention parameter/value/time, sampling rates,
+and \code{end_time_input_s}.
+The top-level \code{kind} determines how the simulator applies the intervention: baseline nodes have no intervention,
+intervention nodes apply the changed value at \code{intervention.time}, and time-zero/static-change nodes apply the changed
+value from time zero.
 
-The top-level \code{kind} determines how the simulator applies the intervention.
-Baseline nodes have no intervention; intervention nodes apply the changed value at \code{intervention.time}; time-zero/static-change nodes apply the changed value from time zero.
-If the lower-level runtime call uses an internal \code{intervention_mode} field, Stage: Simulate derives it from \code{kind}; it must not read \code{recipe.intervention.mode}.
+\item Run the Simulink/Simscape model and collect raw observable signals.
+In serial mode, the runner materializes one run at a time.
+In parallel mode, MATLAB workers run \code{sim_the_model.m} from prepared per-run workspaces, and Python receives raw MATLAB
+results for each completed chunk.
 
-Internally, the function copies \code{simulink_model_original.mdl} to \code{runs/<run_id>/simulink_model.mdl}, assigns workspace values from \code{recipe.baseline_parameters}, applies \code{end_time_input_s} and \code{local_solver_step_size = 1/sampling_rate_hz}, calls \code{sim_the_model.m}, and keeps only the configured observable signals.
+\item Extract and normalize the raw signals returned by MATLAB.
+The runner keeps only configured observable signals and converts Simulink and Simscape outputs into the common signal dictionary
+used by the Python finalization path.
 
-\item If requested, call \code{features.py::compute_problem_specific_features(raw_simulation[:end_time_input_s])} and save the result as \code{features.json}. Missing scalar features are stored as JSON \code{null}; missing list-valued features are stored as empty lists.
+\item If requested, compute problem-specific features with \code{features.py::compute_problem_specific_features(...)} and save
+the result as \code{features.json}. Missing scalar features are stored as JSON \code{null}; missing list-valued features are
+stored as empty lists.
 
-\item \code{df = resample_signal_dict(raw_simulation, signal_type, sampling_rate_hz)} validates continuous raw signals, preserves impulse-like events with the configured event handling, and returns a dataframe.
-The first timestamp is expected to be \code{dt = 1/sampling_rate_hz}; the last point must be smaller than \code{end_time_input_s}.
+\item Resample the signal dictionary to the configured output sampling rate.
+The first timestamp is expected to be \code{dt = 1/sampling_rate_hz}; the last point must be smaller than
+\code{end_time_input_s}.
 
-\item \code{serialize(df, run_id)} saves the dataframe in \code{runs/<run_id>/data.parquet}. All signal columns and the serialized \code{time} column are stored with \code{float32} precision.
-
-\item \code{validate(run_id)} reloads the saved artifact and checks timestamp spacing, column order, \code{float32} storage, minimum length, expected sample count, and absence of \code{NaN} or \code{inf} values.
+\item Serialize \code{data.parquet} under \code{runs/<run_id>/} and validate the saved artifact.
+Validation checks timestamp spacing, column order, \code{float32} storage, minimum length, expected sample count, and absence of
+\code{NaN} or \code{inf} values.
 \end{enumerate}
 
 \subsection*{Parallel Execution}
+
 When \code{--matlab-workers} is set to \code{1}, runs are materialized serially.
-When \code{--matlab-workers} is greater than \code{1}, the script starts one MATLAB engine session, creates a \code{parpool} with \code{N}
-workers, and dispatches jobs there.
-It first prepares isolated temporary workspaces for all pending runs, each containing a rewritten \code{simulink_model.mdl},
-\code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
-It then submits those jobs to MATLAB in chunks.
+When \code{--matlab-workers} is greater than \code{1}, the script starts one MATLAB engine session and creates a MATLAB \code{parpool("Processes", N)}.
+Each pool worker is a separate MATLAB process.
+
+Before submitting jobs to the pool, the runner prepares one isolated MATLAB workspace per selected run.
+Each prepared workspace contains a run-specific \code{simulink_model.mdl}, \code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
+The copied model file has the run's initial workspace parameters embedded.
+These prepared workspaces are operational scratch state and are separate from the final \code{runs/<run_id>/} artifacts.
+
+Jobs are submitted to MATLAB in chunks.
+The chunk size is controlled by \code{TSENV_MATLAB_PARPOOL_CHUNK_SIZE}; if unset, the runner derives a chunk size from the worker count.
+After each chunk returns, Python extracts signals, serializes successful runs, validates artifacts, updates \code{model_record.json}, and writes the registry to disk.
+This means completed chunks survive later failures or interruption.
 
 \begin{DocCode}
-TSENV_MATLAB_PARPOOL_CHUNK_SIZE=20
+TSENV_MATLAB_PARPOOL_CHUNK_SIZE=8
+TSENV_MATLAB_FUTURE_TIMEOUT_S=3600
+TSENV_MATLAB_WORKER_START_STAGGER_S=0.1
 \end{DocCode}
 
+\code{TSENV_MATLAB_FUTURE_TIMEOUT_S} sets a per-running-future timeout in seconds.
+If a MATLAB future exceeds this timeout, the runner cancels that future and records the corresponding run as \code{failed} instead of blocking the whole chunk indefinitely.
+Set it to \code{0} to disable the timeout.
 
+\code{TSENV_MATLAB_WORKER_START_STAGGER_S} adds a small per-worker-slot delay before each worker enters the simulation.
+This reduces simultaneous Simulink/Simscape model-load pressure when many workers start at once.
 
+\subsection*{Prepared Workspace Reuse}
 
+For large policies, workspace preparation can be expensive.
+If a job is interrupted after preparation, a later run can reuse the prepared root with \code{--prepared-workspace-root}.
+If that root already contains prepared jobs, the runner skips the preparation pass and submits the existing jobs to MATLAB.
+Use \code{--keep-prepared-workspace} when starting a new run if the prepared root should be preserved for later recovery.
+
+Prepared roots placed under node-local \code{/scratch} are only valid on the node where they were created.
+When relaunching an LSF job that reuses such a root, pin the job to that host, for example with \code{bsub -m l7161}.
+If the scheduler starts the job on another host, the \code{/scratch} path may be missing or may refer to different local storage.
+
+\begin{DocCode}
+bsub -q normal -m l7161 -n 8 -J ball_drop_reuse_l7161 \
+  -o logs/lsf/ball_drop_reuse_l7161.%J.out \
+  -e logs/lsf/ball_drop_reuse_l7161.%J.err \
+  "cd /csem/divr/users/tbe/repo/tsENV && \
+   export TMPDIR=/scratch/tbe/tsenv_tmp && \
+   export SIMSCAPE_CUSTOM_PATH=/csem/divr/users/tbe/repo/tsENV/simscape_custom && \
+   export TSENV_MATLAB_PARPOOL_CHUNK_SIZE=8 && \
+   export TSENV_MATLAB_FUTURE_TIMEOUT_S=3600 && \
+   export TSENV_MATLAB_WORKER_START_STAGGER_S=0.1 && \
+   env/bin/python workflows/simulate/run_pending_sims.py \
+     --model BallDrop \
+     --policy ball_drop_10000_families_v1 \
+     --matlab-workers 8 \
+     --rerun-failed \
+     --profile-timing \
+     --prepared-workspace-root /scratch/tbe/tsenv_tmp/tsenv-sim-parpool-BallDrop-..."
+\end{DocCode}
 
 Use \code{--profile-timing} to compare worker counts on the target machine.
 The end-to-end wall time should be compared together with \code{profile_timing.jsonl} phases:
@@ -203,8 +279,9 @@ Each successful run directory contains:
 If \code{--debug} is passed, each successful run directory also contains:
 
 \begin{itemize}
-\item \code{debug/input_signals.mat}: MATLAB debug payload storing \code{TimeVaryingParameters}.
-\item \code{debug/raw_simulation.pickle}: exact Python object returned by \code{simulate_recipe(...)}.
+\item \code{debug/input_signals.mat}: MATLAB payload storing \code{TimeVaryingParameters}.
+\item \code{debug/tsenv_worker_heartbeat.jsonl}: stage transitions recorded by the MATLAB worker.
+\item \code{debug/tsenv_worker_stage.txt}: latest recorded MATLAB worker stage.
 \end{itemize}
 
 \code{model_record.json} is rewritten under the run root and serves as the runtime inventory of completed, pending, or failed run IDs.
