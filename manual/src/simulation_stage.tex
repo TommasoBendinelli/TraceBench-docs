@@ -9,10 +9,14 @@
 \docTitle{Stage: Simulate}
 \phantomsection\label{docstart:simulation_stage}
 
-This stage converts resolved Simulink run recipes into materialized run artifacts. 
+This stage converts resolved Simulink run recipes into materialized run artifacts.
 Because this step is computationally expensive, it supports parallel execution across multiple runs and can be resumed after interruption.
-We use this data-generation stage to produce the large batches of simulations needed to train the deep-learning-based validity filter. 
-As a result, the stage must handle workloads on the order of 10,000 or more samples, with total generated data exceeding 50 GB.
+We use this data-generation stage to produce the large batches of simulations required to train the deep-learning-based validity filter.
+As a result, the stage must handle workloads of 10,000 or more samples, with total generated data exceeding 50 GB.
+During parallel MATLAB execution, the script prepares temporary per-run workspaces before submitting jobs to the \code{parpool}.
+These temporary workspaces requires substantial storage and can generate heavy small-file I/O, in case the run recipe is large.
+The temporary workspace root follows Python's temporary-directory selection; if \code{TMPDIR} is set, temporary workspaces are created under that directory, otherwise the system default temporary directory is used.
+The final artifacts are saved separately under \code{models/simulink/<simulator_id>/runs/<run_id>/data.parquet}.
 
 The stage is implemented as a single user-facing script.
 
@@ -26,6 +30,7 @@ The script supports running multiple runs in parallel within the same \termSimul
 
 \begin{DocCode}
 SIMSCAPE_CUSTOM_PATH=... \
+TMPDIR=... \
 python workflows/simulate/run_pending_sims.py \
   [--model SIMULATOR] \
   [--matlab-workers N] \
@@ -146,11 +151,12 @@ The first timestamp is expected to be \code{dt = 1/sampling_rate_hz}; the last p
 \end{enumerate}
 
 \subsection*{Parallel Execution}
-When matlab workers is set to 1, runs are materialized serially.
-When matlab worker is greated than 1, we start one MATLAB engine session, create a parpool with \code{N} workers and dispatch jobs there.
-We first prepares isolated temporary workspaces for all pending runs, each containing a rewritten \code{simulink_model.mdl}, \code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
+When \code{--matlab-workers} is set to \code{1}, runs are materialized serially.
+When \code{--matlab-workers} is greater than \code{1}, the script starts one MATLAB engine session, creates a \code{parpool} with \code{N}
+workers, and dispatches jobs there.
+It first prepares isolated temporary workspaces for all pending runs, each containing a rewritten \code{simulink_model.mdl},
+\code{sim_the_model.m}, and \code{time_varying_parameters.mat}.
 It then submits those jobs to MATLAB in chunks.
-By default the chunk size is \code{10 * --matlab-workers}; it can be overridden with:
 
 \begin{DocCode}
 TSENV_MATLAB_PARPOOL_CHUNK_SIZE=20
