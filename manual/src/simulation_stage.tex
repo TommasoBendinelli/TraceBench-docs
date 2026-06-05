@@ -18,6 +18,12 @@ These temporary workspaces requires substantial storage and can generate heavy s
 The temporary workspace root follows Python's temporary-directory selection; if \code{TMPDIR} is set, temporary workspaces are created under that directory, otherwise the system default temporary directory is used.
 The final artifacts are saved separately under \code{models/simulink/<simulator_id>/runs/<run_id>/data.parquet}.
 
+\subsection*{Current speed}
+Currently regarding the speed we have the following statistics:
+we can do 17.2 runs/s to be processed. 
+Hence  128,806 takes ~125 minutes jsut for the preprocessing.
+
+
 The stage is implemented as a single user-facing script.
 
 \section*{Invocation}
