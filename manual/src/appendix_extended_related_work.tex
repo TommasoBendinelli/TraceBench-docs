@@ -179,6 +179,17 @@ It is relevant because it supports text-to-signal retrieval and signal captionin
 It introduces the TimeText Corpus (TTC), a timestamp-aligned collection of textual and numerical time-series data for multimodal forecasting.
 It is relevant because TTC represents the common setting where text is aligned to the time axis and may help forecast future numerical or textual values.
 
+\paragraph{\href{https://arxiv.org/abs/2506.09108}{\emph{SensorLM} (Jun 2025)}.}
+\relatedWorkMeta{\texttt{NaN} (queried June 4, 2026)}{Jun 2025}{NeurIPS 2025}{New large-scale sensor-language dataset and model family}{Official repository, \url{https://github.com/Google-Health/consumer-health-research/tree/main/sensorlm}}{Wearable sensor sequences; over 59.7 million hours from more than 103,000 people}{Sensor-language modeling, activity analysis, healthcare, sensor captioning, and cross-modal retrieval}
+\relatedWorkTextMeta{Generated hierarchical captions and task labels/descriptions}{Describes the observation and supports sensor-language alignment}{Sample-level}
+It introduces SensorLM, a family of sensor-language foundation models trained with hierarchical captions that capture statistical, structural, and semantic information from wearable sensor data.
+It is relevant because it studies how natural language can describe and retrieve wearable-sensor time series, but differs from \name{} because the language is primarily generated from observed sensor data rather than used to specify controlled simulator interventions.
+
+\subsection*{How is \name{} different}
+We have controlled hidden intervention that allows to have counterfactual reasoning.
+No noise, characterisation of compleixirt.
+Prompt goes to time sereis, arbistrary detailed allow for comleixty.
+
 \subsection*{Data Analysis and ML Engineering Agents}
 
 General data-analysis benchmarks often evaluate whether agents can load datasets, write analysis code, fit models, or answer questions about tables and plots.
