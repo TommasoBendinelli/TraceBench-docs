@@ -10,9 +10,8 @@
 \docTitle{Stage: Oracle Audit, optional}
 \phantomsection\label{docstart:oracle_audit}
 
-The Oracle Audit is an optional expensive post-hoc analysis.
-It is not part of the default large-scale dataset-generation or dataset-selection pipeline.
-It may be run on a small subset of cheap-filtered and surrogate-confidence-passing samples to estimate whether selected samples remain ambiguous under optimized alternative-root-cause search.
+The Oracle Audit is an expensive post-hoc analysis used to check for bias in surrogate-based sample selection.
+Since this run is expensive, this audit is run only on a small subset of surrogate-confidence-passing samples, to check whether the surrogate-selected examples actually is truly unique and not connected to priors or pre-intervention artifacts, or other shortcuts in the agent-visible time series.
 
 The audit implementation currently comprises:
 

@@ -54,23 +54,17 @@ Records are per \code{run_id} and per noise level because a sample that is recog
   "run_id": "run_7fd9daa0055fb3f412ef5e0ab8d4c5ba",
   "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
   "kind": "intervention",
-  "noise_level": "high",
   "ground_truth_label": "gravity",
-  "predicted_label": "gravity",
-  "true_label_confidence": 0.981,
-  "max_confidence": 0.981,
-  "second_best_label": "mass",
-  "confidence_margin": 0.312,
-  "entropy": 0.08,
-  "cheap_filter_pass": true,
-  "surrogate_filter_pass": true,
-  "thresholds": {
-    "min_true_label_confidence": 0.94,
-    "min_margin": 0.20
-  },
-  "failure_reasons": []
+  "confidence_correct_label": [(0,0.99,...., 10,0.4)]
+  "confidence_argmax_label": [(0,0.99,...., 10,0.4)]
+  "argmax_label":[(0,"mass",..."10"",gravity")]
 }
 \end{DocCode}
+
+In these tuple-valued fields, the first element is the noise multiplier relative to the simulator's \code{low} noise profile.
+A multiplier of \code{0} means no added observation noise, \code{1} means the base \code{low} noise magnitude, and \code{10} means ten times the \code{low} noise magnitude.
+\code{confidence_correct_label} records the surrogate confidence assigned to \code{ground_truth_label} at each multiplier.
+\code{confidence_argmax_label} records the confidence of the surrogate's argmax label at each multiplier, and \code{argmax_label} records that predicted label.
 
 \section*{Pass Rule}
 

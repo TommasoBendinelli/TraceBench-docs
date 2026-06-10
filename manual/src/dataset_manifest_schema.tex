@@ -11,13 +11,42 @@
 \phantomsection\label{docstart:dataset_manifest_schema}
 
 \section*{Overview}
+The dataset manifest defines the selected subset of valid, materialized simulator runs that will appear in a tsENV question bundle (either as test samples or as training samples).
+The output of this stage is consumed by the question-generation stage, which turns the selected runs and split metadata into the final tsENV question bundle.
+Selection of the samples is done by two steps.
+First, since \name{} reuses the same test samples across matched experimental conditions, selected samples must have confidence above the threshold for each required noise level and matched condition.
+Second, the train/test split is done in such a way that accuracy with random metric-based methods is low.
 
-The dataset manifest records which materialized production-policy runs are selected for a concrete benchmark dataset.
-It separates the candidate universe from the final train/test samples used to create questions.
+\section*{Invocation}
 
+The selected dataset manifest is produced with:
 
-Candidate generation may intentionally overproduce runs.
-The dataset manifest is the frozen selection of examples that a downstream question bundle consumes.
+\begin{DocCode}
+env/bin/python workflows/generate/select_dataset.py \
+  --model SIMULATOR \
+  --policy PRODUCTION_POLICY_ID \
+  --dataset DATASET_ID \
+  --surrogate-id SURROGATE_ID \
+  [--row-slug ROW_SLUG [ROW_SLUG ...]]
+\end{DocCode}
+
+The command reads the resolved production run graph, cheap-filter metrics, surrogate-confidence scores, threshold configuration, and selection policy.
+It writes the frozen dataset artifacts under:
+
+\begin{DocCode}
+models/simulink/<simulator_id>/datasets/<dataset_id>/
+\end{DocCode}
+
+including:
+
+\begin{DocCode}
+selected_runs.jsonl
+sample_manifest.json
+selection_report.json
+\end{DocCode}
+
+Use \code{--row-slug} when selecting samples for a specific experiment row or set of matched rows.
+When multiple rows share the same test set, the selector must enforce the cross-condition rule: each selected test sample must pass the required cheap-filter and surrogate-confidence checks for every noise level and condition in which it will be reused.
 
 \section*{Location}
 
@@ -49,8 +78,6 @@ The selection stage consumes:
 \item \code{description_levels.json}
 \item \code{selection_policies/<selection_id>.json}
 \end{itemize}
-
-During migration, \code{eligibility_metrics.jsonl} may be read only as a backward-compatible alias for \code{cheap_filter_metrics.jsonl}.
 
 \section*{\texorpdfstring{\titlecode{selected_runs.jsonl}}{selected\_runs.jsonl}}
 
@@ -85,22 +112,21 @@ Allowed \code{split} values are \code{train}, \code{test}, and \code{other}.
 \code{sample_manifest.json} groups selected runs into concrete train/test panels for question generation.
 It preserves the existing question-generation concept of selecting shared test sets by \code{test_set_slug} and \code{seed}, and train samples by \code{shot_slug}.
 
-Each manifest entry should include:
+Each manifest entry should have the following shape:
 
 \begin{DocCode}
-Add SNR SAVED SOMEWHEREE!!!!!
+{
+  "train_samples": [],
+  "train_samples_baselines": [],
+  "test_samples": [],
+  "test_samples_baselines": [],
+  "other_samples": [],
+  "seed": 123,
+  "test_set_slug": "test_set_main_v1",
+  "shot_slug_recipe": "shots_0",
+  "train_test_sample_hash": "..."
+}
 \end{DocCode}
-\begin{itemize}
-\item \code{train_samples}
-\item \code{train_samples_baselines}
-\item \code{test_samples}
-\item \code{test_samples_baselines}
-\item \code{other_samples}
-\item \code{seed}
-\item \code{test_set_slug}
-\item \code{shot_slug_recipe}
-\item \code{train_test_sample_hash}
-\end{itemize}
 
 \section*{Selection Rules}
 
@@ -109,12 +135,10 @@ Selection should enforce:
 \begin{itemize}
 \item only cheap-filter-passing and surrogate-filter-passing intervention runs may be selected as intervention-class samples;
 \item only cheap-filter-passing and surrogate-filter-passing baseline runs may be selected as no-intervention samples;
-\item the surrogate score used for selection must match the target noise level, or must pass for every noise level used by the selected experiment row;
 \item no selected production \code{run_id} may appear in the surrogate training manifest for the same \code{surrogate_id};
 \item no selected production \code{family_id} may appear in the surrogate training, validation, or calibration split for the same \code{surrogate_id};
 \item class counts in each test panel should be as balanced as possible;
-\item train and test samples for the same question must not overlap;
-\item selected samples should preserve the shared-test-set pairing required by the experiment plan.
+\item train and test samples families for the same question must not overlap;
 \end{itemize}
 
 \section*{\texorpdfstring{\titlecode{selection_report.json}}{selection\_report.json}}

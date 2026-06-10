@@ -5,18 +5,14 @@
 
 \begin{document}
 
-\docTitle{Web Explorers}
+\docTitle{Web Applications}
 \phantomsection\label{docstart:web_model_explorer}
-
-This document describes the local web explorers used to inspect \name{} runs and generated question bundles.
-
+This document describes the two web applications available in the repo.
 \section*{Model Explorer}
 
-The Web Model Explorer is a local, read-only browser for inspecting  materialized Simulink runs.
-The registry is loaded with a paged approach to handle large policy (i.e. the design principle is that we fetch only what is needed).
-The first page contains 50 families, and additional pages are fetched on demand (by clicking next page)
-Full family details, including intervention and probe runs, are loaded when a family is expanded (i.e. when we are clicking on a family)
-Deep links are supported and can open a selected run without requiring the full policy registry to be loaded up front.
+This is a local read-only web explorer used to inspect materialized \name{} runs and generated question bundles.
+By default, the data root is the repository's \code{models/} directory, which should contain \code{simulink/<\termSimulator>/}.
+This can be overridden by setting \code{WEB_MODEL_EXPLORER_RUNS_ROOT} to a root directory containing the same internal \code{simulink/} structure.
 
 Start it from the repository with:
 
@@ -26,7 +22,24 @@ bash web_model_explorer/start.sh
 
 The launcher starts the Next.js app in \code{web_model_explorer/}.
 It uses \code{0.0.0.0:3001} by default.
-\code{WEB_MODEL_EXPLORER_HOST}, \code{WEB_MODEL_EXPLORER_PORT}, and \code{WEB_MODEL_EXPLORER_RUNS_DIR_NAME} can override the host, port, and displayed run-artifact folder.
+\code{WEB_MODEL_EXPLORER_HOST}, \code{WEB_MODEL_EXPLORER_PORT}, and \code{WEB_MODEL_EXPLORER_RUNS_ROOT} can override the host, port, and data root.
+Note that \code{WEB_MODEL_EXPLORER_RUNS_ROOT} should point to a root folder containing a \code{simulink/} directory, with a structure such as:
+\begin{DocCode}
+    simulink/
+        simulator_1/
+        simulator_2/
+        \dots
+\end{DocCode}
+
+
+
+
+The registry is loaded with a paged approach to handle large policies (i.e. the design principle is that we fetch only what is needed).
+The first page contains N families (by default N=50), and additional pages are fetched on demand (by clicking the next-page button).
+Full family details, including intervention and probe runs, are loaded when a family is expanded (i.e. when a family is clicked).
+Deep links are supported and can open a selected run without requiring the full policy registry to be loaded up front.
+
+
 
 \section*{What It Shows}
 
@@ -114,22 +127,21 @@ opens the matching run directly if it can be located.
 \item \code{models/simulink/<simulator_id>/plans/<policy_id>/run_edges.jsonl}
 \item \code{models/simulink/<simulator_id>/plans/<policy_id>/generation_report.json}
 \item \code{models/simulink/<simulator_id>/plans/<policy_id>/validation_report.json}
-\item \code{models/simulink/<simulator_id>/<runs>/model_record.json}
+\item \code{models/simulink/<simulator_id>/runs/model_record.json}
 \item \code{models/simulink/<simulator_id>/metrics/<policy_id>/cheap_filter_metrics.jsonl}
 \item \code{models/simulink/<simulator_id>/metrics/<policy_id>/surrogate_scores/<surrogate_id>.jsonl}
 \item \code{models/simulink/<simulator_id>/surrogates/<surrogate_id>/thresholds.json}
 \item \code{models/simulink/<simulator_id>/generated/metadata.json}
 \item \code{models/simulink/<simulator_id>/description_levels.json}
 \item \code{models/simulink/<simulator_id>/experiment_config.json}
-\item \code{models/simulink/<simulator_id>/<runs>/<run_id>/data.parquet}
+\item \code{models/simulink/<simulator_id>/runs/<run_id>/data.parquet}
 \item \code{tsENV_questions/<simulator_id>/dataframes/<run_id>.parquet}, as fallback for exported bundles
 \item \code{models/simulink/<simulator_id>/noise_adder.py}
 \end{itemize}
 
 
-\section*{Web Human Study}
-
-The Web Human Study app checks whether exported questions are feasible for humans.
+\section*{Human Study}
+The Human Study app checks whether exported questions are feasible for humans.
 It reads from \code{tsENV_questions/} and can be started with:
 
 \begin{DocCode}

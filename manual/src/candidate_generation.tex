@@ -3,11 +3,15 @@
 \externaldocument{build/terminology_shared_utilities}[terminology_shared_utilities.pdf]
 \externaldocument{build/environment_profiles}[environment_profiles.pdf]
 \externaldocument{build/simulink_generated_metadata_schema}[simulink_generated_metadata_schema.pdf]
+\externaldocument{build/simulation_stage}[simulation_stage.pdf]
 
 \begin{document}
 
-\docTitle{Candidate Generation}
+\docTitle{Candidate Run Generation}
 \phantomsection\label{docstart:candidate_generation}
+Candidate Run Generation samples and resolves candidate baseline and intervention run recipes according to the configured generation policies.
+The output is a resolved run graph that defines the runnable cases later materialized by \hyperref[docstart:simulation_stage]{Stage: Simulate}.
+
 \section*{Inputs and Outputs}
 
 For each \termSimulator{} under \code{models/simulink/<simulator_id>/}, the stage reads:
@@ -41,12 +45,12 @@ validation_report.json
 Manual-only graph compilation can be run with:
 
 \begin{DocCode}
-python workflows/generate_runs/compile_run_graph.py 
-  –model BallDrop 
-  –policy manual_debug_v1 
-  –manual-only 
-  –manual-cases manual_cases.jsonl 
-  –overwrite
+python workflows/generate_runs/compile_run_graph.py \
+  --model BallDrop \
+  --policy manual_debug_v1 \
+  --manual-only \
+  --manual-cases manual_cases.jsonl \
+  --overwrite
 \end{DocCode}
 
 Each line of \code{manual_cases.jsonl} is one JSON object of the following form:
@@ -204,7 +208,7 @@ Hashing should use normalized JSON values, canonical JSON with sorted keys and c
 \code{metadata} records provenance for the node.
 It is not part of the recipe hash.
 
-Recommended fields include:
+Fields include:
 
 \begin{itemize}
 \item \code{source}: typically \code{programmatic} or \code{manual}.
@@ -428,13 +432,10 @@ Stage: Simulate may refuse to materialize a plan whose validation report has \co
 The following rules apply to every resolved run graph:
 
 \begin{itemize}
-\item \code{run_nodes.jsonl} must be non-empty.
-\item Every line in \code{run_nodes.jsonl} and \code{run_edges.jsonl} must be valid JSON.
 \item Every \code{run_id} must be unique.
 \item Every node must have \code{run_id}, \code{kind}, \code{family_id}, \code{recipe_hash}, \code{recipe}, and \code{metadata}.
 \item Every \code{kind} must be one of \code{baseline}, \code{intervention}, or \code{time0_baseline}.
 \item Every recipe must include \code{model} (the \termSimulator identifier), \code{baseline_parameters}, and \code{intervention}.
-\item Every baseline parameter value must be finite.
 \item Every baseline recipe must include all exposed parameters and initial-state variables.
 \item Every baseline parameter value must respect \code{experiment_config.json::exposed_variables::*::allowed_intervals}.
 \item Every \code{kind = "baseline"} node must have \code{intervention.parameter}, \code{intervention.value}, and \code{intervention.time} set to \code{null}.
@@ -453,12 +454,10 @@ The following rules apply to every resolved run graph:
 The following additional checks apply to candidate runs intended for benchmark selection:
 
 \begin{itemize}
-\item Every intervention value must differ from the baseline value by at least the configured \termMinAbsDist{}.
-\item Every intervention value must differ from the baseline value by at least the configured \termMinSRDDistance{}.
+ \item Every intervention candidate should have both a matched no-intervention baseline run and a matched time-zero/static-change run.
 \item Every intervention candidate should have a matched no-intervention baseline run.
 \item Every intervention candidate should have a matched time-zero/static-change run.
 \item Generated families should provide broad coverage across root-cause parameters and directions.
-\item Coverage failures should be recorded in \code{generation_report.json}.
 \end{itemize}
 
 

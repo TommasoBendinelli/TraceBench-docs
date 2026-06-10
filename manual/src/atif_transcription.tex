@@ -7,13 +7,13 @@
 \docTitle[Agent Trajectory Schema]{Agent Trajectory Schema}
 \phantomsection\label{docstart:atif_transcription}
 This is the canonical format used in \name{}. 
-Each agent produces its own format, and this is a way of standardizing stuff.
+Each platform produces its own format, and this is a way of standardizing stuff.
 Our format is based on ATIF v1.6 \url{https://github.com/harbor-framework/harbor/blob/main/rfcs/0001-trajectory-format.md}.
-We have a script that converts everything in this format from any agent.
+In this stage the main script converts the trajectory in this format from the supported platforms.
 We additionally have a light version of the format, to easy analytics. 
 The light version is stripped of heavy metadata.
 
-\subsection{Technical Documentation}
+\subsection*{Technical Documentation}
 \begin{DocCode}
 python workflows/rollout/export_atif_trajectory.py [<agentic_run_id>] [--path PATH]
 \end{DocCode}
@@ -23,18 +23,11 @@ The \code{agentic_run_id} resolves to:
 terminal-bench/runs/<agentic_run_id>
 \end{DocCode}
 
-\subsection{Inputs}
+\subsection*{Inputs}
 This script takes as input:
 \begin{itemize}
   \item \code{scenario_info.json} to read information regarding \code{agent_id}, \code{question_id}, \code{tag}
   \item \code{terminal-bench/runs/<run_id>/question_0/question_0.1-of-<run_id>/agent_logs/*.json}.
-  For each platform type, there is a different parsings. Currently supported:
-  \begin{itemize}
-    \item codex
-    \item gemini-cli
-    \item claude-code
-    \item opencode
-  \end{itemize}
 \end{itemize}
 
 And produces
@@ -42,6 +35,11 @@ And produces
   \item \code{terminal-bench/runs/<run_id>/question_0/question_0.1-of-<run_id>/agent_logs/atif_processed/atif_trajectory.json}
   \item \code{terminal-bench/runs/<run_id>/question_0/question_0.1-of-<run_id>/agent_logs/atif_processed/atif_trajectory_light.json}
 \end{itemize}
+
+Note that each platform type has its own parser.
+The supported platform IDs are defined in \code{shared/platform.json}.
+Conversion is only supported for platform IDs with an explicit parser.
+If \code{scenario_info.json} resolves to an unsupported \code{platform_id}, the converter must raise an explicit error and must not silently skip logs or write partial ATIF output.
 \section*{\texorpdfstring{\titlecode{atif_trajectory.json}}{atif_trajectory.json} schema}
 
 The top-level object has the following shape:

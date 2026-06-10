@@ -2,7 +2,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RENDER_DATE="$(date +%Y%m%d)"
 PROJECT_NAME="$(basename "${SCRIPT_DIR}")"
 PROJECT_NAME="${PROJECT_NAME#docs-}"
 MANUAL_DIR="${SCRIPT_DIR}/manual"
@@ -13,10 +12,11 @@ WRAPPER_DIR="${SCRIPT_DIR}/.render_wrappers"
 OUTPUT_DIR="${SCRIPT_DIR}/pdf"
 LATEX_TEXINPUTS="${MANUAL_SUPPORT_DIR}//:${MANUAL_SRC_DIR}//:${SCRIPT_DIR}//:"
 NUMBERED_SUFFIX="_numbered"
-COMBINED_OUTPUT_FILE="${OUTPUT_DIR}/${RENDER_DATE}_${PROJECT_NAME}_docs_combined_compact.pdf"
+COMBINED_OUTPUT_FILE="${OUTPUT_DIR}/${PROJECT_NAME}_docs_combined_compact.pdf"
 COMBINED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only.pdf"
-COMBINED_NUMBERED_OUTPUT_FILE="${OUTPUT_DIR}/${RENDER_DATE}_${PROJECT_NAME}_docs_combined_compact${NUMBERED_SUFFIX}.pdf"
+COMBINED_NUMBERED_OUTPUT_FILE="${OUTPUT_DIR}/${PROJECT_NAME}_docs_combined_compact${NUMBERED_SUFFIX}.pdf"
 COMBINED_NUMBERED_DOCS_ONLY_FILE="${BUILD_DIR}/docs_combined_compact_docs_only${NUMBERED_SUFFIX}.pdf"
+DRIVE_TARGET_RELATIVE="My Drive/android_pdf"
 INDEX_SOURCE_FILE="${MANUAL_SRC_DIR}/documentation_index.tex"
 INDEX_OVERRIDES_FILE="${BUILD_DIR}/documentation_index_page_overrides.tex"
 DOC_ORDER_MANIFEST="${MANUAL_DIR}/docs_order_manifest.txt"
@@ -33,10 +33,12 @@ NIPS_MAIN_AUX="${SCRIPT_DIR}/overleaf_paper/build/main.aux"
 BUILD_COMBINED=false
 FORCE_REBUILD=false
 SKIP_PAPER=false
+SYNC_TO_DRIVE=false
+built_pdfs=()
 
 usage() {
   cat <<EOF
-Usage: bash docs/render_all_pdf.sh [options]
+Usage: ./render_all_pdf.sh [options]
 
 Incrementally build standalone docs PDFs and the NIPS manuscript. Combined PDFs are only rebuilt when requested.
 
@@ -49,17 +51,19 @@ Options:
   --skip-paper             Build only the standalone docs and never invoke the NIPS build.
   --force                  Delete target build artifacts before compiling.
   --all                    Shortcut for --combine --force.
+  --sync_to_drive          Update existing built PDFs in My Drive/android_pdf.
   --help                   Show this help message.
 
 Examples:
-  bash docs/render_all_pdf.sh
-  bash docs/render_all_pdf.sh --skip-paper
-  bash docs/render_all_pdf.sh --combine
-  bash docs/render_all_pdf.sh --skip-paper --combine
-  bash docs/render_all_pdf.sh --all
-  bash docs/render_all_pdf.sh --left-padding +0.2in --right-padding 0pt
-  bash docs/render_all_pdf.sh --left-padding -6pt --right-padding +12pt
-  bash docs/render_all_pdf.sh --combine --left-padding -25mm --right-padding +25mm --nips-left-padding 0pt --nips-right-padding +10mm
+  ./render_all_pdf.sh
+  ./render_all_pdf.sh --skip-paper
+  ./render_all_pdf.sh --combine
+  ./render_all_pdf.sh --skip-paper --combine
+  ./render_all_pdf.sh --sync_to_drive
+  ./render_all_pdf.sh --all
+  ./render_all_pdf.sh --left-padding +0.2in --right-padding 0pt
+  ./render_all_pdf.sh --left-padding -6pt --right-padding +12pt
+  ./render_all_pdf.sh --combine --left-padding -25mm --right-padding +25mm --nips-left-padding 0pt --nips-right-padding +10mm
 EOF
 }
 
@@ -116,6 +120,10 @@ while [ "$#" -gt 0 ]; do
     --all)
       BUILD_COMBINED=true
       FORCE_REBUILD=true
+      shift
+      ;;
+    --sync_to_drive)
+      SYNC_TO_DRIVE=true
       shift
       ;;
     --help)
@@ -221,6 +229,80 @@ mkdir -p "${OUTPUT_DIR}"
 mkdir -p "${BUILD_DIR}"
 mkdir -p "${WRAPPER_DIR}"
 
+find_drive_target_dir() {
+  local candidate
+  shopt -s nullglob
+  for candidate in "${HOME}/Library/CloudStorage"/GoogleDrive-*/"${DRIVE_TARGET_RELATIVE}"; do
+    if [ -d "${candidate}" ]; then
+      shopt -u nullglob
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+  shopt -u nullglob
+
+  candidate="${HOME}/Google Drive/${DRIVE_TARGET_RELATIVE}"
+  if [ -d "${candidate}" ]; then
+    printf '%s' "${candidate}"
+    return 0
+  fi
+
+  return 1
+}
+
+register_built_pdf() {
+  local pdf_file="$1"
+  local existing
+
+  case "${pdf_file}" in
+    "${OUTPUT_DIR}"/*.pdf)
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+
+  if [ "${#built_pdfs[@]}" -gt 0 ]; then
+    for existing in "${built_pdfs[@]}"; do
+      if [ "${existing}" = "${pdf_file}" ]; then
+        return 0
+      fi
+    done
+  fi
+  built_pdfs+=("${pdf_file}")
+}
+
+sync_built_pdfs_to_drive() {
+  local drive_target_dir
+  local pdf_file
+  local drive_pdf_file
+
+  if ! drive_target_dir="$(find_drive_target_dir)"; then
+    echo "Error: could not find Google Drive target folder '${DRIVE_TARGET_RELATIVE}'." >&2
+    exit 1
+  fi
+
+  if [ "${#built_pdfs[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  for pdf_file in "${built_pdfs[@]}"; do
+    drive_pdf_file="${drive_target_dir}/$(basename "${pdf_file}")"
+    if [ -f "${drive_pdf_file}" ]; then
+      cp "${pdf_file}" "${drive_pdf_file}"
+      echo "Synced: ${drive_pdf_file}"
+    else
+      echo "Skipped missing Drive file: ${drive_pdf_file}"
+    fi
+  done
+}
+
+finish() {
+  if [ "${SYNC_TO_DRIVE}" = "true" ]; then
+    sync_built_pdfs_to_drive
+  fi
+}
+
 write_file_if_changed() {
   local target="$1"
   local temp_file
@@ -313,7 +395,7 @@ compile_tex() {
   local stem="${source_file##*/}"
   local display_source="${source_file}"
   stem="${stem%.tex}"
-  local output_file="${OUTPUT_DIR}/${RENDER_DATE}_${PROJECT_NAME}_${output_stem}.pdf"
+  local output_file="${OUTPUT_DIR}/${PROJECT_NAME}_${output_stem}.pdf"
   if [[ "${display_source}" == "${SCRIPT_DIR}/"* ]]; then
     display_source="${display_source#${SCRIPT_DIR}/}"
   fi
@@ -387,6 +469,7 @@ copy_pdf_if_needed() {
   if [ ! -f "${destination}" ] || ! cmp -s "${source_pdf}" "${destination}"; then
     cp "${source_pdf}" "${destination}"
   fi
+  register_built_pdf "${destination}"
 }
 
 build_nips_main() {
@@ -413,6 +496,7 @@ merge_pdfs() {
 
   echo "Merging PDFs -> ${output_file}"
   gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile="${output_file}" "$@"
+  register_built_pdf "${output_file}"
 }
 
 add_combined_index_paper_links() {
@@ -593,6 +677,7 @@ compile_tex_variants "documentation_index.tex"
 
 if [ "${BUILD_COMBINED}" != "true" ]; then
   echo "Skipping combined manual PDFs. Pass --combine to rebuild merged outputs."
+  finish
   exit 0
 fi
 
@@ -631,6 +716,7 @@ if [ "${SKIP_PAPER}" = "true" ]; then
   copy_pdf_if_needed "${COMBINED_DOCS_ONLY_FILE}" "${COMBINED_OUTPUT_FILE}"
   copy_pdf_if_needed "${COMBINED_NUMBERED_DOCS_ONLY_FILE}" "${COMBINED_NUMBERED_OUTPUT_FILE}"
   echo "Skipping paper merge and paper index links because --skip-paper was provided."
+  finish
   exit 0
 fi
 
@@ -665,3 +751,4 @@ merge_pdfs "${COMBINED_OUTPUT_FILE}" "${COMBINED_DOCS_ONLY_FILE}" "${NIPS_MAIN_P
 merge_pdfs "${COMBINED_NUMBERED_OUTPUT_FILE}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}" "${NIPS_MAIN_PDF}"
 add_combined_index_paper_links "${COMBINED_OUTPUT_FILE}"
 add_combined_index_paper_links "${COMBINED_NUMBERED_OUTPUT_FILE}"
+finish

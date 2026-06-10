@@ -45,26 +45,28 @@
   \vspace{0.2em}%
 }
 
+
+
 \tsenvAppendixExtendedRelatedWorkStart
 
 This appendix provides an analysis of dataset and benchmark papers that share similarity with \name{}.
-For each paper, we report a metadata line with:
+It follows the convention mentioned in the \href{../../docs-template/manual/src/example.tex}{\code{docs-template/manual/src/example.tex}} file 
+However with the additional addition of 
 \begin{itemize}
-  \item number of citations
-  \item first online date or source date when available
-  \item publication venue
   \item whether the data used to create the benchmark is new, reused, derived, or reframed from previous publications
   \item availability of the dataset with URL 
   \item time-series length, channel count, or source-dependent length information when applicable
   \item task goal
 \end{itemize}
-We additionally report a second metadata line with text-specific information.
-The text-role annotation has three parts:
+Additionally in each text of the time series it should be mention:
 \begin{itemize}
-  \item \textbf{Text fields}: where natural language appears, e.g. question, instruction, context, system description, caption, report, annotation, answer, generated text, task specification, repository instruction, or bug report.
-  \item \textbf{Text--series relation}: how the text relates to the time series, e.g. queries the observation, describes the observation, explains the underlying process, provides metadata, provides external context, is aligned to timestamps, is generated from labels, is the target output, or is not time-series-specific.
-  \item \textbf{Text scope}: whether the text is sample-level, multiple-sample-level, dataset-level, environment-level, task-level, or repository-level.
+  \item Only if it's the case paragraph with written "Reasons not to mention". 
+  If this is the case nothing else is necessary.
+  \item How was the dataset constructed 
+  \item Weakness at the end (in respect to our paper)
 \end{itemize}
+
+
 Additional details of how this was done are provided in \hyperref[app:related-work-information-method]{Appendix: Information collection method}.
 
 
@@ -73,21 +75,22 @@ Additional details of how this was done are provided in \hyperref[app:related-wo
 \subsection*{Time-series and text benchmarks}
 
 \paragraph{\href{https://doi.org/10.1038/s41597-020-0495-6}{\emph{PTB-XL} (May 2020)}.}
-\relatedWorkMeta{1419 (queried June 2, 2026)}{May 2020}{Scientific Data}{New dataset}{PhysioNet, \url{https://physionet.org/content/ptb-xl/}}{10-second 12-lead ECG records}{Diagnostic classification}
-\relatedWorkTextMeta{Diagnostic annotations}{Describes the observation}{Sample-level}
-It is a public clinical ECG dataset with real 12-lead electrocardiogram recordings and diagnostic annotations.
-The natural-language or text-like content in PTB-XL is the clinical diagnostic labels/annotations attached to each ECG record. 
-They are expert diagnostic statements or labels such as rhythm, myocardial infarction, conduction disturbance, and related ECG findings.
-Those annotations describe what is visible or clinically inferred from the ECG time series itself. 
-The ECG waveform is the time series; the diagnostic annotation tells you what the waveform indicates. 
-It is a description of that specific ECG observation.
+\relatedWorkMeta{1419 (queried June 2, 2026)}{May 2020}{Nature Scientific Data}{New dataset}{PhysioNet, \url{https://physionet.org/content/ptb-xl/}}{10-second 12-lead ECG records}{Diagnostic classification}
+It is a public clinical ECG dataset with real 12-lead electrocardiogram recordings and diagnostic annotations. It includes 21,837 10-second 12-lead ECG records from 18,885 patients.
+A lead is the electrical activity of the heart measured from a certain angle.
+A 12-lead electrocardiogram involves 10 electrodes from which you can get this.
+It was created by a large collection of data in hosptials. 
 
+\paragraph{Weakness}: Text wise it only includes metadata such sex, gender etc plus the ground truth target (i.e. SCP-ECG statement, which is the diseases (diagnosis) affecting the heart or a description)
 
 \paragraph{\href{https://proceedings.neurips.cc/paper_files/paper/2023/hash/d0b67349dd16b83b2cf6167fb4e2be50-Abstract-Datasets_and_Benchmarks.html}{\emph{ECG-QA} (Jun 2023)}.}
 \relatedWorkMeta{23* (queried June 2, 2026)}{Jun 2023}{NeurIPS 2023 Datasets and Benchmarks Track}{New QA annotations/templates over existing ECG datasets}{Official repository, \url{https://github.com/Jwoo5/ecg-qa}}{10-second ECG records where source ECG datasets provide 10-second records; otherwise varies by source dataset}{Question answering}
-\relatedWorkTextMeta{Question and answer}{Queries the observation and is the target output}{Sample-level}
-It is a medical signal-language benchmark that pairs ECGs with question-answer supervision for clinically relevant ECG interpretation tasks.
-It is relevant because the model must connect signal evidence with language, making it close to TSENV's interest in language-grounded time-series analysis.
+This work reuses ECG signals and labels from existing ECG datasets, especially PTB-XL in its original version, and converts the clinical ECG labels into question-answer using templates.
+Experts are not involved, they just convert ground truth into text with templates.
+
+\paragraph{Weakness}: It inhereits all the weakness from the other work.
+
+
 
 \paragraph{\href{https://doi.org/10.1038/s41597-022-01899-x}{\emph{MIMIC-IV} (Jan 2023)}.}
 \relatedWorkMeta{3305 (queried June 2, 2026)}{Jan 2023}{Scientific Data}{New clinical EHR dataset resource}{PhysioNet, credentialed access required}{Variable irregular clinical time series by patient stay and measurement type}{Clinical prediction, retrospective EHR analysis, and multimodal clinical modeling}
@@ -96,7 +99,7 @@ It is a large de-identified clinical electronic health record dataset with patie
 It is relevant because it combines irregular clinical time-series records with text and structured patient-stay context.
 
 \paragraph{\href{https://doi.org/10.13026/4nqg-sb35}{\emph{MIMIC-IV-ECG} (Sep 2023)}.}
-\relatedWorkMeta{\texttt{NaN} (queried June 2, 2026)}{Sep 2023}{PhysioNet dataset release}{New dataset resource/module linked to MIMIC-IV}{PhysioNet, \url{https://physionet.org/content/mimic-iv-ecg/1.0/}}{10-second 12-lead ECG records at 500 Hz}{Diagnostic interpretation}
+\relatedWorkMeta{191 (queried June 8, 2026)}{Sep 2023}{PhysioNet dataset release}{New dataset resource/module linked to MIMIC-IV}{PhysioNet, \url{https://physionet.org/content/mimic-iv-ecg/1.0/}}{10-second 12-lead ECG records at 500 Hz}{Diagnostic interpretation}
 \relatedWorkTextMeta{Diagnostic reports}{Describes the observation}{Sample-level}
 It is a large hospital ECG resource with diagnostic reports matched to real clinical ECG waveforms.
 It is relevant because it provides real-world medical signal-language data with paired waveform and report information.
@@ -104,14 +107,38 @@ It is relevant because it provides real-world medical signal-language data with 
 \paragraph{\href{https://arxiv.org/abs/2503.16858}{\emph{MTBench} (Mar 2025)}.}
 \relatedWorkMeta{41 (queried June 2, 2026)}{Mar 2025}{arXiv preprint; ICLR 2026 OpenReview desk-rejected submission}{New benchmark dataset}{Official repository, \url{https://github.com/Graph-and-Geometric-Learning/MTBench}}{Varies by source dataset}{Temporal reasoning question answering}
 \relatedWorkTextMeta{Question, context, and answer}{Queries the observation, provides external context, and is aligned to timestamps}{Sample-level}
-Dataset Construction:
-Finance side: they collected over 200,000 financial news article URLs from sites including GlobeNews, MarketWatch, SeekingAlpha, Zacks, Invezz, Quartz, PennyStocks, and Benzinga, covering May 2021–September 2023. 
-They parsed each article’s content, title, associated company/ticker names, and publication date, then curated 20,000 articles with balanced article lengths. 
-They used GPT-4o to annotate attributes such as content type, temporal effect range, and sentiment. They then aligned each article with the corresponding market time series by publication timestamp and trend direction.  
-Weather side: they selected 50 U.S. airports from the GHCN-H hourly weather dataset, covering 2003–2020, with variables such as temperature, humidity, wind, visibility, pressure, and precipitation. 
-They also used NOAA’s Storm Events Database, which includes severe weather event type, location, casualties, and narrative descriptions. 
-They aligned storm events to the nearest airport weather station within 50 km, and for missing storm narratives they used LLMs to generate synthetic news-style articles.
-The time series are stock-market time series and weather (temperature, humidity, wind, visibility, pressure, and precipitation) time series.
+They constructed the dataset as follows:
+\begin{itemize}
+    \item Finance side:
+    \begin{itemize}
+      \item Collected over 200,000 financial news article URLs from GlobeNews, MarketWatch, SeekingAlpha, Zacks,
+      Invezz, Quartz, PennyStocks, and Benzinga.
+      \item Covered May 2021--September 2023.
+      \item Parsed each article's content, title, associated company/ticker names, and publication date.
+      \item Curated 20,000 articles with balanced article lengths.
+      \item Used GPT-4o to annotate content type, temporal effect range, and sentiment.
+      \item Aligned each article with the corresponding market time series by publication timestamp and trend
+      direction.
+    \end{itemize}
+
+    \item Weather side:
+    \begin{itemize}
+      \item Selected 50 U.S. airports from the GHCN-H hourly weather dataset.
+      \item Covered 2003--2020.
+      \item Used variables such as temperature, humidity, wind, visibility, pressure, and precipitation.
+      \item Used NOAA's Storm Events Database for severe weather event type, location, casualties, and narrative
+      descriptions.
+      \item Aligned storm events to the nearest airport weather station within 50 km.
+      \item Used LLMs to generate synthetic news-style articles for missing storm narratives.
+    \end{itemize}
+
+    \item Time series:
+    \begin{itemize}
+      \item Stock-market time series.
+      \item Weather time series: temperature, humidity, wind, visibility, pressure, and precipitation.
+    \end{itemize}
+  \end{itemize}
+
 
 \paragraph{Weakness}: Noisy data, not published (so we can avoid citing it), the questions are created by LLM.
 
@@ -123,20 +150,29 @@ Existing time-series sample + task-specific natural-language template for classi
 For open-ended QA, existing time-series samples are paired with GPT-4o-generated questions and answers about properties such as trend, seasonality, volatility, anomalies, structural breaks, and summaries. 
 For open ended QA Existing time-series sample + GPT4o questions about trend seasonaility etc. The reference answer is synthetic (GPT4o generated)
 
-\paragraph{Weakness}: So all the questions and answers depends fully on the time-series, or there is LLM bias 
+\paragraph{Weakness}: Questions are created by templates, or with GPT4o so ground truth is inherently biased and introduces circularity when testing.
 
 \paragraph{\href{https://openreview.net/forum?id=ULQt51DRug}{\emph{TRQA} (Sep 2025)}.}
 \relatedWorkMeta{\texttt{NaN} (queried June 2, 2026)}{Sep 2025}{OpenReview; ICLR 2026 withdrawn submission}{New benchmark dataset}{\texttt{NaN}; no official dataset URL identified in the current notes}{Varies by source dataset/sample}{Time-series reasoning question answering, including anomaly detection and classification}
-\relatedWorkTextMeta{Question, contextual information, and answer}{Queries the observation, provides context, and is the target output}{Sample-level}
+\paragraph{Reasons not to mention}: Not published anywhere and data not available.
 It is a time-series reasoning question-answering benchmark that unifies multiple task families, including anomaly detection, classification, characterization, comparison, transformation, and temporal relationship reasoning.
 It is relevant because it evaluates a broad set of temporal reasoning abilities in a QA format.
 
 \paragraph{\href{https://doi.org/10.1145/3715014.3722074}{\emph{SensorQA} (Jan 2025)}.}
-\relatedWorkMeta{\texttt{NaN} (queried June 2, 2026)}{Jan 2025}{ACM SenSys 2025}{Reused ExtraSensory sensor features plus new human-created QA annotations}{Official repository, \url{https://github.com/benjamin-reichman/SensorQA}}{Long-term sensor histories from a single day to multiple weeks}{Sensor question answering}
-\relatedWorkTextMeta{Question, context, and answer}{Queries the observation and is the target output}{Multiple-sample-level}
-It is a human-created question-answering benchmark for daily-life monitoring from long-term wearable and mobile sensor data.
-It builds on the ExtraSensory dataset and collects natural-language questions and answers about activity and context histories over time scales ranging from a single day to multiple weeks.
-It is relevant because it studies natural-language interaction with sensor time series, including questions about activity duration, frequency, existence, timing, and day-level comparisons.
+\relatedWorkMeta{10 (queried June 8, 2026)}{Jan 2025}{ACM SenSys 2025}{Reused ExtraSensory sensor features plus new human-created QA annotations}{Official repository, \url{https://github.com/benjamin-reichman/SensorQA}}{Long-term sensor histories from a single day to multiple weeks}{Sensor question answering}
+SensorQA builds on ExtraSensory sensor data, but its QA annotations are human-created rather than template-generated.
+They asked  Amazon Mechanical Turk workers to generate QA from activity-history graphs such as this.
+\begin{DocCode}
+Monday
+Sleeping:  #######
+Walking:          ##
+At work:            ########
+Eating:                    ##
+Sitting:              ######
+\end{DocCode}
+and provided answers derived from the sensor data.
+
+\paragraph{Weakeness}: There is not much textual contex, it's about retrofitting an existing dataset into QA.
 
 \paragraph{\href{https://dl.acm.org/doi/10.1145/3450268.3453529}{\emph{DeepSQA} (May 2021)}.}
 \relatedWorkMeta{12 (queried June 2, 2026)}{May 2021}{ACM/IEEE IoTDI 2021}{Generated OppQA benchmark over the reused OPPORTUNITY sensor dataset}{Official repository, \url{https://github.com/nesl/DeepSQA}}{Windowed OPPORTUNITY sensor sequences; exact length not specified in the current notes}{Sensor question answering}
@@ -400,25 +436,6 @@ Given the first seven daily climate rows and their aligned forecast texts, forec
 \begin{DocCode}
 {"date":"2014-01-08","temp":"22.2","precip":"0.0","humidity":"40.4","windspeed":"7.8"}
 \end{DocCode}
-
-\phantomsection
-\subsection*{Appendix: Information collection method}
-\label{app:related-work-information-method}
-We used Codex to query citation counts from Semantic Scholar and first-online dates from arXiv, specifically using the prompt:
-\begin{DocCode}
-  Find the number of citations for each article using Semantic Scholar, and the first time each article appeared online on arXiv, and update the document.
-\end{DocCode}
-Citation counts were retrieved with Codex using Semantic Scholar. 
-The first-online metadata records the first public online date or source date when available.
-The month and year shown next to each paper title are the first public online date when available, or another publication/date marker used by the local notes otherwise. 
-When a citation count or month/year could not be found from those sources, the value was completed with ChatGPT and marked with an asterisk. Interpret starred values cautiously.
-Dataset origin records whether the reviewed artifact introduces a new dataset, reuses a prior dataset, or is only described as a benchmark in the available notes.
-Availability records a dataset URL only when the current document already identifies one; otherwise it uses \texttt{NaN} or notes that a public URL is not specified here.
-Time-series length records the per-series or per-record length when available, notes source-dependent variation when lengths differ across source datasets, and uses ``Not applicable'' for non-time-series benchmarks.
-Task goal records the primary evaluation target or dataset use, such as classification, forecasting, question answering, captioning, data analysis, or code-agent decision making.
-Text fields record where natural language appears, such as question, instruction, context, system description, caption, report, annotation, answer, generated text, task specification, repository instruction, or bug report.
-Text--series relation records how the text relates to the time series when applicable, or marks the benchmark as not time-series-specific.
-Text scope records whether the text is sample-level, multiple-sample-level, dataset-level, environment-level, task-level, or repository-level.
 
 
 \tsenvAppendixExtendedRelatedWorkEnd
