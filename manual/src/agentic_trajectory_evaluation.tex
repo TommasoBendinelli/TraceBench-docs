@@ -1,14 +1,23 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\externaldocument{build/atif_transcription}[atif_transcription.pdf]
 
 \begin{document}
 \docTitle{Stage: Agentic Trajectory Evaluation}
 \phantomsection\label{docstart:agentic_trajectory_evaluation}
-This stage is responsible for extracting quantitative insights from agent trajectories.
+This stage is responsible for extracting quantitative insights from agent trajectories in the \hyperref[docstart:atif_transcription]{ATIF trajectory format}.
+By default, it computes programmatic metrics such as token usage, interaction counts, tool-call counts, file artifacts, parsed Python invocations, library usage, and output sizes.
+When run with \code{--llm}, it additionally enriches each parsed Python invocation with an LLM-generated description, exploration/exploitation intent class, subtype, and count of meaningful numeric values printed in the matched Python output.
+The programmatic evaluation is run automatically during agentic rollout.
+The LLM enrichment is triggered manually in a second stage because it adds external model calls and may be less reproducible than the deterministic metrics.
+
 The input artifact is \code{terminal-bench/runs/<run_id>/<task>/<trial>/agent_logs/atif_processed/atif_trajectory.json}.
 
 \begin{DocCode}
-python workflows/trajectory/trajectory_evaluation_programmatic.py <agentic_run_id> [--llm [--parallel N]] [--path PATH]
+python workflows/trajectory/trajectory_evaluation_programmatic.py \
+[<agentic_run_id>] \ 
+[--llm [--parallel N]] \ 
+[--path PATH]
 \end{DocCode}
 Note that only one of \code{<agentic_run_id>} or \code{--path} may be passed.
 The \code{agentic_run_id} resolves to:
@@ -16,28 +25,9 @@ The \code{agentic_run_id} resolves to:
 terminal-bench/runs/<agentic_run_id>
 \end{DocCode}
 
-It requires \code{tree_sitter} and \code{tree_sitter_bash} to be installed
-
 \section*{Output Schema}
 
 The emitted value is one JSON object with name \code{trajectory_evaluation.json} inside the run folder with the following keys:
-
-\begin{itemize}
-\item \code{agentic_run_id}: the CLI argument
-\item \code{agent_id}: resolved agent profile id
-\item \code{atif_trajectory_path}: Relative path of the analyzed trajectory file
-\item \code{tokens.total_prompt_tokens}: total tokens in input
-\item \code{tokens.total_completion_tokens}: total tokens as output
-\item \code{tokens.avg_prompt_tokens_per_iteration}
-\item \code{tokens.avg_completion_tokens_per_iteration}
-\item \code{cost_usd}: numeric run cost. It is computed from \code{atif_trajectory.final_metrics.total_*} and the token pricing stored in the resolved agent profile, using the formula defined in the Agent Trajectory Schema
-\item \code{number_of_interactions}: object keyed by source
-\item \code{tool_calls}: object keyed by allowed tool name, as defined in the \code{agents.json} profile
-\item \code{subcommand_analysis}: object keyed by parsed shell subcommand family
-\end{itemize}
-
-Minimal shape:
-
 
 \begin{DocCode}
 {
@@ -50,9 +40,24 @@ Minimal shape:
     "avg_prompt_tokens_per_iteration": 80.0,
     "avg_completion_tokens_per_iteration": 16.67
   },
+  "artifact_analysis": {
+    "python_scripts": {"created": 2, "executed": 1},
+    "json_files": {"created": 1},
+    "plots": {"generated": 4, "inspected": 3}
+  },
   "cost_usd": 0.123,
-  "number_of_interactions": {...},
-  "tool_calls": {...}
+  "number_of_interactions": {
+    "user": 1,
+    "system": 0,
+    "agent": {
+      "tool_call_steps": 51,
+      "tool_observation_steps": 51,
+      "steps": 20
+    }
+  },
+  "tool_calls": {
+    "run_shell_command": {"count": 9}
+  }
 }
 \end{DocCode}
 
@@ -64,9 +69,13 @@ This is always a fixed object with the keys:
 \begin{itemize}
 \item \code{user}: integer, must be 1
 \item \code{system}: integer, must be 0
-\item \code{agent}: a dict with two keys:
+\item \code{agent}: a dict with three keys:
 \begin{DocCode}
-{"tool_call_steps": tells you the total number of tool calls, "tool_observations": tell you the total number of tool observations, "steps" : int}
+{
+  "tool_call_steps": 51,
+  "tool_observation_steps": 51,
+  "steps": 20
+}
 \end{DocCode}
 \end{itemize}
 Note that \code{tool_call_steps} and \code{tool_observation_steps} must have the same value, otherwise it raises an error
@@ -74,46 +83,38 @@ Note that \code{tool_call_steps} and \code{tool_observation_steps} must have the
 Each value is an integer count of steps whose \code{source} matches that bucket.
 
 \begin{DocCode}
-"number_of_interactions": {
-  "user": 1,
-  "system": 0,
-  "agent": {"tool_call_steps": 51, "tool_observations": 51, "steps": 20}
+{
+  "number_of_interactions": {
+    "user": 1,
+    "system": 0,
+    "agent": {
+      "tool_call_steps": 51,
+      "tool_observation_steps": 51,
+      "steps": 20
+    }
+  }
 }
 \end{DocCode}
 In the standard case, \code{user} should be 1 and \code{system} should be 0.
 
-\section*{\code{tokens}}
-
-This object is derived from \code{atif_trajectory.final_metrics}.
-
-\begin{itemize}
-\item \code{total_prompt_tokens}
-\item \code{total_completion_tokens}
-\item \code{avg_prompt_tokens_per_iteration}
-\item \code{avg_completion_tokens_per_iteration}
-\end{itemize}
-
-The averages use \code{final_metrics.total_steps} as the iteration count.
-
-\begin{DocCode}
-"tokens": {
-  "total_prompt_tokens": 1200,
-  "total_completion_tokens": 250,
-  "avg_prompt_tokens_per_iteration": 80.0,
-  "avg_completion_tokens_per_iteration": 16.67
-}
-\end{DocCode}
 
 \section*{\code{artifact_analysis}}
-It analysis what files have been created by the agent it
+This section summarizes files created or used by the agent, including Python scripts, JSON files, and plot artifacts.
 \begin{DocCode}
-"artifact_analysis":
 {
-  "python_scripts":
-  "json_files":
-  "plots"
+  "artifact_analysis": {
+    "python_scripts": {"created": 2, "executed": 1},
+    "json_files": {"created": 1},
+    "plots": {
+      "generated": 4,
+      "inspected": 3
+    }
+  }
 }
 \end{DocCode}
+A plot is counted as \code{generated} when the trajectory creates an image-like artifact, such as a \code{.png}, \code{.jpg}, \code{.jpeg}, \code{.svg}, or \code{.pdf}, or when a parsed Python invocation calls a plotting save routine such as \code{savefig}.
+A plot is counted as \code{inspected} only when the trajectory contains a later image-capable read, open, or visualization event for that artifact.
+Merely creating a plot file, listing it, or mentioning its path does not count as inspection.
 
 \section*{\code{tool_calls}}
 \code{tool_calls} is an object keyed by tools defined in \code{agents.json::<agent_entry>::available_tools}. 
@@ -126,21 +127,23 @@ The total sums of each value in the parse-specific key, such as \code{read} or \
 
 Schematic example:
 \begin{DocCode}
-"tool_calls": {
-  "tool_name_without_parsing": {"count": 2}
-  "run_shell_command": {
-    "count": 9,
-    "commands": {
-      "ls": {...}
-      "cat": {...}
-      "python": {...}
-    }
-  }
-  "read_file": {
-    "count": 4,
-    "read": {
-    "docs/a.tex": 3,
-    "shared/schema.json": 1
+{
+  "tool_calls": {
+    "tool_name_without_parsing": {"count": 2},
+    "run_shell_command": {
+      "count": 9,
+      "commands": {
+        "ls": {"count": 2, "call_unique": 2},
+        "cat": {"total_invocations": 4},
+        "python": {"total_invocations": 3}
+      }
+    },
+    "read_file": {
+      "count": 4,
+      "read": {
+        "docs/a.tex": 3,
+        "shared/schema.json": 1
+      }
     }
   }
 }
@@ -153,8 +156,9 @@ Note that entries within command are further analysed as described below
 In the current implementation, we support \code{cat} and \code{python}.
 If a command is not supported, then it will just return
 \begin{DocCode}
-  {"count": 3, "call_unique": 2} which is the number of times the command was called and the number of times was called consider one call at most per tool call.
+{"count": 3, "call_unique": 2}
 \end{DocCode}
+Here \code{count} is the number of times the command was called, and \code{call_unique} counts the command at most once per tool call.
 
 \subsection*{\code{cat}}
 
@@ -163,37 +167,37 @@ If a command is not supported, then it will just return
 Schema:
 
 \begin{DocCode}
-"cat": {
-  "total_invocations": 4,
-  "pattern": {
-    "heredoc_write": {
-      "create_files": {
-        "python_files": {
-          "rule.py": 1,
+{
+  "cat": {
+    "total_invocations": 4,
+    "pattern": {
+      "heredoc_write": {
+        "create_files": {
+          "python_files": {
+            "rule.py": 1
+          },
+          "other": {
+            "notes.txt": 2
+          }
         }
-        "other":{
-          "notes.txt": 2
-        }
-        
-      }
+      },
+      "file_concat_to_stdout": 1,
+      "file_concat_to_file": 1,
+      "pipe_into_cat": 0,
+      "other": 0
     },
-    "file_concat_to_stdout": 1,
-    "file_concat_to_file": 1,
-    "pipe_into_cat": 0,
-    "other": 0
-  },
-  "followup_command_counts": {
-    "python": 1
-  },
-  "execution_after_creation": {
-    "executed_in_same_shell_snippet": 1,
-    "not_executed_in_same_shell_snippet": 2
-  },
-  "heredoc_delimiters": {
-    "PY": 1,
-    "EOF": 1
+    "followup_command_counts": {
+      "python": 1
+    },
+    "execution_after_creation": {
+      "executed_in_same_shell_snippet": 1,
+      "not_executed_in_same_shell_snippet": 2
+    },
+    "heredoc_delimiters": {
+      "PY": 1,
+      "EOF": 1
+    }
   }
-
 }
 \end{DocCode}
 
@@ -215,51 +219,66 @@ Notes:
 \code{python} summarizes parsed Python invocations found inside shell-parsed tools.
 This block is emitted only when the observed invocation count is non-zero.
 
-Default schema:
+Schema with optional LLM enrichment:
 
 \begin{DocCode}
-"python": {
-  "total_invocations": 3,
-  "failed_invocations": 1,
-  "total_stdout_lines": 7,
-  "total_stderr_lines": 2,
-  "total_output_bytes": 142,
-  "invocation_modes": {
-    "dash_c": 1,
-    "heredoc": 1,
-    "script_path": 1,
-    "other": 0
-  },
-  "lines_of_code": {
-    "script_total": 24
-  },
-  "library_calls": {
-    "numpy": 2,
-    "pandas": 1
-  },
-  "detailed": {
-    "dash_c_1": {
-      "executions": 1,
-      "lines_of_code": 1,
-      "library_calls": {},
-      "total_stdout_lines": 2,
-      "total_stderr_lines": 0,
-      "total_output_bytes": 12
+{
+  "python": {
+    "total_invocations": 3,
+    "failed_invocations": 1,
+    "total_stdout_lines": 7,
+    "total_stderr_lines": 2,
+    "total_output_bytes": 142,
+    "invocation_modes": {
+      "dash_c": 1,
+      "heredoc": 1,
+      "script_path": 1,
+      "other": 0
     },
-    "analyze.py": {
-      "executions": 1,
-      "lines_of_code": 24,
-      "library_calls": {
-        "numpy": 2,
-        "pandas": 1
+    "lines_of_code": {
+      "script_total": 24
+    },
+    "library_calls": {
+      "numpy": 2,
+      "pandas": 1
+    },
+    "detailed": {
+      "dash_c_1": {
+        "executions": 1,
+        "lines_of_code": 1,
+        "library_calls": {},
+        "total_stdout_lines": 2,
+        "total_stderr_lines": 0,
+        "total_output_bytes": 12,
+        "llm_enrichment": {
+          "description": "Prints the first few time values.",
+          "number_of_semantically_relevant_numbers": 3,
+          "intent_class": "exploring",
+          "specific_subtype": "data_preview"
+        }
       },
-      "total_stdout_lines": 5,
-      "total_stderr_lines": 2,
-      "total_output_bytes": 130
+      "analyze.py": {
+        "executions": 1,
+        "lines_of_code": 24,
+        "library_calls": {
+          "numpy": 2,
+          "pandas": 1
+        },
+        "total_stdout_lines": 5,
+        "total_stderr_lines": 2,
+        "total_output_bytes": 130,
+        "llm_enrichment": {
+          "description": "Computes summary statistics for candidate classes.",
+          "number_of_semantically_relevant_numbers": 8,
+          "intent_class": "exploiting",
+          "specific_subtype": "summary_statistics"
+        }
+      }
     }
   }
 }
 \end{DocCode}
+\code{llm_enrichment} is present only when the CLI is run with \code{--llm}.
 
 Field semantics:
 \begin{itemize}
@@ -276,7 +295,7 @@ Field semantics:
 
 \item \code{lines_of_code.script_total}: sum of resolved script file lengths for \code{script_path} invocations only.
 \item \code{library_calls}: aggregated detected Python library usage across all analyzed code.
-\item \code{detailed}: List with sorted python cals
+\item \code{detailed}: JSON object keyed by Python invocation identifier; each value summarizes one parsed invocation entry.
 \end{itemize}
 
 Details contanes
@@ -295,18 +314,33 @@ Details contanes
 By default, \code{library_calls} maps each detected library function to a total count:
 
 \begin{DocCode}
-"library_calls": {
-  "numpy": 2,
-  "pandas": 1
+{
+  "library_calls": {
+    "numpy": 2,
+    "pandas": 1
+  }
 }
 \end{DocCode}
 For instance this means that two numpy functions were called and one pandas function.
 
 
 
-\subsubsection*{\code{--llm} Enrichment}
+\subsubsection*{\code{llm_enrichment}}
 
-When the CLI is run with \code{--llm}, Codex is called once per Python invocation.
+When the CLI is run with \code{--llm}, Codex is called once per Python invocation and the \code{llm_enrichment} is filled.
+This has the following schema
+\begin{DocCode}
+{
+  "llm_enrichment": {
+    "description": "Prints the first few time values.",
+    "number_of_semantically_relevant_numbers": 43,
+    "intent_class": "exploring",
+    "specific_subtype": "data_preview"
+  }
+}
+\end{DocCode}
+The number of enriched entries equals the number of parsed Python invocation entries for which LLM enrichment was run.
+
 Each Codex request sees exactly one invocation and one matched observed output.
 The resulting enrichment is then attached to the corresponding Python \code{detailed} entry.
 
@@ -323,7 +357,7 @@ Guidelines:
   exploring: inspection, plotting, debugging, exploratory statistics, or hypothesis generation.
   exploiting: inferring the label, producing the final answer, verifying a guessed class, or otherwise solving the task.
   artifact: work that is not related to solving the task, such as metadata or file-management work.
-- specific_subtype: 
+- specific_subtype: Use a concise subtype for the invocation, such as data_preview, summary_statistics, plotting, model_fit, rule_validation, or final_answer.
 Heuristics:
 - If the output includes labels, candidate classes, or answers, classify it as exploiting.
 - If the code is trying to train a black-box algorithm on the training data, classify it as exploiting.
@@ -360,19 +394,10 @@ These fields are:
 \item \code{description}: A short natural-language summary of what the script does.
 \item \code{number_of_semantically_relevant_numbers}: The number of semantically meaningful numbers the script outputs.
 \item \code{intent_class}: One of \code{exploring}, \code{exploiting}, or \code{artifact}.
+\item \code{specific_subtype}: A concise subtype for the invocation, such as \code{data_preview}, \code{summary_statistics}, \code{plotting}, \code{model_fit}, \code{rule_validation}, or \code{final_answer}.
 \end{itemize}
 
-An example is
 
-\begin{DocCode}
-"description": "Prints inline sample output",
-"number_of_semantically_relevant_numbers": 1,
-"intent_class": "exploiting",
-\end{DocCode}
-
-
-If the same \code{entry_key} is executed multiple times, Codex is still called independently for each execution.
-The current rendered output keeps a single enriched record per \code{entry_key}.
 
 If the enrichment subprocess fails, the Codex binary is missing, or the enrichment payload is invalid, these four fields can be present with \code{null} values.
 

@@ -12,6 +12,7 @@
 \usepackage{caption}
 \usepackage{placeins}
 \usepackage{tabularx}
+\externaldocument{overleaf_paper/build/main}[overleaf_paper/archive/compiled/main.pdf]
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 \newcolumntype{S}{>{\raggedright\arraybackslash}p{1.9cm}}
@@ -39,7 +40,30 @@
 }
 
 \docTitle{Experiment Plan}
-This document describes how to use the previous stages and it creates the artifacts that are shown in the paper or used for human analysis.
+\phantomsection\label{docstart:experiment_plan}
+This document describes how to use the outputs of the previous stages to create the artifacts shown in the paper, as well as those used for human analysis and debugging.
+The experiments are designed to test the following hypotheses:
+\begin{itemize}
+\item Increasing observation noise decreases agent accuracy.
+\item Requiring reusable code-rule predictions decreases performance relative to direct prediction.
+\item Removing textual context decreases performance more than removing labeled examples.
+\item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
+\end{itemize}
+We also explore what happens as observation noise increases. 
+In particular, we analyze the most common types of errors made by the agents. 
+For example, do agents more frequently confuse intervention cases with non-intervention cases, or do they make other types of mistakes?
+
+This stage contains a series of scripts that follow a collect, consolidate and visualise strategy. 
+The idea is to first use a script that collects the necessary information from all runs and stores it in a specific folder.
+These outputs are then consolidated into single .csv files, which are subsequently used to generate the .tex tables, plots, detailed analysis and spotting errors/debugging.
+This structure also ensure lineage and traceability.
+
+We observed that ChatGPT is very effective at analyzing individual files. 
+Empirically, we found that providing ChatGPT with the entire folder of trajectories is an effective way to obtain insights and identify potential errors.
+
+Everything is done programmatically to ensure lineage and tracking. 
+
+
 All the results by default are saved in three folders:
 \begin{itemize}
   \item \code{results/} This folder is committed to Git and contains results that are relatively small.
@@ -47,7 +71,26 @@ All the results by default are saved in three folders:
   \item \code{docs/overleaf_paper/generated} This folder contains the tables and plots that are shown in the paper or in the appendix.
 \end{itemize}
 
-\phantomsection\label{docstart:experiment_plan}
+\subsection*{Commands to run}
+\begin{DocCode}
+# 1. Recompute deterministic trajectory metrics
+for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
+  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id"
+done
+# 2. Optional: add LLM trajectory annotations
+for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
+  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id" --llm --parallel 8
+done
+# 3. Consolidate
+python consolidate_trajectories.py
+python consolidate_results.py
+python generate_csv_tables.py
+# 4. Regenerate paper artifacts
+python generate_plots.py
+python generate_tex_tables.py
+\end{DocCode}
+
+These commands recompute trajectory metrics, consolidate results, and regenerate the paper artifacts.
 
 \begingroup
 \renewcommand{\arraystretch}{1.0}
@@ -64,7 +107,7 @@ All the results by default are saved in three folders:
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Calibration experiment evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
+\caption{Calibration condition evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-calibration}\\
 
 \toprule
 \calibrationHeader
@@ -93,7 +136,7 @@ All the results by default are saved in three folders:
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Main paper experiments evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
+\caption{Main paper conditions evaluated with \code{gpt-5.5}, \code{gemini-3.1-pro}, \code{claude-opus-4.6}, and \code{minimax-m2.7}; models with reasoning-effort settings use high reasoning.}\label{tab:experiment-plan-main}\\
 
 \toprule
 \experimentHeader
@@ -125,7 +168,7 @@ All the results by default are saved in three folders:
   p{3.7cm}
   p{2.23cm}
 }
-\caption{Ablation experiments evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
+\caption{Ablation conditions evaluated with \code{gpt-5.5} and \code{gemini-3.1-pro}, both using high reasoning.}\label{tab:experiment-plan-ablation}\\
 
 \toprule
 \experimentHeader
@@ -160,10 +203,12 @@ This script collects all the \code{atif_trajectory.json}, optionally filtered by
 \begin{DocCode}
   python consolidate_results.py [TAG ...] [--output-folder FOLDER]
 \end{DocCode}
-This script takes as input all \code{run_configurations/*.json}, optionally filters them by tag, and generates two files at \code{FOLDER}, by default \code{results_large_artifacts/consolidated_numerical_results}:
-\code{results_large_artifacts/consolidated_numerical_results/<row_slug>_summary.json} and \code{results_large_artifacts/consolidated_numerical_results/<row_slug>.json}.
-These two files have the following structure.
-
+This script takes as input all \hyperref[sec:agentic-rollout-run-configurations]{\code{run_configurations/*.json}}, optionally filters them by tag, and generates two files in \code{FOLDER}, set by default at \code{results_large_artifacts/consolidated_numerical_results}.
+\begin{itemize}
+  \item \code{<row_slug>_summary.json} 
+  \item \code{<row_slug>.json}
+\end{itemize}
+These json share the following attributes.
 \noindent\textbf{Identity fields shared by both files.}
 
 \begingroup
@@ -181,42 +226,45 @@ These two files have the following structure.
 \code{agent_id} & Agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id} \\
 \code{question_slug} & Question slug \\
 \code{recipe} & Question recipe metadata copied from \code{question.recipe_info.*} field \\
-\code{seed_numbers} & Int stating how many seeds have been collected with that specific question \\
+\code{seed_numbers} & Number of repetition seeds collected for this question. \\
 \bottomrule
 \end{tabular}
 \endgroup
 
 
-\code{<row_slug>_summary.json} contains additionally the following:
+Additionally, \code{<row_slug>_summary.json} contains:
 \begin{itemize}
-  \item \code{score_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_test}. 
+  \item \code{score_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_test}.
   Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{score_other_batch}: a list of per-seed metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{trajectory_evaluation}: It is a list of dictionaries, where each dictionary has information directly from \code{trajectory_evaluation.json}
+  \item \code{score_other_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{trajectory_evaluation}: a list of dictionaries copied from \code{trajectory_evaluation.json}. The consolidated fields include:
   \begin{itemize}
-    \item \code{cost_usd}: \code{trajectory_evaluation.json::cost_usd}
-    \item \code{tokens}: \code{trajectory_evaluation.json::tokens}
-    \item \code{total_steps}:  \code{trajectory_evaluation.json::number_of_interactions.agent.steps}
-    \item \code{number_of_tool_calls}: It is equal to \code{trajectory_evaluation.number_of_interactions.agent.tool_call_steps}
-    \item \code{python_calls}: \code{trajectory_evaluation.json::subcommand_analysis.python.total_invocations} 
-    \item \code{plots_generated}: number of entries in \code{trajectory_evaluation.json::artifact_analysis.plots}, i.e. plot artifacts actually seen by the agent 
+    \item \code{cost_usd}
+    \item \code{tokens}
+    \item \code{total_steps} 
+    \item \code{number_of_tool_calls}
+    \item \code{python_calls} 
+    \item \code{plots_generated}: number of plot artifacts generated by the agent.
+    \item \code{plots_inspected}: number of generated plot artifacts later inspected by the agent.
+    \item \code{llm_semantically_relevant_numbers_total}: optional total from \code{--llm} enrichment.
+    \item \code{llm_exploring_calls}: optional count of enriched Python calls labeled \code{exploring}.
+    \item \code{llm_exploiting_calls}: optional count of enriched Python calls labeled \code{exploiting}.
+    \item \code{llm_artifact_calls}: optional count of enriched Python calls labeled \code{artifact}.
   \end{itemize}
 \end{itemize}
-While \code{<row_slug>.json} contains additionally the following:
+And \code{<row_slug>.json} contains:
 \begin{itemize}
-  \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \code{sample_uuid} for entries that the model answers incorrectly.
+  \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \termRunID for entries that the model answers incorrectly.
   \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
 \end{itemize}
 
-
-In case there are multiple combinations of   \code{(agent_id, model, question_slug)} from different \code{run_configurations/*.json}, it returns the newest one based on the \code{configuration_name::<timestamp>} entry.
-If any of these two files would be empty, then it's not created.
+If multiple entries share the same \code{(agent_id, model, question_slug)} combination across different \code{run_configurations/*.json} files, where \code{model} is the \termSimulator identifier, the newest entry is returned based on the \code{configuration_name::} value.
 
 \section{Generate final artifacts}
 \subsection{CSV Tables}
-This script works with the output from all \code{<row_slug>.json}
+This script converts the consolidated row-level JSON artifacts into CSV files used for analysis and paper-table generation.
 \begin{DocCode}
-  python generate_csv_tables.py [TAG ...]
+python generate_csv_tables.py [TAG …]
 \end{DocCode}
 Where [TAG] if passed only includes results from the previous script with that corresponding tag.
 
@@ -226,17 +274,7 @@ The output of this second script consists of two CSV artifact types (for direct 
   \item \code{results/consolidated/tables/all_samples.csv}
 \end{itemize}
 
-These CSVs have the following columns
-
-\paragraph{Run-level consolidated CSV.}
-Each row in \code{results/consolidated/all_runs.csv} describes one consolidated run:
-
-\allRunsCsvSchemaTable
-
-\paragraph{Sample-level consolidated CSV.}
-Each row in \code{results/consolidated/tables/all_samples.csv} describes one evaluated sample:
-
-\allSamplesCsvSchemaTable
+The schemas of these CSV outputs are documented in \hyperref[sec:experiment-plan-consolidated-csv-schema-appendix]{Appendix: Consolidated CSV schemas}.
 
 \FloatBarrier
 \subsection{Generate TeX tables}
@@ -245,7 +283,7 @@ Use the following command:
   python generate_tex_tables.py
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The script takes as input the tables from \code{all_runs.csv}.
+The script takes as input \code{results/consolidated/all_runs.csv}, \code{results/consolidated/tables/all_samples.csv}, and matching \code{all_runs_*CALIBRATION*.csv}/\code{all_samples_*CALIBRATION*.csv} auxiliary files when present.
 Tables follow the following rules:
 \begin{itemize}
 \item The standard deviation is the `standard deviation per batch'; generated tables use \verb|\scorepm{91.2}{0.4}|, rendered as \(91.2 \pm {\scriptstyle 0.4}\).
@@ -254,11 +292,12 @@ Both the main number and the std.
 \item All the tables follow the same font size and occupy the entire width.
 \item The model name is displayed in \code{shared/config/agents.json}.
 \item The model name must not go next line.
-\item Environment name must not go to the next line and their name must match \code{experiment_config.json::paper_facing_name}
+\item \termSimulator name must not go to the next line and their name must match \code{experiment_config.json::paper_facing_name}
 \item Model names and column names must all use \verb|\texttt{...}| and nothing else.
 \item Each word in the header should be capitalised.
 \item Group headers should be written as natural labels, e.g., \verb|\texttt{Low Noise}| and \verb|\texttt{High Noise}|.
-\item An entry is shown only if each environment has at least four seeds.
+\item An entry is shown only if five repetition seeds are present for each \termSimulator.
+This holds also for the aggregate main paper tables.
 \end{itemize}
 The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
@@ -268,88 +307,59 @@ So for example
 \end{DocCode}
 Additionally tables in the Appendix follow these stylistic rules:
 \begin{itemize}
-  \item They are seven stacked metric tables, all with the same structure Model × Environment.
-  The seven metric sections are: 
+  \item They are eight stacked metric tables, all with the same structure Model × \termSimulator.
+  The eight metric sections are: 
   \begin{itemize}
   \item Episode Accuracy shows accuracy on the episode split. All four model rows are shown; unavailable values render as \code{-}.
   \item Held-out Accuracy shows accuracy on held-out data, when present.
   \item Python Calls shows how many Python calls were made.
-  \item Plots Used shows how many plots were actually seen by the agent (not just generated). 
+  \item Plots Generated shows how many plot artifacts were created by the agent.
+  \item Plots Inspected shows how many generated plot artifacts were actually seen by the agent.
   \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
-  \item Successful Runs shows how many successful runs contributed to each cell.
-  Note that successful runs are shown even when there are fewer than four seeds.
+  \item Successful Runs shows how many successful runs contributed to each visible cell.
+  Under the five-repetition-seed visibility rule, visible cells contain five successful runs.
   This table should contain integers rather than std.
   \end{itemize}
-  \item There is one stacked table for each experiment row. Note that if a value has more than four successful runs, then its entry cannot miss! 
+  \item There is one stacked table for each experiment-plan row. Note that if a value has more than four successful runs, then its entry cannot miss!
 \end{itemize}
    
 
-In the following we show the generated result tables used by the paper in the same order as they appear in the paper.
-Their numbers are correct; if a requested result is not present, the generated table renders \code{-}.
+The generated result tables are rendered in the paper and appendix, rather than duplicated here.
+If a requested result is not present, the generated table renders \code{-}.
+
 \subsubsection*{Main paper result tables}
-
-These results are created with the experiments run from Table 2.
-\par
-\textbf{Main experiment accuracy table}\par
-\input{overleaf_paper/generated/tables/main/acc_main_experiment_table}
-
-\medskip
-\textbf{Main experiment cumulative-token table}\par
-\input{overleaf_paper/generated/tables/main/cum_main_experiment_table}
+These results are created from the main paper conditions listed in Table~\ref{tab:experiment-plan-main}.
+\begin{itemize}
+  \item \hyperref[tab:acc_main_experiment_table]{Main experiment accuracy table}
+  \item \hyperref[tab:cum-main-experiment-table]{Main experiment cumulative-token table}
+\end{itemize}
 
 \subsubsection*{Ablation paper result tables}
-\medskip
-These results are created with the experiments run from Table 3.
-\medskip
-\par
-\textbf{Ablation experiment accuracy table}\par
-\input{overleaf_paper/generated/tables/main/acc_ablation_training_examples}
+These results are created from the ablation conditions listed in Table~\ref{tab:experiment-plan-ablation}.
+\begin{itemize}
+  \item \hyperref[tab:acc_ablation_training_examples]{Ablation experiment accuracy table}
+  \item \hyperref[tab:cum-ablation-training-examples]{Ablation experiment cumulative-token table}
+\end{itemize}
 
-\medskip
-\textbf{Ablation experiment cumulative-token table}\par
-\input{overleaf_paper/generated/tables/main/cum_ablation_training_examples}
-
-\clearpage
-\subsubsection*{Appendix A summary tables}
+\subsubsection*{Appendix summary tables}
 These generated tables summarize the main and ablation rows from Tables~\ref{tab:experiment-plan-main} and~\ref{tab:experiment-plan-ablation}.
+\begin{itemize}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-cloud]{Main experiment direct low-noise table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-flame]{Main experiment code low-noise table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-pine]{Main experiment direct high-noise table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-orbit]{Main experiment code high-noise table}
+  \item \hyperref[tab:app-per-simulator-frost-01234-pine]{Ablation zero-example direct table}
+  \item \hyperref[tab:app-per-simulator-frost-01234-orbit]{Ablation zero-example code table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-harbor]{Ablation no-textual-context direct table}
+  \item \hyperref[tab:app-per-simulator-gentle-01234-tide]{Ablation no-textual-context code table}
+\end{itemize}
 
-\textbf{Main experiment direct low-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-cloud}
-
-\medskip
-\textbf{Main experiment code low-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-flame}
-
-\medskip
-\textbf{Main experiment direct high-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-pine}
-
-\medskip
-\textbf{Main experiment code high-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-orbit}
-
-\medskip
-\textbf{Ablation zero-example direct table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-pine}
-
-\medskip
-\textbf{Ablation zero-example code table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-orbit}
-
-\medskip
-\textbf{Ablation no-textual-context direct table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-harbor}
-
-\medskip
-\textbf{Ablation no-textual-context code table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/gentle_01234-tide}
-
-\subsubsection*{Appendix B summary tables}
-These generated tables summarize the calibration results Tables~\ref{tab:experiment-plan-calibration}.
-
-\textbf{Calibration direct no-noise table}\par
-\input{overleaf_paper/generated/tables/appendix/current/calibration/frost_01234-anchor}
+\subsubsection*{Appendix no-noise summary tables}
+These generated tables summarize the no-noise results from Table~\ref{tab:experiment-plan-calibration}.
+\begin{itemize}
+  \item \hyperref[tab:app-calibration-frost-01234-anchor]{No-noise direct results table}
+\end{itemize}
 
 
 \subsection{Plots}
@@ -362,6 +372,7 @@ The command also writes supporting single-panel plot and CSV artifacts from the 
 \end{DocCode}
 The script takes as input the run-level \code{results/consolidated/all_runs.csv}.
 The figure being generated is the following and it includes only the results in the main experiment table.
+It follows the same convention of the main experiment table, we are only showing a dot only if five repetition seeds are present for each \termSimulator.
 
 \begin{figure}[ht]
 \centering
@@ -369,5 +380,200 @@ The figure being generated is the following and it includes only the results in 
 \caption{Top-1 accuracy as a function of cumulative token usage and Python calls for the results in the main experiment table.}
 \label{fig:experiment-plan-accuracy-vs-compute}
 \end{figure}
+
+\subsection{Statistical Significance}
+
+The statistical analysis is designed to support the main comparative claims made in the paper:
+\begin{enumerate}
+\item \textbf{Overall model ranking:} \code{gpt-5.5} performs best across the main experimental conditions, followed by \code{claude-opus-4.6} and \code{gemini-3.1-pro}.
+\item \textbf{Textual-context ablation:} removing textual context decreases performance for \code{gpt-5.5} and \code{gemini-3.1-pro}, averaged across direct and code settings.
+\item \textbf{Labeled-example ablation:} removing labeled time-series examples changes performance for \code{gpt-5.5} and \code{gemini-3.1-pro}, averaged across direct and code settings.
+\end{enumerate}
+
+We use paired bootstrap confidence intervals for all three claim families.
+The analysis is implemented by:
+\begin{DocCode}
+python generate_statistical_significance.py
+\end{DocCode}
+The script reads:
+\begin{itemize}
+  \item \code{results/consolidated/all_runs.csv}
+  \item \code{results/consolidated/tables/all_samples.csv}
+\end{itemize}
+and writes:
+\begin{itemize}
+  \item \code{results/consolidated/statistical_significance/statistical_tests.json}
+  \item \code{docs/overleaf_paper/generated/tables/statistical_significance_tests.tex}
+\end{itemize}
+
+\subsubsection{Technical Brief}
+\paragraph{Evaluation unit.}
+The bootstrap unit is a matched simulator--repetition-seed--setting episode, not an individual time-series sample.
+For each agent and experimental condition, the script aggregates the sample-level correctness values from \code{all_samples.csv} into an episode-level top-1 accuracy:
+\[
+\mathrm{acc}_{a,u}
+=
+\frac{1}{N_u}
+\sum_{i \in u}
+\mathbb{1}\{\hat{y}_{a,i}=y_i\},
+\]
+where \(a\) is the agent and \(u\) is a matched evaluation unit.
+A unit is identified by the simulator, repetition seed, experimental row, task mode, and split being evaluated.
+Timeouts and infrastructure failures are handled consistently with the main table-generation script: they are not imputed and are reported separately.
+
+\paragraph{Matched comparisons.}
+For every pre-specified comparison, the script first constructs the intersection of matched units available for both sides of the comparison.
+No missing runs are imputed.
+For two systems or conditions \(A\) and \(B\), the script computes a paired difference for each matched unit:
+\[
+d_u = \mathrm{acc}_{A,u} - \mathrm{acc}_{B,u}.
+\]
+The estimated effect size is the mean paired difference, reported in percentage points:
+\[
+\Delta = 100 \cdot \frac{1}{|U|}\sum_{u \in U} d_u .
+\]
+
+\paragraph{Paired bootstrap confidence interval.}
+For each comparison, the script performs paired bootstrap resampling over the matched units \(U\).
+Using a fixed random seed, it samples \(|U|\) units with replacement and recomputes \(\Delta\).
+This is repeated for 10,000 bootstrap replicates.
+The 95\% confidence interval is the 2.5th and 97.5th percentile of the resulting bootstrap distribution.
+A comparison is treated as statistically distinguishable when the 95\% confidence interval excludes zero.
+If the interval includes zero, the paper reports the numerical difference but does not describe it as statistically distinguishable.
+
+\paragraph{Claim 1: overall model ranking.}
+To test the overall model-ranking claim, the script uses the main experiment rows:
+\begin{DocCode}
+gentle_01234-cloud   low-noise direct
+gentle_01234-flame   low-noise code
+gentle_01234-pine    high-noise direct
+gentle_01234-orbit   high-noise code
+\end{DocCode}
+For each agent, the script computes macro-average accuracy across these matched main-condition units.
+The ranking is tested using adjacent pairwise comparisons:
+\begin{itemize}
+  \item \code{gpt-5.5} minus \code{claude-opus-4.6}
+  \item \code{claude-opus-4.6} minus \code{gemini-3.1-pro}
+\end{itemize}
+The first comparison supports the claim that \code{gpt-5.5} performs best if its confidence interval is entirely above zero.
+The second comparison supports the ordering of \code{claude-opus-4.6} ahead of \code{gemini-3.1-pro} if its confidence interval is entirely above zero.
+If the second interval includes zero, the paper should state that \code{claude-opus-4.6} and \code{gemini-3.1-pro} obtain the next-highest numerical accuracies, rather than claiming a statistically distinguishable ordering.
+
+\paragraph{Claim 2: textual-context ablation.}
+To test the effect of removing textual context, the script compares matched high-noise settings with and without the textual simulator description:
+\begin{DocCode}
+Direct: gentle_01234-pine  - gentle_01234-harbor
+Code:   gentle_01234-orbit - gentle_01234-tide
+\end{DocCode}
+The effect is computed separately for \code{gpt-5.5} and \code{gemini-3.1-pro}, then macro-averaged across direct and code settings.
+The signed effect is:
+\[
+\Delta_{\mathrm{text}}
+=
+100 \cdot
+\left(
+\mathrm{acc}_{\mathrm{with\ text}}
+-
+\mathrm{acc}_{\mathrm{without\ text}}
+\right).
+\]
+A positive value means that textual context improves performance.
+Therefore, removing textual context is said to decrease performance only when the 95\% confidence interval for \(\Delta_{\mathrm{text}}\) is entirely above zero.
+
+\paragraph{Claim 3: labeled-example ablation.}
+To test the effect of removing labeled time-series examples, the script compares matched high-noise settings with three labeled examples against zero labeled examples:
+\begin{DocCode}
+Direct: gentle_01234-pine  - frost_01234-pine
+Code:   gentle_01234-orbit - frost_01234-orbit
+\end{DocCode}
+The effect is computed separately for \code{gpt-5.5} and \code{gemini-3.1-pro}, then macro-averaged across direct and code settings.
+The signed effect is:
+\[
+\Delta_{\mathrm{examples}}
+=
+100 \cdot
+\left(
+\mathrm{acc}_{\mathrm{with\ examples}}
+-
+\mathrm{acc}_{\mathrm{without\ examples}}
+\right).
+\]
+Because the paper claim is that removing labeled examples \emph{changes} performance, this is treated as a two-sided comparison.
+If the 95\% confidence interval excludes zero, the effect is statistically distinguishable.
+If \(\Delta_{\mathrm{examples}}>0\), removing examples hurts performance.
+If \(\Delta_{\mathrm{examples}}<0\), removing examples improves performance.
+
+\paragraph{Output format.}
+The JSON output contains one record per pre-specified comparison with the following fields:
+\begin{DocCode}
+{
+  "claim_id": "...",
+  "comparison": "...",
+  "agent_a": "...",
+  "agent_b": "...",
+  "condition_a": "...",
+  "condition_b": "...",
+  "n_units": ...,
+  "effect_pp": ...,
+  "ci95_low_pp": ...,
+  "ci95_high_pp": ...,
+  "n_bootstrap": 10000,
+  "statistically_distinguishable": true
+}
+\end{DocCode}
+For ablation tests, \code{agent_a} and \code{agent_b} are the same and \code{condition_a}/\code{condition_b} define the compared settings.
+For model-ranking tests, \code{condition_a} and \code{condition_b} are the same matched main-condition set and \code{agent_a}/\code{agent_b} define the compared agents.
+
+The generated TeX table reports, for each comparison, the effect size in percentage points, the 95\% paired bootstrap confidence interval, the number of matched units, and whether the comparison supports the corresponding paper claim.
+
+\paragraph{How to run.}
+The statistical-significance artifacts are generated after the result-consolidation and CSV-generation steps have completed.
+Run:
+\begin{DocCode}
+python generate_statistical_significance.py
+\end{DocCode}
+from the repository root.
+
+By default, the script reads:
+\begin{DocCode}
+results/consolidated/all_runs.csv
+results/consolidated/tables/all_samples.csv
+\end{DocCode}
+and writes:
+\begin{DocCode}
+results/consolidated/statistical_significance/statistical_tests.json
+docs/overleaf_paper/generated/tables/statistical_significance_tests.tex
+\end{DocCode}
+
+The expected workflow is therefore:
+\begin{DocCode}
+python consolidate_trajectories.py [TAG ...]
+python consolidate_results.py [TAG ...]
+python generate_csv_tables.py [TAG ...]
+python generate_statistical_significance.py
+\end{DocCode}
+
+If the input CSV files are missing or stale, rerun the consolidation and CSV-generation steps before running the statistical-significance script.
+The script should fail loudly if any pre-specified comparison has no matched simulator--repetition-seed units, rather than silently producing an empty confidence interval.
+
+\subsection*{Analysis of class swapping when adding noise}
+Given the results we compute for each agent the transition of predictions when agent is increased. 
+These are saved as json where we are storing for each model and each simulation condition the transition from the beginning to the end
+
+
+\FloatBarrier
+\appendix
+\section{Consolidated CSV schemas}
+\phantomsection\label{sec:experiment-plan-consolidated-csv-schema-appendix}
+
+\paragraph{Run-level consolidated CSV.}
+Each row in \code{results/consolidated/all_runs.csv} describes one consolidated run:
+
+\allRunsCsvSchemaTable
+
+\paragraph{Sample-level consolidated CSV.}
+Each row in \code{results/consolidated/tables/all_samples.csv} describes one evaluated sample:
+
+\allSamplesCsvSchemaTable
 
 \end{document}
