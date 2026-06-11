@@ -108,6 +108,10 @@
 \newcommand{\termMinAbsDist}{\code{min_abs_dist}\xspace}
 \newcommand{\termDescLevel}{\code{desc_level}\xspace}
 \newcommand{\termSimulator}{\code{simulator}\xspace}
+\newcommand{\termSimulators}{\code{simulators}\xspace}
+\newcommand{\termSimulatorRecipe}{\code{simulator_recipe}\xspace}
+\newcommand{\termFamily}{\code{family}\xspace}
+\newcommand{\termRunID}{\code{run_id}\xspace}
 \newcommand{\termTaskMode}{\code{task_mode}\xspace}
 \newcommand{\termNoiseLevel}{\code{noise_level}\xspace}
 \newcommand{\termNoParameterChangeClass}{\ensuremath{\mathrm{NI} }\xspace}
@@ -124,6 +128,11 @@
 \newcommand{\manualDocDocCodeNumberStyle}{%
   {\linenumberfont\arabic{FancyVerbLine}}%
 }
+\definecolor{manualDocCodeBg}{RGB}{248,248,248}
+\definecolor{manualDocCodeBorder}{RGB}{210,210,210}
+\newenvironment{DocComment}
+  {\begin{quote}\small\color{gray}\itshape\textbf{Comment. }}
+  {\end{quote}}
 \makeatletter
 \newcommand{\manualDocBeginNumberedDocCode}{%
   \nolinenumbers
@@ -163,21 +172,62 @@
     breakanywhere=true,
     breaksymbolleft={},
     breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg,
     numbers=left,
     stepnumber=1,
     numberblanklines=true,
     numbersep=10pt,
     firstnumber=last
   }
+  \DefineVerbatimEnvironment{LinkedDocCode}{Verbatim}{
+    fontsize=\small,
+    breaklines=false,
+    breaksymbolleft={},
+    breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg,
+    numbers=left,
+    stepnumber=1,
+    numberblanklines=true,
+    numbersep=10pt,
+    firstnumber=last,
+    commandchars=\\\{\}
+  }
   \BeforeBeginEnvironment{DocCode}{\manualDocBeginNumberedDocCode}
   \AfterEndEnvironment{DocCode}{\manualDocEndNumberedDocCode}
+  \BeforeBeginEnvironment{LinkedDocCode}{\manualDocBeginNumberedDocCode}
+  \AfterEndEnvironment{LinkedDocCode}{\manualDocEndNumberedDocCode}
 \else
   \DefineVerbatimEnvironment{DocCode}{Verbatim}{
     fontsize=\small,
     breaklines=true,
     breakanywhere=true,
     breaksymbolleft={},
-    breaksymbolright={}
+    breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg
+  }
+  \DefineVerbatimEnvironment{LinkedDocCode}{Verbatim}{
+    fontsize=\small,
+    breaklines=false,
+    breaksymbolleft={},
+    breaksymbolright={},
+    frame=single,
+    framerule=0.35pt,
+    framesep=3pt,
+    rulecolor=\color{manualDocCodeBorder},
+    bgcolor=manualDocCodeBg,
+    commandchars=\\\{\}
   }
 \fi
 

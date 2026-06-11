@@ -1,5 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\externaldocument{build/appendix_agents}[appendix_agents.pdf]
 
 \begin{document}
 
@@ -22,34 +23,51 @@ Each platform entry must define exactly these fields:
 
 \section*{Agent Schema}
 \code{shared/config/agents.json} must contain a non-empty JSON array of agent profile objects.
+Unless explicitly marked optional, all fields are required.
 
-Each agent profile object must define these required fields:
-\begin{itemize}
-\item \code{agent_id}: non-empty string; must be unique across entries
-\item \code{platform_id}: one of \code{codex}, \code{gemini-cli}, \code{claude-code}, \code{opencode}
-\item \code{cost}: object:
-\begin{itemize}
-    \item \code{.input_token}: non-negative number
-    \item \code{.cached_token}: non-negative number
-    \item \code{.completion_token}: non-negative number
-\end{itemize}
-\item \code{support_images}: boolean
-\item \code{available_tools}: object keyed by non-empty tool names <tool>
-\begin{itemize}
-\item \code{.<tool>.parse_method}: either boolean \code{false}, \code{"tree_sitter_bash"}, or \code{"file_path"}
-\item \code{.<tool>.subcommands}: list of non-empty strings naming shell subcommands to analyze in detail
-\end{itemize}
-\item \code{model_name}: non-empty string
-\item \code{reasoning}: \code{high}, \code{medium}, \code{low}, or \code{null}; non-null values are allowed only for \code{codex} and \code{claude-code} profiles
-\end{itemize}
-
-Each agent profile may also define:
-\begin{itemize}
-\item \code{paper_facing_name}: non-empty string used as the model label in generated paper \code{.tex} tables  (consolidated CSV \code{agent} fields instead use \code{model_name}). It must be unique or empty.
-\end{itemize}
+\begingroup
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{|P{0.24\textwidth}|P{0.30\textwidth}|P{0.36\textwidth}|}
+\caption{Agent profile fields.}\\
+\hline
+\textbf{Field} & \textbf{Type / allowed values} & \textbf{Meaning} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Field} & \textbf{Type / allowed values} & \textbf{Meaning} \\
+\hline
+\endhead
+\code{agent_id} & non-empty string & Unique identifier for the agent profile. \\
+\hline
+\code{platform_id} & \code{codex}, \code{gemini-cli}, \code{claude-code}, or \code{opencode} & Platform used to run the agent. \\
+\hline
+\code{cost.input_token} & non-negative number & Input-token cost per 1M tokens. \\
+\hline
+\code{cost.cached_token} & non-negative number & Cached-input-token cost per 1M tokens. \\
+\hline
+\code{cost.completion_token} & non-negative number & Completion-token cost per 1M tokens. \\
+\hline
+\code{support_images} & boolean & Whether the agent can inspect images. \\
+\hline
+\code{available_tools} & object keyed by tool name & Tools available to the agent. \\
+\hline
+\code{available_tools.<tool>.parse_method} & \code{false}, \code{tree_sitter_bash}, or \code{file_path} & How tool calls are parsed during trajectory evaluation. \\
+\hline
+\code{available_tools.<tool>.subcommands} & list of non-empty strings & Shell subcommands analyzed in detail. \\
+\hline
+\code{model_name} & non-empty string & Model name used by the platform. \\
+\hline
+\code{reasoning} & \code{high}, \code{medium}, \code{low}, or \code{null} & Reasoning-effort setting, when supported by the platform; otherwise \code{null}. \\
+\hline
+\code{paper_facing_name} & non-empty string or omitted & Optional display name used in generated paper tables. \\
+\hline
+\end{longtable}
+\endgroup
 
 If \code{paper_facing_name} is omitted, \code{.tex} tables generation falls back to a display name derived from \code{model_name}
 
-The full agent platform and profile catalog is collected in the paper appendix, under Appendix: Agent Platforms and Profiles.
+The full agent platform and profile catalog is collected in the paper appendix, under \hyperref[docstart:appendix_agents]{Appendix: Agent Platforms and Profiles}.
 
 \end{document}

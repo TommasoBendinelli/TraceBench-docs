@@ -1,269 +1,125 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+\externaldocument{build/cheap_filter_metrics_stage}[cheap_filter_metrics_stage.pdf]
+\externaldocument{build/surrogate_confidence_scoring_stage}[surrogate_confidence_scoring_stage.pdf]
+\externaldocument{build/dataset_manifest_schema}[dataset_manifest_schema.pdf]
 
 \begin{document}
-\docTitle{Stage: Oracle solution}
-\phantomsection\label{docstart:oracle_solution}
 
-\section{Stage: Oracle solution}
-The goal of this stage is to find the best non-correct fitting hypothesis for the criterion.
-This stage comprises of three scripts:
+\docTitle{Stage: Oracle Audit, optional}
+\phantomsection\label{docstart:oracle_audit}
+
+The Oracle Audit is an expensive post-hoc analysis used to check for bias in surrogate-based sample selection.
+Since this run is expensive, this audit is run only on a small subset of surrogate-confidence-passing samples, to check whether the surrogate-selected examples actually is truly unique and not connected to priors or pre-intervention artifacts, or other shortcuts in the agent-visible time series.
+
+The audit implementation currently comprises:
+
 \begin{itemize}
-\item \code{workflows/metrics/parameter_optimisation_over_all.py}: Orchestrator.
-\item \code{workflows/metrics/parameter_optimisation.py}: It does the heavy lifting for the optimisation.
-\item \code{workflows/metrics/generate_trajectory_counterfactul_and_get_measurement.py}: It generates the trajectory and compute the SNR against the ground truth.
+\item \code{workflows/metrics/parameter_optimisation_over_all.py}: orchestrator.
+\item \code{workflows/metrics/parameter_optimisation.py}: per-run optimization.
+\item \code{workflows/metrics/generate_trajectory_counterfactul_and_get_measurement.py}: counterfactual trajectory generation and measurement.
 \end{itemize}
 
-\section{Orchestrator}
+\section*{Orchestrator Invocation}
+
 \begin{DocCode}
-env/bin/python workflows/metrics/parameter_optimisation_over_all.py --model [MODEL [...]] [--overwrite] [--matlab-workers N] [--only-tsENV-questions]
-\end{DocCode}
-Where:
-\begin{itemize}
-    \item \code{--overwrite}: The script by default skip interventions if the target folder exists and it's newer than the \code{data.parquet} file in the folder unless this flag is passed.
-    \item \code{--model}: You can specify one or more models
-    \item \code{--matlab-workers}: To decide how many workers to use
-    \item \code{--only-tsENV-questions}: We are just going use to 
-    \item Optimisation flags of \code{parameter_optimisation.py} can be passed (max-iter, coarse-grid-points, etc)
-\end{itemize}
-
-\subsection{Inputs}
-This script reads \code{models/simulink/<model>/}
-\begin{itemize}
-  \item \code{runs/eligibility_metrics.json}
-  \item \code{model_run_specs.json}
-  \item \code{runs/<runid>/*.mdl}
-\end{itemize}
-
-\subsection{Internal working}
-The script first collects all the candidate intervention run as follows:
-If \code{--only-tsENV-questions} is not passed, then script iterates over each intervention run of \code{eligibility_metrics.json::baselines::<baseline_uuid>:children::<intervention_uuid>} that has \code{eligible==true} and for which parent baseline \code{eligibility_metrics.json::baselines::<baseline_uuid>::family_eligible==True}.
-If \code{--only-tsENV-questions} is passed, then the script iterates over each unique intervention run defined in \code{test_samples} and \code{train_samples in} \code{tsENV_questions/<model>/sample_manifest.json/}  with \code{changed_parameter!=no_parameter_change}
-
-
-
-Internally for each intevention, it makes use of the machinery \code{workflows/metrics/parameter_optimisation.py}. 
-If \code{--matlab-workers} is passed then we are internally using a pool that is shared among all runs.  
-Note that for each intervention run a complete report file is created at \code{simulink/<MODEL>/runs/<uuid>/optimisation_results.json}.
-
-Progress is tracked by a tqdm bar.
-
-Note that this script skips intervention run if the file already exists and it's newer than the \code{data.parquet} file  unless \code{--overwrite} is passed.
-Once it finishes it also creates a summary file \code{simulink/<MODEL>/runs/optimisation_summary.json} with the schema
-\begin{DocCode}
-{
-  "timestamp": "2026-04-17T14:32:05Z",
-  "child-uuid-1": {
-    "url": "http://localhost:3001/?model=demo_model&run=child-uuid-1&compare=none",
-    "parameters" :
-    "gravity":
-    {
-      "loss": 343,
-      "value_found": 12
-      "is_ground_truth": False
-    },
-    "mass",
-    {
-      "loss": 0,
-      "value_found": 12
-      "ground_truth_value: 12
-      "is_ground_truth": True
-    }
-    ...
-  }
-}
-
+env/bin/python workflows/metrics/parameter_optimisation_over_all.py \
+  --model SIMULATOR [SIMULATOR ...] \
+  --policy POLICY_ID \
+  [--overwrite] \
+  [--matlab-workers N] \
+  [--only-tsENV-questions]
 \end{DocCode}
 
+Optimization flags from \code{parameter_optimisation.py}, such as \code{--max-iter} and \code{--coarse-grid-points}, may be forwarded.
+\code{--matlab-workers} controls the MATLAB parallel pool used inside the optimization search.
+It does not change candidate generation or the resolved run graph; each audited run is optimized from its existing run artifacts and a temporary copied Simulink model.
 
-\section{Optimiser script}
-This script computes for each possible parameter, the one the fits the best a given trajectory.
+\section*{Inputs}
+
+For each \termSimulator, the audit reads selected or explicitly requested audited samples:
+
+\begin{itemize}
+\item \code{plans/<policy_id>/run_nodes.jsonl}
+\item \code{plans/<policy_id>/run_edges.jsonl}
+\item \code{datasets/<dataset_id>/selected_runs.jsonl}, or an explicit \code{audit_runs.jsonl}
+\item \code{metrics/<policy_id>/cheap_filter_metrics.jsonl}
+\item \code{metrics/<policy_id>/surrogate_scores/<surrogate_id>.jsonl}, when auditing selected production samples
+\item \code{experiment_config.json}
+\item \code{noise_adder.py}
+\item \code{runs/<run_id>/data.parquet}
+\end{itemize}
+
+During migration, the audit may read legacy compatibility metrics only to recover sample metadata.
+New selection code must not depend on audit outputs.
+
+\section*{Candidate Collection}
+
+The audit starts from a frozen selected dataset or a dedicated audit request list.
+It recovers the parent baseline recipe, changed parameter, intervention value, and intervention time from \code{run_nodes.jsonl} and \code{run_edges.jsonl}.
+The audit should not iterate over the full candidate universe as the default path for dataset construction.
+
+\section*{Per-Run Optimization}
+
+A typical per-run invocation is:
 
 \begin{DocCode}
 env/bin/python workflows/metrics/parameter_optimisation.py \
-    --model BallDrop \
-    --run-id d47f56abc03d5b9ca55ff2f0f9d0e1d3 \
-    --max-iter 10 \
-    --coarse-grid-points 9 \
-    [--output simulink/<MODEL>/runs/<uuid>/optimisation_results.json]
+  --model BallDrop \
+  --policy production_v1 \
+  --run-id run_7fd9daa0055fb3f412ef5e0ab8d4c5ba \
+  --max-iter 10 \
+  --coarse-grid-points 9
 \end{DocCode}
-\code{RUN_ID} must be a child. 
-For each intervention child run, the script loops over every possible parameter.
-This relies on Simulink optimisation tools called from Python.
 
-\begin{itemize}
-\item \code{--model}: model ID under \code{models/simulink/}.
-\item \code{--run-id}: successful intervention child UUID to diagnose.
-\item \code{--max-iter}: maximum MATLAB \code{fminbnd} iterations for the final local refinement step after the coarse grid.
-\item \code{--coarse-grid-points}: number of \code{parsim} coarse-grid values per candidate parameter. Setting it to \code{1} disables coarse search and runs \code{fminbnd} on the full interval.
-\item \code{--output}: the output path where to save the script.
-\item \code{--countinous-only}: If we run this, we just use continuos signals.
-\end{itemize}
+\code{RUN_ID} must identify an intervention run selected for audit.
+For each possible root-cause parameter, the script optimizes a post-intervention value that best fits the target trajectory.
+Candidate simulations are diagnostic and are not registered as benchmark samples.
 
-\paragraph{Inputs.}
-For each model under \code{models/simulink/<model>/}, the script reads:
-\begin{itemize}
-    \item \code{model_run_specs.json}: baseline parameters, child intervention values, intervention times
-    \item \code{experiment_config.json}: exposed parameters, allowed intervals and observable signals.
-    \item \code{noise_adder.py}: to add noise in the case of LOW and HIGH
-    \item \code{models/simulink/<model>/runs/<RUN_ID>/simulink_model.mdl} 
-\end{itemize}
+\section*{Objective}
 
-It starts a MATLAB session and uses the correct intervention time.
-Candidate simulations are temporary diagnostic simulations and are not registered as benchmark samples.
+The optimizer minimizes a normalized post-intervention trajectory loss.
+Schematic objective:
 
-The script computes the pre-intervention operating point once and reuses it for candidate simulations.
-
-\subsection{Internal working}
-The script finds for each parameter, the best fit tha minimise the loss to the post-intervention run trajectory.
-
-In pseudo code, the loss is defined as:
 \begin{DocCode}
-raw_output = Simulator()
+raw_output = Simulator(candidate_parameter_value)
 candidate_i = preprocessing(raw_output)
-target_i = preprocessing(raw_target_it)
+target_i = preprocessing(raw_target)
 raw_loss_i = MSE(candidate_i, target_i)
 baseline_loss_i = MSE(no_change_baseline_i, target_i)
 normalized_loss_i = raw_loss_i / max(baseline_loss_i, 1e-6)
 objective = mean(normalized_loss_i)
 \end{DocCode}
-The preprocessing is model specific and signal specific at it's defined in the paper appendix file \code{docs/overleaf_paper/src/appendix/appendix_environment.tex}.
-By default all the signals are used for optimization. However, if the flag \code{--countinous-only} is passed, then only continuos signals are used for the search.  
 
-\begin{itemize}
-\item First the scripts generate the baseline trajectory to compute the \code{baseline_loss_i} entry and to obtain a cache of the pre-intervention part of the trajectory, so that we don't need to change that.
-\item The script create a grid over each parameter defiend at \code{experiment_config.json::exposed_variables::parameters}.
-For each candidate parameter, the code builds N evenly spaced values over \code{experiment_config.json::exposed_variables::parameters::*::allowed_intervals}.
-The total points are sent to \code{parsim} at the same time, resulting in \code{Nxlen(experiment_config.json::exposed_variables::parameters)} parsin evaluations.
-Note that, once per intervention child run and before computing the pre-intervention operating point \code{xFinal}, the oracle must initialise all mapped Simulink block parameters numerically from the baseline values, using the same block-parameter initialisation path as normal rollout simulation. Candidate simulations then reuse this operating point and override only the tested parameter.
-\item For each param, the script checks the loss. 
-Then:
-\begin{itemize}
-  \item If the loss is below \code{10**(-4)} for any parameter we stop the search already and we return the parameter solution found.
-  \item If the loss is the same for all the points evaluated for a given paramater and it's equal to the baseline loss (within 1\%), we return the baseline parameter.
-\end{itemize}
-Otherwise: If the loss is above we start for each parameter 
-\item For each parameter (in paralell) then we use matlab \code{fminbnd} to refine the results. 
-After \code{fminbnd}, compare its optimization loss with the best coarse-grid loss. 
-If the coarse-grid point has lower loss, use \code{coarse_best_p} as the candidate's optimized value.
-\item For each parameter, with the lowest loss value found during the entire optimisation procedure we compute the signal.
-The signal is channel specific as it's defined as \code{RMS(candidate_i - target_i)}
-\end{itemize}
+The preprocessing is \termSimulator-specific and signal-specific as defined in the paper appendix.
 
-\paragraph{Printing} 
-Before starting, it prints the run id that we are currently doing and finally it prints the path to the save .json
+\section*{Output}
+
+Audit output is written under:
 
 \begin{DocCode}
-mdl = "myModel";
-load_system(mdl)
-% Target trajectory
-t_target = target.time;
-y_target = target.signals.values;
-% Parameter bounds
-p_min = 0.1;
-p_max = 10.0;
-lossFcn = @(p) trajectoryLoss(p, mdl, t_target, y_target);
-grid = linspace(p_min, p_max, n_grid);
-simInputs = repmat(Simulink.SimulationInput(mdl), numel(grid), 1);
-
-for i = 1:numel(grid)
-    simInputs(i) = configureCandidate(simInputs(i), grid(i), candidate);
-end
-
-simOut = parsim(simInputs, "ShowProgress", "off");
-gridLoss = arrayfun(@(out) trajectoryLossFromOutput(out, target), simOut);
-
-[~, bestIdx] = min(gridLoss);
-leftIdx = max(1, bestIdx - 1);
-rightIdx = min(numel(grid), bestIdx + 1);
-
-[p_opt, J_opt] = fminbnd(lossFcn, grid(leftIdx), grid(rightIdx));
-fprintf("Best parameter = %.6g\n", p_opt);
-fprintf("Final loss = %.6g\n", J_opt);
-
-function J = trajectoryLoss(p, mdl, t_target, y_target)
-    simIn = Simulink.SimulationInput(mdl);
-    simIn = simIn.setVariable("myParam", p);
-
-    % Run simulation
-    simOut = sim(simIn);
-    % Extract logged signal
-    logs = simOut.logsout;
-    sig = logs.get("y_sim");
-    y_sim_ts = sig.Values;
-
-    % Compute scalar loss as defined in appendix_environment.tex::Oracle specific signal preprocessing
-    J = 0;
-    for channel = 1:channels
-        loss = channel_specific_loss(y_sim, y_target);
-        J = loss + J;
-    end
-
-    % Optional: penalize failed or unstable simulations
-    if ~isfinite(J)
-        J = 1e12;
-    end
-end
-
-\subsection{Output}:
-The output schema is as follows and by default it's saved in  \code{simulink/<MODEL>/runs/<uuid>/optimisation_results.json}, unless it's override
-\begin{itemize}
-    \item \code{url}
-    \item \code{uuid}
-    \item \code{ground_truth_intervention}
-    \item \code{best_found_intervention}
-    \item \code{hash}
-    \item \code{candidates}: a struct with the schema defined below.
-\end{itemize}
-
-\begin{DocCode}
-{
-  "RMS": [312, 12, 12],
-  "param_opt": 2.7402071544697235,
-  "optimisation_loss": 231.2,
-  "coarse_grid_points": 9,
-  "evaluations": 7,
-  "iterations": 6,
-  "parameter": "inclined_plane",
-  "refinement_bracket": [
-    0.0,
-    3.75
-  ],
-  "status": "success"
-}
+models/simulink/<simulator_id>/audits/<audit_id>/oracle_audit_summary.json
+models/simulink/<simulator_id>/audits/<audit_id>/oracle_audit_runs.jsonl
 \end{DocCode}
 
-Note that \code{results_final} is computed using the parameter found and then computing it in the three settings.
+Per-run diagnostic details may still be written beside audited run artifacts while migration is in progress, but those files are audit artifacts, not selection inputs.
 
-\section{Generator}
-\begin{DocCode}
-python3 workflows/metrics/generate_trajectory_counterfactul_and_get_measurement.py --model [] [--overwrite]
-\end{DocCode}
-This script takes as input the \code{models/simulink/<model>/runs/<run_id>/optimisation_results.json} for each run id and it creates a new run called \code{data_counterfactual.parquet}
-If the folder doens't have a \code{optimisation_results.json} we are skipping it.
-This is the time series generated by simulating the best not ground truth parameter in terms of loss.
-The script by default if \code{data_counterfactual.parquet} exists at it's newer than \code{models/simulink/<model>/runs/<run_id>/optimisation_results.json} it skipps it.
-Finally the script once it has created each entry creates a final \code{eligibility_metric_detectable.json}.
-This final file has the structure where this are computed as described in \code{compute_metrics.tex}
+\section*{Counterfactual Generation}
 
-\begin{DocCode}
-  "timestamp": "2026-05-04T11:55:12Z",
-  "noise_adder_md5": "be6572b9fb42ba311f3f69b619b12cca",
-  "run_ids":{
- "218e2eadaa8d45ac943dec78abed5708": {
-          "url": "http://localhost:3001/?model=InclinedPlane&run=218e2eadaa8d45ac943dec78abed5708&compare=none",
-              "detectable": "yes",
-              "mean_SNR": [
-                  null,
-                  null,
-                  33.36359298416533
-                ],
-              "mean_euclidean_distance_clean_baseline": [
-                  0.0,
-                  0.0,
-                  36684.640950991954
-                ],
-            }
-\end{DocCode}
+\code{generate_trajectory_counterfactul_and_get_measurement.py} uses each per-run optimization result to simulate the best non-ground-truth counterfactual trajectory.
+It writes a counterfactual parquet artifact and an audit summary describing residual ambiguity under the optimized search.
+
+\section*{Validation Rules}
+
+\begin{itemize}
+\item The target \code{run_id} must be an intervention node in \code{run_nodes.jsonl}.
+\item The target run must have a matched baseline edge.
+\item Candidate parameters must come from \code{experiment_config.json::exposed_variables.parameters}.
+\item Candidate values must remain inside the configured \code{allowed_intervals}.
+\item The audit must not modify \code{run_nodes.jsonl}, \code{run_edges.jsonl}, \code{model_record.json}, or selected dataset manifests.
+\item Oracle Audit outputs must never be required by \code{select_dataset.py} or question generation.
+\item If Oracle Audit results are used to remove samples, that dataset must declare an explicit \code{selection_policy} with \code{oracle_audit.enabled=true}.
+\end{itemize}
 
 \end{document}

@@ -6,10 +6,13 @@
 \phantomsection\label{docstart:simulink_generated_metadata_schema}
 
 \section*{Overview}
+A \termSimulator becomes usable once the required files exist, \code{build_metadata.py} has been run for \code{simulink_model_original.mdl}, and the \termSimulator has been added to \code{shared/benchmark_utils.py::ALLOWED_TSENV_MODELS}.
 
-\code{models/simulink/<MODEL>/generated/metadata.json} is the extracted manifest produced by
+
+\phantomsection\label{sec:simulink-build-metadata-stage}
+\code{models/simulink/<simulator_id>/generated/metadata.json} is the extracted manifest produced by
 \begin{DocCode}
-workflows/simulate/build_metadata.py [--model MODEL] [--overwrite]
+workflows/simulate/build_metadata.py [--model SIMULATOR] [--overwrite]
 \end{DocCode}
 It is a programmatically generated artifact not to be edited manually.
 This script must run before any downstream manual environment files are authored. It only depends on \code{simulink_model_original.mdl}.

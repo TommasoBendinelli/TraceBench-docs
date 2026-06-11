@@ -82,9 +82,17 @@ for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf
   python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id" --llm --parallel 8
 done
 # 3. Consolidate
+<<<<<<< HEAD
 python consolidate_trajectories.py
 python consolidate_results.py
 python generate_csv_tables.py
+=======
+python consolidate_trajectories.py PAPER CALIBRATION
+
+python consolidate_results.py PAPER CALIBRATION
+
+python generate_csv_tables.py PAPER --include-calibration
+>>>>>>> 7efb0ec2fa8e6d08e39462abe886fb47248edc32
 # 4. Regenerate paper artifacts
 python generate_plots.py
 python generate_tex_tables.py
@@ -344,6 +352,10 @@ These results are created from the ablation conditions listed in Table~\ref{tab:
 
 \subsubsection*{Appendix summary tables}
 These generated tables summarize the main and ablation rows from Tables~\ref{tab:experiment-plan-main} and~\ref{tab:experiment-plan-ablation}.
+<<<<<<< HEAD
+=======
+In the paper, these results appear in Appendix~\ref{app:per-simulator-result-tables}, where each experiment-plan row is expanded into a per-\termSimulator table with the stacked metrics described above.
+>>>>>>> 7efb0ec2fa8e6d08e39462abe886fb47248edc32
 \begin{itemize}
   \item \hyperref[tab:app-per-simulator-gentle-01234-cloud]{Main experiment direct low-noise table}
   \item \hyperref[tab:app-per-simulator-gentle-01234-flame]{Main experiment code low-noise table}
@@ -357,6 +369,10 @@ These generated tables summarize the main and ablation rows from Tables~\ref{tab
 
 \subsubsection*{Appendix no-noise summary tables}
 These generated tables summarize the no-noise results from Table~\ref{tab:experiment-plan-calibration}.
+<<<<<<< HEAD
+=======
+In the paper, these results appear in Appendix~\ref{app:calibration-results}.
+>>>>>>> 7efb0ec2fa8e6d08e39462abe886fb47248edc32
 \begin{itemize}
   \item \hyperref[tab:app-calibration-frost-01234-anchor]{No-noise direct results table}
 \end{itemize}

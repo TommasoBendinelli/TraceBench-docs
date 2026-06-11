@@ -1,0 +1,91 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\externaldocument{build/cheap_filter_metrics_stage}[cheap_filter_metrics_stage.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+
+\begin{document}
+
+\docTitle{Stage: Surrogate Training}
+\phantomsection\label{docstart:surrogate_training_stage}
+
+This stage trains and calibrates a neural classifier on the bootstrap candidate pool after cheap filtering.
+The surrogate estimates whether the simulator ground-truth label is recognizable from the agent-visible time series.
+It is trained on bootstrap-policy runs and then frozen before scoring the production-policy pool.
+Logs are trained in WandB.
+
+\section*{Main Driver}
+
+\begin{DocCode}
+env/bin/python workflows/surrogate/train_surrogate.py \
+  --model SIMULATOR \
+  --policy BOOTSTRAP_POLICY_ID \
+  --surrogate-id SURROGATE_ID \
+  [--noise-level none|low|high|all] \
+  [--seed SEED]
+\end{DocCode}
+
+\section*{Inputs}
+
+\begin{itemize}
+\item \code{plans/<bootstrap_policy_id>/run_nodes.jsonl}, required for labels, family-grouped splits, and leakage checks
+\item \code{plans/<bootstrap_policy_id>/run_edges.jsonl}, required for labels, family-grouped splits, and leakage checks
+\item \code{runs/model_record.json}
+\item \code{runs/<run_id>/data.parquet}
+\item \code{experiment_config.json}
+\item \code{description_levels.json}, for label mapping only
+\item \code{noise_adder.py}, when training on noisy materializations
+\end{itemize}
+
+\section*{Critical Rules}
+
+\begin{itemize}
+\item Include both intervention classes and the \code{no_intervention} class.
+\item Splits must be grouped by \code{family_id}.
+\item No \code{family_id} may appear in more than one of train, validation, and test.
+\item The production policy used for benchmark selection must not be used to train or calibrate the same surrogate version.
+\item The surrogate input should match the agent-visible time-series representation for the target noise regime.
+\end{itemize}
+
+\section*{Outputs}
+
+Outputs are written under:
+
+\begin{DocCode}
+models/simulink/<simulator_id>/surrogates/<surrogate_id>/
+\end{DocCode}
+
+Expected files:
+
+\begin{itemize}
+\item \code{model.pt}
+\item \code{model_config.json}
+\item \code{training_manifest.jsonl}
+\item \code{training_metrics.json}
+\item \code{calibration_report.json}
+\item \code{thresholds.json}
+\end{itemize}
+
+Example \code{thresholds.json}:
+
+\begin{DocCode}
+{
+  "surrogate_id": "surrogate_ball_drop_v1",
+  "model": "BallDrop",
+  "trained_on_policy_id": "bootstrap_v1",
+  "confidence_definition": "calibrated_probability_of_ground_truth_label",
+  "global_min_true_label_confidence": 0.95,
+  "global_min_margin": 0.20,
+  "per_class_thresholds": {
+    "mass": 0.93,
+    "drag_coeff": 0.96,
+    "restitution": 0.95,
+    "gravity": 0.94,
+    "no_intervention": 0.97
+  },
+  "calibration_split": "family_grouped_validation",
+  "target_precision": 0.98,
+  "noise_levels": ["low", "high"]
+}
+\end{DocCode}
+
+\end{document}

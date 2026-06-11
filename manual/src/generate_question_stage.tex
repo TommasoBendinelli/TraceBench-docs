@@ -1,286 +1,150 @@
 \documentclass[11pt]{article}
 \usepackage{manual_docs_style}
-\externaldocument{build/simulation_stage}[simulation_stage.pdf]
+\externaldocument{build/dataset_manifest_schema}[dataset_manifest_schema.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+\externaldocument{build/cheap_filter_metrics_stage}[cheap_filter_metrics_stage.pdf]
+\externaldocument{build/surrogate_confidence_scoring_stage}[surrogate_confidence_scoring_stage.pdf]
 
 \begin{document}
 
 \docTitle{Stage: Generate Question}
 \phantomsection\label{docstart:generate_question_stage}
-This stage converts model run artifacts into \name{} question bundles for downstream agent rollout.
-It requires the following artifacts:
-\begin{itemize}
-  \item under \code{models/simulink/*/}:
-  \begin{itemize}
-    \item \code{runs/<UUIDS>}
-    \item \code{runs/eligibility_metrics.json}
-    \item \code{experiment_config.json}
-    \item \code{description_levels.json}
-    \item \code{runs/model_record.json}
-    \item \code{noise_adder.py} 
-  \end{itemize}
-  \item \code{all_possible_combinations.csv}, the resolved combinations matrix for question generation. Each row defines one configuration family for the stage.
-  \begin{itemize}
-    \item \code{type_of_request}: type \texttt{enum<string>}; allowed values: \texttt{direct}, \texttt{code}, \texttt{open-ended}
-    \item \termDescLevel: type \texttt{enum<string>}; allowed values: \texttt{none}, \texttt{low}, \texttt{high}. Use \code{none} when no model-specific natural-language description is provided.
-    \item \code{noise_level}: type \texttt{enum<string>}; allowed values: \texttt{none}, \texttt{low}, \texttt{high}.
-    \item \code{number_train_samples_per_class}: type \texttt{integer}; number of labeled training examples per class.
-    \item \code{number_test_samples}: type \texttt{integer}; target number of test samples selected for that configuration.
-    \item \code{is_adversarial}: type \texttt{nullable<boolean>}; whether the baseline-classifier rejection rule is enforced during selection. 
-    Allowed values are \code{true}, \code{false}, and \code{null}. 
-    It must be \code{null} if and only if \code{number_train_samples_per_class == 0}; otherwise it must be \code{true} or \code{false}.
-    \item \code{seeds}: type \texttt{list<integer>}; list of selection seeds associated with that row. One concrete \code{seed} is attached to each exported question.
-    \item \code{test_set_slug}:  type \texttt{string}; It identifies a \code{number_test_samples} confiruation. Right now we just have one configuration (\code{number_test_samples=10}). We use the word `home' to identify this.
-    \item \code{shot_slug}: type \texttt{string}; human-readable identifier associated with a specific \code{(number_train_samples_per_class, is_adversarial)} configuration
-    \item \code{row_slug}: type \texttt{string}; unique identifier for this experimental condition.
-  \end{itemize}
-    Each row has then \code{len(seeds)} questions. Note that questions with the same \code{seed} and \code{test_set_slug} will have the same underlying test set.
-\end{itemize}
-It has two steps:
-\begin{itemize}
-\item \code{workflows/generate/train_test_selection.py} builds \code{sample_manifest.json} from \code{all_possible_combinations.csv}
-\item \code{workflows/generate/create_exam_questions_tsenv_cls_from_registry.py}. It's fully deterministic, consumes \code{sample_manifest.json} and it requires a series of \code{row_slug} that includes which combinations will be effectively created
 
+This stage exports selected simulator runs into the canonical TSENV question bundle: the standard exchange format consumed by agentic rollout, baseline evaluation, and downstream analysis.
+
+\section*{Required Inputs}
+
+For each \termSimulator, question generation requires:
+
+\begin{itemize}
+\item \code{datasets/<dataset_id>/sample_manifest.json}: selected train/test panels.
+\item \code{datasets/<dataset_id>/selected_runs.jsonl}: selected runs and split metadata.
+\item \code{datasets/<dataset_id>/selection_report.json}: frozen selection diagnostics.
+\item \code{runs/<run_id>/data.parquet}: materialized time-series artifacts.
+\item \code{runs/model_record.json}: runtime inventory for selected runs.
+\item \code{plans/<production_policy_id>/run_nodes.jsonl}: canonical production run recipes and hashes.
+\item \code{plans/<production_policy_id>/run_edges.jsonl}: production baseline/intervention/time-zero relationships.
+\item \code{experiment_config.json}
+\item \code{description_levels.json}
+\item \code{noise_adder.py}
 \end{itemize}
 
-The two scripts together produce the canonical exported bundle for a model. It has the following structure:
+Question generation itself should not need to rescore the whole candidate pool.
+The preferred design writes the selected dataset artifacts first.
+
+\section*{Step 1: Dataset Selection}
+
+The selection step builds a selected dataset manifest.
+It is documented in the Dataset Manifest Schema and is conceptually upstream of this stage.
+
+Recommended invocation:
 
 \begin{DocCode}
-tsENV_questions/<MODEL>/
-  questions.json
-  dataframes/*.parquet
-  noise_adder.py
-  sample_manifest.json 
-  model_record.json
+env/bin/python workflows/generate/select_dataset.py \
+  --model SIMULATOR \
+  --policy PRODUCTION_POLICY_ID \
+  --dataset DATASET_ID \
+  --surrogate-id SURROGATE_ID \
+  [--row-slug ROW_SLUG [ROW_SLUG ...]]
+\end{DocCode}
+
+\section*{Step 2: Generate Exported Questions}
+
+This step is deterministic once \code{sample_manifest.json} exists.
+
+\begin{DocCode}
+env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py \
+  --model SIMULATOR [SIMULATOR ...] \
+  --dataset DATASET_ID \
+  --row-slug SLUG [SLUG ...]
+\end{DocCode}
+
+It materializes the canonical exported bundle as:
+\begin{DocCode}
+  tsENV_questions/<simulator_id>/
+    questions.json
+    dataframes/
+      `-- *.parquet
+    noise_adder.py
+    sample_manifest.json
+    model_record.json
 \end{DocCode}
 Where:
-\begin{itemize}
-\item \code{questions.json}, explained \hyperref[sec:questions-json-schema]{here}
-\item \code{dataframes/<UUID*>.parquet} contains the time-series files referenced by the manifest (each column is stored in float32, last column is always time).
-\item (Optionally) \code{noise_adder.py}
-\item \code{sample_manifest.json}, explained \hyperref[sec:sample-manifest-json-schema]{here}
-\item \code{model_record.json}, explained \hyperref[sec:model-record-json-schema]{here}. Used by \code{evaluate_rule}.
-\end{itemize}
-\code{workflows/generate/generate_data.sh} calls both scripts for each model and copies the data to the target PC and it also supports publishing the bundle to the Hugging Face dataset repository.
+\section*{\texorpdfstring{\titlecode{sample_manifest.json}}{sample\_manifest.json}}
 
+The manifest is keyed by \code{shot_slug}.
+Each \code{shot_slug} maps to a non-empty list of entries, one per resolved \code{(shot_slug, test_set_slug, seed)} combination.
 
-\section*{Step 1: Train/Test Selection}
-\begin{DocCode}
-env/bin/python workflows/generate/train_test_selection.py --model MODEL [--row_slug ROW_SLUG [ROW_SLUG ...]]
-\end{DocCode}
-Where \code{--row_slug} it's an optional filter.  
-If you pass it, the script only builds the sample manifest for matching rows from \code{all_possible_combinations.csv}. 
-If you omit it, it loads all rows.
-
-\code{train_test_selection.py} writes to \code{tsENV_questions/<MODEL>/sample_manifest.json}.
-This selection stage first samples shared test set and then samples training examples for the requested shot configurations. 
-\begin{enumerate}
-
-  \item Retain only \code{baseline_uuid} with \code{family_eligible==True} from 
-  \code{eligibility_metrics.json::"baselines":<baseline_uuid>} and their children 
-  \item Out of this children retain only the ones that are \code{eligible==True}
-  \item Create a sorted list of available classes from \code{experiment_config.json::exposed_variables:parameters:<parameter>} plus \termNoParameterChangeClass.
-  Note that \termNoParameterChangeClass samples are from eligible \code{baseline_uuid} pool.
-
-  \item Get the requested rows from \code{all_possible_combinations.csv} and the unique \code{test_set_slug} and \code{seed} in all the rows selected.
-
-  Note that comparable rows needs to share the same \code{test_set_slug} and seed list. This ensure that for an unique \code{(test_set_slug, seed)} pair, the underlying test set is the same.
-  The field \code{shot_slug} identifies the training-example configuration.
-
-  \item For each unique pair \code{(test_set_slug, seed)}, sample one shared test set:
-  \begin{enumerate}
-    \item Sample \code{number_test_samples} \code{<uuid>} such that:
-    \begin{itemize}
-      \item class counts are as balanced as possible, with any two class counts differing by at most one;
-      \item each \code{<uuid>} must be the child of, or itself be, a different \code{<baseline_uuid>};
-      \item within the same \code{test_set_slug}, the same \code{<uuid>} does not repeat across different seed buckets in the test set.
-    \end{itemize}
-    \item Store the sampled test set as the canonical test set for \code{(test_set_slug, seed)}.
-  \end{enumerate}
-
-  \item For each requested row and each associated \code{seed}, attach the corresponding shared test set:
-  \begin{DocCode}
-    test_uuids = shared_test_sets[(test_set_slug, seed)]
-  \end{DocCode}
-  Rows with the same \code{test_set_slug} and \code{seed} are therefore evaluated on the same underlying test samples.
-
-  \item For each requested row and each associated \code{seed}, sample the training examples needed by that row:
-  \begin{enumerate}
-    \item If \code{number_train_samples_per_class == 0}, set:
-    \begin{DocCode}
-train_samples = []
-train_samples_baselines = []
-    \end{DocCode}
-
-    \item Otherwise, sample \code{number_train_samples_per_class} training examples per class such that:
-    \begin{itemize}
-      \item training samples come from eligible \code{<baseline_uuid>} not already associated with the shared test panel for that seed;
-      \item no training sample overlaps with the test samples for that seed;
-      \item within the same \code{shot_slug}, the same \code{<uuid>} does not repeat across different seed buckets in the train set.
-    \end{itemize}
-  \end{enumerate}
-
-  \item If \code{is_adversarial=True}, apply the adversarial acceptance criterion to the candidate 
-  \code{(train_uuids, test_uuids)} pair.
-
-The accuracy of the basic algorithms should not improve with these samples. In practice this is checked by computing
-\code{baseline_classifier(train_uuids,test_uuids,classifier_type)}%
-\footnote{Note that \code{run_baseline_classifier} can also be run independently from 
-\code{baseline_classifier_few_shot.py}.}
-where \code{classifier_type} ranges over \code{euclidean_knn}, \code{euclidean_centroid}, and 
-\code{correlation_nn}. The function returns the same accuracy structure as \code{ml_metrics.json} on the test set.
-
-  The candidate is rejected and resampled if
-  \begin{DocCode}
-(accuracy - 1/K) / (1-1/K) > 0.1
-  \end{DocCode}
-
-  If it fails 500 times, the script raises an error with the name of the row or shot configuration that failed.
-  \item Produce \code{sample_manifest.json}. The manifest is keyed by \code{(shot_slug, seed)}.
-  \item Validate \code{sample_manifest.json}.
-
-\end{enumerate}
-
-
-\phantomsection\label{sec:sample-manifest-json-schema}
-\subsection*{Output Schema: \code{sample_manifest.json}}
-The manifest is an object keyed by \code{shot_slug}. Each \code{shot_slug} maps to a non-empty list of manifest entries, one entry per resolved \code{(shot_slug, test_set_slug, seed)} combination.
-A concrete train/test split is identified by the tuple \code{(shot_slug, test_set_slug, seed)}, which must be unique within the manifest.
-
-Each manifest entry contains:
-\begin{itemize}
-\item \code{train_samples_baselines}: sorted list of the associated baseline train sample UUIDs
-\item \code{train_samples}: sorted list of selected train sample UUIDs
-\item \code{train_samples_hashes}: sorted list of hashes for each train sample
-\item \code{test_samples_baselines}: sorted list of the associated baseline test sample UUIDs
-\item \code{test_samples}: sorted list of selected test sample UUIDs
-\item \code{test_samples_hashes}: sorted list of hashes for each test sample.
-\item \code{other_samples}: sorted list of UUIDs that \code{train_samples} nor \code{test_samples} for this \code{(shot_slug, test_set_slug, seed)}, but they are for other \code{train_samples} or \code{test_samples}
-\item \code{seed}: concrete selection seed for this manifest entry
-\item \code{test_set_slug}: identifier of the shared test panel used to select the test samples
-\item \code{shot_slug_recipe}: object containing the shot configuration metadata: \code{is_adversarial}, \code{number_train_samples_per_class}, and \code{number_test_samples}
-\item \code{accuracy_with_baselines}: object with \code{euclidean_knn}, \code{euclidean_centroid}, and \code{correlation_nn}
-\item \code{accuracy_with_baselines_all_samples}: object with \code{euclidean_knn}, \code{euclidean_centroid}, and \code{correlation_nn} where they are trained using all the trainin samples plus all the samples in \code{other_samples}
-\item \code{train_test_sample_hash}: hash created by hashing together \code{train_samples_hashes} and \code{test_samples_hashes}
-\end{itemize}
-Note that the pair \code{(test_set_slug, seed)} has a one-to-one mapping to \code{test_samples_hashes}.
-
-
-Validation enforces:
-\begin{itemize}
-\item test-set length must match \code{id.number_test_samples} and any two class counts may differ by at most one.
-\item train-set length must equal \code{id.number_train_samples_per_class * num_labels}
-\end{itemize}
-
-\section*{Step 2: Generate tsENV Questions}
-This step is fully deterministic.
-\begin{DocCode}
-env/bin/python workflows/generate/create_exam_questions_tsenv_cls_from_registry.py --model MODEL [MODEL ...] --row-slug SLUG [SLUG ...]
-\end{DocCode}
-This step consumes \code{sample_manifest.json} together with the other input-state artifacts and materializes the canonical exported bundle under \code{tsENV_questions/<MODEL>/}.
-Only for the rows specified with SLUG. 
-
-
-
-
-\phantomsection\label{sec:questions-json-schema}
-\subsection*{Top-Level \texorpdfstring{\titlecode{questions.json}}{questions.json} Schema}
+Each entry contains:
 
 \begin{itemize}
-\item \code{version}: a number that gets update whenever the dataset is regenerate so we can make sure that we are always using the latest version. Everytime the script is called this number should be updated by 1
-\item \code{questions}: object 
-\item \code{label_int_mapping}: object mapping class labels to integer ids. Example:
-\begin{DocCode}
-    "label_int_mapping": {
-    "drag coefficient": 0,
-    ...
-    "no parameter change": 4
-  }
-\end{DocCode}
-The last integer id is reserved for the \termNoParameterChangeClass class.
-The others are sorted alphabetically
-\item \code{ground_truth_information}: object containing judge-facing ground-truth context
-\item \code{environment_name}: name of the simulated environment
+\item \code{train_samples_baselines}
+\item \code{train_samples}
+\item \code{train_samples_hashes}
+\item \code{test_samples_baselines}
+\item \code{test_samples}
+\item \code{test_samples_hashes}
+\item \code{other_samples}
+\item \code{seed}
+\item \code{test_set_slug}
+\item \code{shot_slug_recipe}
+\item \code{accuracy_with_baselines}, when adversarial selection is evaluated
+\item \code{accuracy_with_baselines_all_samples}, when evaluated
+\item \code{train_test_sample_hash}
 \end{itemize}
 
-\subsection*{\texorpdfstring{\titlecode{ground_truth_information}}{ground_truth_information} Schema}
+The pair \code{(test_set_slug, seed)} has a one-to-one mapping to \code{test_samples_hashes}.
 
-\code{ground_truth_information} contains:
+\section*{\texorpdfstring{\titlecode{questions.json}}{questions.json}}
+
+The exported \code{questions.json} contains:
 
 \begin{itemize}
-\item \code{interventions}: object keyed by sample uuid, including intervention uuids
-\item \code{pattern_observed}: object containing a key and a short description of specific patterns used to solve the task. For example:
-\begin{DocCode}
-  "count_impacts": count the number of impacts in the time series
-\end{DocCode}
+\item \code{version}
+\item \code{questions}
+\item \code{label_int_mapping}
+\item \code{ground_truth_information}
+\item \code{environment_name}
 \end{itemize}
 
-Each entry in \code{interventions} contains:
+\code{ground_truth_information} is derived from the selected production run graph and selected dataset manifest.
+For each selected sample, it records initial parameters, changed parameter, intervention time, new value, and \code{first_diff} values.
+No-intervention samples use the no-intervention class and null intervention fields.
+Surrogate confidence values may be copied into hidden provenance metadata, but they must not appear in the agent-visible prompt or files.
+
+\section*{Question Text}
+
+\code{question_text} contains the rendered prompt components:
 
 \begin{itemize}
-\item \code{initial_parameters}: object mapping baseline parameter names to their pre-intervention values.
-\item \code{intervention_time}: time of intervention
-\item \code{changed_parameter}: parameter name changed by the intervention
-\item \code{new_value}: value assigned by the intervention
-\item \code{first_diff}: list<nullable<float>> The value of the first timestamp for each signal, where the run is different than its corresponding baseline run. 
-It's obtained from \code{eligibility_metrics.json::<baseline_uuid>::children::<child-uuid-1>.detectability.vs_baseline.first_diff}. 
-If \code{new_value} is null, the all the entries in \code{first_diff} must be null. Otherwise, at least one should have a value equal or greater than \code{intervention_time}
+\item sample-source description;
+\item environment description controlled by \termDescLevel;
+\item observed-column descriptions;
+\item intervention semantics;
+\item allowed labels and label space;
+\item no-change guidance;
+\item few-shot context;
+\item task artifact instructions;
+\item prediction format;
+\item mode-specific requirements;
+\item evaluation and runtime constraints.
 \end{itemize}
 
-\subsection*{Questions Schema}
+These values are resolved from \code{shared/config/tsenv_shared_description.json}, \code{description_levels.json}, and the selected dataset manifest.
 
-Each entry in \code{questions} is keyed by \code{question_slug}, where \code{question_slug} is defined as \code{row_slug} + \code{_<resolved_seed_of_shot_slug>}
+\section*{Validation Rules}
 
 \begin{itemize}
-\item \code{question_hash}: the \code{train_test_sample_hash} from the \code{sample_manifest.json} entry resolved by \code{(recipe_info.shot_slug, recipe_info.test_set_slug, recipe_info.question_seed)}
-\item \code{train_test_sample_hash}: the same hash from the resolved \code{sample_manifest.json} entry
-\item \code{question_text}: object for creating the initial user prompt to the agent
-\item \code{recipe_info}: object for the recipe
+\item Question generation must not select new samples.
+\item It may only export samples already present in \code{datasets/<dataset_id>/selected_runs.jsonl} and grouped by \code{sample_manifest.json}.
+\item Every selected \code{run_id} must exist in \code{run_nodes.jsonl} and \code{model_record.json}.
+\item Every selected run must have a materialized \code{data.parquet} artifact.
+\item Test-set length must match the requested \code{number_test_samples}.
+\item Test-set class counts should be balanced, with any two class counts differing by at most one.
+\item Train-set length must equal \code{number_train_samples_per_class * num_labels}.
+\item Train and test samples must not overlap within a question.
+\item Comparable rows sharing \code{test_set_slug} and seed must share the same underlying test set.
+\item Exported question hashes must be derived from selected sample hashes.
 \end{itemize}
-
-The class vocabulary includes \termNoParameterChangeClass clas with samples coming from \code{baseline_uuid}.
-
-\phantomsection\label{sec:question-text-schema}
-\subsection*{\texorpdfstring{\titlecode{question_text}}{question_text} Schema}
-
-\code{question_text} contains all the textual values so that we can generate the agent prompt.
-Examples of agent prompts with different combinations can be found in \code{docs/overleaf_paper/src/appendix/appendix_prompt_example_combinations.tex}.
-
-\begin{itemize}
-\item \code{sample_source}: describes which sample folders are available to the agent. It depends on \code{number_train_samples_per_class}.
-\item \code{environment_description}: model-specific natural-language description controlled by \code{desc_level}.
-\begin{DocCode}
-if \termDescLevel in {"low", "high"}:
-  description_levels.json::textual_description::<desc_level>
-else:
-  tsenv_shared_description.json::textual_description::none
-\end{DocCode}
-\item \code{observed_columns}: model-specific description of the Parquet schema and observed signals. 
-It is generated from \code{description_levels.json::internal_naming_to_agent_facing_signal}
-\item \code{intervention_semantics}: shared text describing the intervention structure.
-\item \code{allowed_labels}: Depends on \code{description_levels.json::textual_description}:
-\begin{itemize}
-  \item if \code{tsenv_shared_description.json::textual_description==high} is the canonical list of agent-facing labels used by both the prompt and evaluator. 
-    It is generated from \code{description_levels.json::internal_naming_to_agent_facing_parameter} plus \termNoParameterChangeClass. This list is the source of truth for exact label strings.
-  \item if \code{tsenv_shared_description.json::textual_description==none} is \code{class_0}, \code{class_1},  ... \code{class_n}. 
-  Where \code{label_n} is \termNoParameterChangeClass and the other are sorted alphabetically.
-\end{itemize}
-\item \code{label_space}: rendered text form of \code{allowed_labels}.
-\item \code{no_change_guidance}: shared text explaining the \termNoParameterChangeClass.
-\item \code{fewshot_context}: text describing available labeled examples. 
-\item \code{task_artifact}: task-mode-specific artifact instruction. It depends on \code{type_of_request}.
-\item \code{prediction_format}: task-mode-specific ranked-list output convention.
-\item \code{mode_specific_requirements}: task-mode-specific validity requirements. It depends on \code{type_of_request} and, for code tasks, on whether labeled examples are available.
-\item \code{evaluation}: shared text describing the primary and secondary metrics.
-\item \code{runtime_constraints}: shared execution constraints.
-\item \code{ordered_field_agent_prompt}: it's a dict of list of block names used by later stages to render the initial agent prompt. 
-Each entry is a tuple, where the first value is an a block name, and the second tuple element mean the separator after the field as the current renderer implements it
-It dependends on \termDescLevel
-
-\end{itemize}
-Note that all of these entries, except \code{label_space} and \code{allowed_labels}, are available at \code{shared/config/tsenv_shared_description.json} or, if they are model-specific, at \code{description_levels.json}.
-T
-\subsection*{\texorpdfstring{\titlecode{recipe_info}}{recipe_info} Schema}
-
-\code{recipe_info} describes the recipe configuration attached to a question payload. It contains all the elements of the corresponding row of \code{all_possible_combinations}, including \code{test_set_slug}, except for \code{seed} that is replaced with \code{question_seed} and it's just an int.
 
 \end{document}

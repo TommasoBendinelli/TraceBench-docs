@@ -1,0 +1,122 @@
+\documentclass[11pt]{article}
+\usepackage{manual_docs_style}
+\externaldocument{build/environment_profiles}[environment_profiles.pdf]
+\externaldocument{build/candidate_generation}[candidate_generation.pdf]
+\externaldocument{build/simulation_stage}[simulation_stage.pdf]
+\externaldocument{overleaf_paper/build/main}[overleaf_paper/archive/compiled/main.pdf]
+
+\begin{document}
+
+\docTitle{Stage: Fast filter calculations}
+\phantomsection\label{docstart:cheap_filter_metrics_stage}
+
+\subsection*{Overview}
+This stage computes low-cost detectability filters.
+Specifically, for each intervention we measure RMS againt the baseline and another baseline where the initial value is the value of the intervention.
+We also compute some other enviroment specific features to detect other possible issues. 
+The key of all of these that are cheap to compute and essentially get rid of cases that bad, altough many could still be there.
+We then use enviroment specific threshold to determine if this detectable or not.
+To tune the filters we can apply some sanity checks, such as before the change they must be exactly the same.
+We first compute the differences.
+The filters here are only applied to intervention runs!!
+Motivation for this can be found in the paper section on \hyperref[sec:detectability]{detectability and distinguishability}.
+
+\section*{Inputs}
+
+For each \termSimulator, the stage reads:
+
+\begin{itemize}
+\item \code{plans/<policy_id>/run_nodes.jsonl}: canonical run recipes and \code{run_id} values.
+\item \code{plans/<policy_id>/run_edges.jsonl}: baseline/intervention/time-zero relationships.
+\item \code{runs/model_record.json}: runtime status and recipe hashes.
+\item \code{runs/<run_id>/data.parquet}: materialized trajectories.
+\item \code{experiment_config.json}: observed signals, signal types, and detectability thresholds.
+\item \code{detectability_specific_environment.py}: optional environment-specific detectability veto hook.
+\end{itemize}
+
+\section*{Run Relationships}
+
+For each intervention node, the stage uses \code{run_edges.jsonl} to find:
+
+\begin{itemize}
+\item the matched no-intervention baseline run;
+\item the matched time-zero/static-change probe run;
+\item the changed root-cause parameter;
+\item the intervention time and post-intervention value.
+\end{itemize}
+
+These relationships are not inferred from filename or identifier structure.
+
+
+
+\section*{Detectability}
+We use this 
+\begin{DocCode}
+detectability_specific_environment.py::is_detectable(...)
+\end{DocCode}
+
+
+
+If this hook returns \code{"no"}, the intervention fails the cheap filter even if the generic RMS/SRD checks pass.
+
+\section*{Pass Rules}
+
+An intervention has \code{cheap_filter_pass = true} only if:
+
+\begin{itemize}
+\item it has status \code{success} in \code{model_record.json};
+\item it is numerically valid and has all required observable signals;
+\item its comparison against the matched baseline has \code{detectable == "yes"};
+\item its comparison against the matched time-zero/static-change run has \code{detectable == "yes"};
+\item the relevant noise levels satisfy configured SNR thresholds;
+\item no \termSimulator-specific low-cost veto hook rejects it.
+\end{itemize}
+
+A family has \code{family_cheap_filter_pass = true} when it has cheap-filter-passing children for at least the configured minimum number of distinct root-cause parameters.
+The default minimum is three distinct parameters unless a policy or selection stage specifies a stricter rule.
+
+\section*{Output}
+
+The preferred output location is:
+
+\begin{DocCode}
+models/simulink/<simulator_id>/metrics/<policy_id>/cheap_filter_metrics.jsonl
+\end{DocCode}
+
+\section*{Preferred JSON Lines Shape}
+
+Each line of \code{cheap_filter_metrics.jsonl} records one run or one family summary.
+
+Example intervention record:
+
+\begin{DocCode}
+{
+  "record_type": "run",
+  "policy_id": "production_v1",
+  "family_id": "fam_de4d7c0a5335e9005510cc2442d0971e",
+  "run_id": "run_7fd9daa0055fb3f412ef5e0ab8d4c5ba",
+  "kind": "intervention",
+  "ground_truth_label": "gravity",
+  "baseline_run_id": "run_baseline_...",
+  "time0_run_id": "run_time0_...",
+  "changed_parameter": "gravity",
+  "cheap_filter_pass": true,
+  "baseline_rms_difference": {"channel1": x, "channel2" ..}
+  "time0_rms_difference": {"channel1": x, "channel2" ..}
+  "failure_reasons": []
+}
+
+\end{DocCode}
+
+
+\section*{Validation Rules}
+
+\begin{itemize}
+\item Every metric record must refer to a \code{run_id} present in \code{run_nodes.jsonl}.
+\item Every intervention metric must have a matched baseline and time-zero/static-change run from \code{run_edges.jsonl}.
+\item Only successful materialized runs may have \code{cheap_filter_pass = true}.
+\item The cheap-filter stage must not change run recipes or recipe hashes.
+\item Re-running this stage may overwrite previous metrics for the same \code{policy_id}.
+\end{itemize}
+
+\end{document}
