@@ -113,24 +113,52 @@ No-intervention samples use the no-intervention class and null intervention fiel
 Surrogate confidence values may be copied into hidden provenance metadata, but they must not appear in the agent-visible prompt or files.
 
 \section*{Question Text}
+\phantomsection\label{sec:generate-question-question-text}
 
-\code{question_text} contains the rendered prompt components:
+\code{question_text} contains the structured components used to render the final agent prompt.
+The final prompt is produced by \code{shared/prompts.py::render_tsenv_agent_prompt(question_text:Mapping[str, Any]) -> str}.
 
+The payload contains:
 \begin{itemize}
-\item sample-source description;
-\item environment description controlled by \termDescLevel;
-\item observed-column descriptions;
-\item intervention semantics;
-\item allowed labels and label space;
-\item no-change guidance;
-\item few-shot context;
-\item task artifact instructions;
-\item prediction format;
-\item mode-specific requirements;
-\item evaluation and runtime constraints.
+\item \code{sample_source}: description of which sample folders are available.
+\item \code{environment_description}: environment description controlled by \termDescLevel.
+\item \code{observed_columns}: observed-column and signal descriptions.
+\item \code{intervention_semantics}: shared intervention semantics.
+\item \code{allowed_labels}: canonical allowed labels.
+\item \code{label_space}: rendered text form of the allowed labels.
+\item \code{no_change_guidance}: guidance for the no-change label.
+\item \code{fewshot_context}: few-shot context when train samples are present.
+\item \code{task_artifact}: task artifact instructions.
+\item \code{prediction_format}: required prediction/output format.
+\item \code{mode_specific_requirements}: requirements specific to direct or code mode.
+\item \code{evaluation}: evaluation text.
+\item \code{runtime_constraints}: runtime constraints.
+\item \code{ordered_field_agent_prompt}: canonical rendering order and per-field separators. It looks like: 
+\begin{DocCode}
+    "ordered_field_agent_prompt": [
+    ["sample_source", " "],
+    ["environment_description", "\n\n"],
+    ["observed_columns", "\n\n"],
+    ["intervention_semantics", "\n\n"],
+    ["label_space", "\n\n"],
+    ["no_change_guidance", "\n\n"],
+    ["task_artifact", "\n"],
+    ["prediction_format", "\n\n"],
+    ["fewshot_context", "\n\n"],
+    ["mode_specific_requirements", "\n\n"],
+    ["evaluation", "\n\n"],
+    ["runtime_constraints", ""]
+  ]
+\end{DocCode}
 \end{itemize}
 
+The renderer renders the fields listed in \code{question_text.ordered_field_agent_prompt} in order.
+Each entry specify the separator to use before the next rendered field.
+Missing or empty fields are skipped, and placeholder references inside field values are resolved before concatenation.
+
 These values are resolved from \code{shared/config/tsenv_shared_description.json}, \code{description_levels.json}, and the selected dataset manifest.
+The function \code{render_tsenv_agent_prompt(...)} renders the final agent question from these entries using \code{ordered_field_agent_prompt}.
+
 
 \section*{Validation Rules}
 

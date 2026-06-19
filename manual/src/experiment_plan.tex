@@ -41,26 +41,30 @@
 
 \docTitle{Experiment Plan}
 \phantomsection\label{docstart:experiment_plan}
-This document describes how to use the outputs of the previous stages to create the artifacts shown in the paper, as well as those used for human analysis and debugging.
-The experiments are designed to test the following hypotheses:
+This document describes how to use the agentic rollout stages to create the artifacts shown in the paper, as well as those used for human analysis and debugging.
+The experiments conducted here are designed to fill out the paper and to test the followng hypothesis:
 \begin{itemize}
 \item Increasing observation noise decreases agent accuracy.
 \item Requiring reusable code-rule predictions decreases performance relative to direct prediction.
 \item Removing textual context decreases performance more than removing labeled examples.
 \item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
 \end{itemize}
-We also explore what happens as observation noise increases. 
-In particular, we analyze the most common types of errors made by the agents. 
-For example, do agents more frequently confuse intervention cases with non-intervention cases, or do they make other types of mistakes?
+Other questions we want to ask is: 
+\begin{itemize}
+  \item What are the most common types of errors made by the agents?
+  \item Do agents more frequently confuse intervention cases with non-intervention cases, or do they make other types of mistakes?
+\end{itemize}
+The tables with all the experiments conducted are  \hyperref[tab:experiment-plan-calibration]{Table~\ref*{tab:experiment-plan-calibration}}, \hyperref[tab:experiment-plan-main]{Table~\ref*{tab:experiment-plan-main}}, and \hyperref[tab:experiment-plan-ablation]{Table~\ref*{tab:experiment-plan-ablation}}.
 
-This stage contains a series of scripts that follow a collect, consolidate and visualise strategy. 
-The idea is to first use a script that collects the necessary information from all runs and stores it in a specific folder.
+Assuming we have run all the experiments, the exact commands to obtain the results are located here:
+\hyperref[sec:experiment-plan-commands-to-run]{Commands to run}.
+
+\subsection*{Technical implementation brief}
+We first use a script that collects the necessary information from all runs and stores it in a specific folder.
 These outputs are then consolidated into single .csv files, which are subsequently used to generate the .tex tables, plots, detailed analysis and spotting errors/debugging.
 This structure also ensure lineage and traceability.
-
 We observed that ChatGPT is very effective at analyzing individual files. 
 Empirically, we found that providing ChatGPT with the entire folder of trajectories is an effective way to obtain insights and identify potential errors.
-
 Everything is done programmatically to ensure lineage and tracking. 
 
 
@@ -71,39 +75,10 @@ All the results by default are saved in three folders:
   \item \code{docs/overleaf_paper/generated} This folder contains the tables and plots that are shown in the paper or in the appendix.
 \end{itemize}
 
-\subsection*{Commands to run}
-\begin{DocCode}
-# 1. Recompute deterministic trajectory metrics
-for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
-  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id"
-done
-# 2. Optional: add LLM trajectory annotations
-for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
-  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id" --llm --parallel 8
-done
-# 3. Consolidate
-<<<<<<< HEAD
-python consolidate_trajectories.py
-python consolidate_results.py
-python generate_csv_tables.py
-=======
-python consolidate_trajectories.py PAPER CALIBRATION
-
-python consolidate_results.py PAPER CALIBRATION
-
-python generate_csv_tables.py PAPER --include-calibration
->>>>>>> 7efb0ec2fa8e6d08e39462abe886fb47248edc32
-# 4. Regenerate paper artifacts
-python generate_plots.py
-python generate_tex_tables.py
-\end{DocCode}
-
-These commands recompute trajectory metrics, consolidate results, and regenerate the paper artifacts.
-
 \begingroup
 \renewcommand{\arraystretch}{1.0}
 \setlength{\tabcolsep}{2pt}
-\tiny
+\small
 
 \vspace{0.25em} 
 
@@ -216,57 +191,7 @@ This script takes as input all \hyperref[sec:agentic-rollout-run-configurations]
   \item \code{<row_slug>_summary.json} 
   \item \code{<row_slug>.json}
 \end{itemize}
-These json share the following attributes.
-\noindent\textbf{Identity fields shared by both files.}
-
-\begingroup
-\small
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.08}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
-\toprule
-\textbf{Field} & \textbf{Description} \\
-\midrule
-\code{timestamp} & \code{configuration_name.json::timestamp} \\
-\code{configuration_name} & Name of the configuration file used \\
-\code{paths} & Path to the scores \\
-\termSimulator & \termSimulator name \\
-\code{agent_id} & Agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id} \\
-\code{question_slug} & Question slug \\
-\code{recipe} & Question recipe metadata copied from \code{question.recipe_info.*} field \\
-\code{seed_numbers} & Number of repetition seeds collected for this question. \\
-\bottomrule
-\end{tabular}
-\endgroup
-
-
-Additionally, \code{<row_slug>_summary.json} contains:
-\begin{itemize}
-  \item \code{score_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_test}.
-  Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{score_other_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs). Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
-  \item \code{trajectory_evaluation}: a list of dictionaries copied from \code{trajectory_evaluation.json}. The consolidated fields include:
-  \begin{itemize}
-    \item \code{cost_usd}
-    \item \code{tokens}
-    \item \code{total_steps} 
-    \item \code{number_of_tool_calls}
-    \item \code{python_calls} 
-    \item \code{plots_generated}: number of plot artifacts generated by the agent.
-    \item \code{plots_inspected}: number of generated plot artifacts later inspected by the agent.
-    \item \code{llm_semantically_relevant_numbers_total}: optional total from \code{--llm} enrichment.
-    \item \code{llm_exploring_calls}: optional count of enriched Python calls labeled \code{exploring}.
-    \item \code{llm_exploiting_calls}: optional count of enriched Python calls labeled \code{exploiting}.
-    \item \code{llm_artifact_calls}: optional count of enriched Python calls labeled \code{artifact}.
-  \end{itemize}
-\end{itemize}
-And \code{<row_slug>.json} contains:
-\begin{itemize}
-  \item \code{wrong_uuids}: It is a list of two-item lists, where each element contains \code{question_uuid} and \termRunID for entries that the model answers incorrectly.
-  \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
-\end{itemize}
-
-If multiple entries share the same \code{(agent_id, model, question_slug)} combination across different \code{run_configurations/*.json} files, where \code{model} is the \termSimulator identifier, the newest entry is returned based on the \code{configuration_name::} value.
+The schemas of these JSON outputs are documented in \hyperref[sec:experiment-plan-consolidated-json-schema-appendix]{Appendix: Consolidated JSON schemas}.
 
 \section{Generate final artifacts}
 \subsection{CSV Tables}
@@ -315,8 +240,8 @@ So for example
 \end{DocCode}
 Additionally tables in the Appendix follow these stylistic rules:
 \begin{itemize}
-  \item They are eight stacked metric tables, all with the same structure Model × \termSimulator.
-  The eight metric sections are: 
+  \item They are multiple stacked metric tables, all with the same structure Model × \termSimulator.
+  These are: 
   \begin{itemize}
   \item Episode Accuracy shows accuracy on the episode split. All four model rows are shown; unavailable values render as \code{-}.
   \item Held-out Accuracy shows accuracy on held-out data, when present.
@@ -325,6 +250,10 @@ Additionally tables in the Appendix follow these stylistic rules:
   \item Plots Inspected shows how many generated plot artifacts were actually seen by the agent.
   \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
+  \item Percentage of python calls over the total number of python calls in a trajectory, marked as exploitation by the LLM 
+  \item Percentage of python calls over the total number of python calls in a trajectory, marked as exploration by the LLM
+  \item Percentage of python calls over the total number of python calls in a trajectory, marked as artifacts by the LLM
+  \item Number of sementically meaningful numbers explored marked by the LLM
   \item Successful Runs shows how many successful runs contributed to each visible cell.
   Under the five-repetition-seed visibility rule, visible cells contain five successful runs.
   This table should contain integers rather than std.
@@ -352,10 +281,7 @@ These results are created from the ablation conditions listed in Table~\ref{tab:
 
 \subsubsection*{Appendix summary tables}
 These generated tables summarize the main and ablation rows from Tables~\ref{tab:experiment-plan-main} and~\ref{tab:experiment-plan-ablation}.
-<<<<<<< HEAD
-=======
 In the paper, these results appear in Appendix~\ref{app:per-simulator-result-tables}, where each experiment-plan row is expanded into a per-\termSimulator table with the stacked metrics described above.
->>>>>>> 7efb0ec2fa8e6d08e39462abe886fb47248edc32
 \begin{itemize}
   \item \hyperref[tab:app-per-simulator-gentle-01234-cloud]{Main experiment direct low-noise table}
   \item \hyperref[tab:app-per-simulator-gentle-01234-flame]{Main experiment code low-noise table}
@@ -369,10 +295,7 @@ In the paper, these results appear in Appendix~\ref{app:per-simulator-result-tab
 
 \subsubsection*{Appendix no-noise summary tables}
 These generated tables summarize the no-noise results from Table~\ref{tab:experiment-plan-calibration}.
-<<<<<<< HEAD
-=======
 In the paper, these results appear in Appendix~\ref{app:calibration-results}.
->>>>>>> 7efb0ec2fa8e6d08e39462abe886fb47248edc32
 \begin{itemize}
   \item \hyperref[tab:app-calibration-frost-01234-anchor]{No-noise direct results table}
 \end{itemize}
@@ -579,6 +502,65 @@ These are saved as json where we are storing for each model and each simulation 
 
 \FloatBarrier
 \appendix
+\section{Consolidated JSON schemas}
+\phantomsection\label{sec:experiment-plan-consolidated-json-schema-appendix}
+
+The \code{consolidate_results.py} script writes row-level JSON artifacts under \code{results_large_artifacts/consolidated_numerical_results}.
+Both \code{<row_slug>_summary.json} and \code{<row_slug>.json} share the following identity fields.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+\toprule
+\textbf{Field} & \textbf{Description} \\
+\midrule
+\code{timestamp} & \code{configuration_name.json::timestamp} \\
+\code{configuration_name} & Name of the configuration file used \\
+\code{paths} & Path to the scores \\
+\termSimulator & \termSimulator name \\
+\code{agent_id} & Agent profile identifier from \code{run_configurations/*.json::runs[]::agent_id} \\
+\code{question_slug} & Question slug \\
+\code{recipe} & Question recipe metadata copied from \code{question.recipe_info.*} field \\
+\code{seed_numbers} & Number of repetition seeds collected for this question. \\
+\bottomrule
+\end{tabular}
+\endgroup
+
+\paragraph{\texorpdfstring{\titlecode{<row\_slug>\_summary.json}}{<row\_slug>\_summary.json}.}
+The summary artifact additionally contains:
+\begin{itemize}
+  \item \code{score_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_test}.
+  Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{score_other_batch}: a list of per-repetition metric dictionaries from \code{scores.json::final_metric_other} (optional, only for code runs).
+  Each dictionary contains \code{average_top1_accuracy}, \code{average_shortlist_score}, and \code{average_num_answers}.
+  \item \code{trajectory_evaluation}: a list of dictionaries copied from \code{trajectory_evaluation.json}. The consolidated fields include:
+  \begin{itemize}
+    \item \code{cost_usd}
+    \item \code{tokens}
+    \item \code{total_steps}
+    \item \code{number_of_tool_calls}
+    \item \code{python_calls}
+    \item \code{plots_generated}: number of plot artifacts generated by the agent.
+    \item \code{plots_inspected}: number of generated plot artifacts later inspected by the agent.
+    \item \code{llm_semantically_relevant_numbers_total}: total numbers considered good for enrichment.
+    \item \code{llm_exploring_calls}: count of enriched Python calls labeled \code{exploring}.
+    \item \code{llm_exploiting_calls}: count of enriched Python calls labeled \code{exploiting}.
+    \item \code{llm_artifact_calls}: count of enriched Python calls labeled \code{artifact}.
+  \end{itemize}
+\end{itemize}
+
+\paragraph{\texorpdfstring{\titlecode{<row\_slug>.json}}{<row\_slug>.json}.}
+The detailed artifact additionally contains:
+\begin{itemize}
+  \item \code{wrong_uuids}: a list of two-item lists, where each element contains \code{question_uuid} and \termRunID for entries that the model answers incorrectly.
+  \item \code{sample_results}: a list of per-run dictionaries copied from \code{scores.json::sample_results}.
+\end{itemize}
+
+If the runs were done without \code{--llm}, all LLM-related entries are set to \code{nan}.
+If multiple entries share the same \code{(agent_id, model, question_slug)} combination across different \code{run_configurations/*.json} files, where \code{model} is the \termSimulator identifier, the newest entry is returned based on the \code{configuration_name} value.
+
 \section{Consolidated CSV schemas}
 \phantomsection\label{sec:experiment-plan-consolidated-csv-schema-appendix}
 
@@ -591,5 +573,32 @@ Each row in \code{results/consolidated/all_runs.csv} describes one consolidated 
 Each row in \code{results/consolidated/tables/all_samples.csv} describes one evaluated sample:
 
 \allSamplesCsvSchemaTable
+
+
+
+\phantomsection\label{sec:experiment-plan-commands-to-run}
+\subsection*{Commands to run}
+\begin{DocCode}
+# 1. Recompute deterministic trajectory metrics
+for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
+  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id"
+done
+# 2. Optional: add LLM trajectory annotations
+for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
+  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id" --llm --parallel 8
+done
+# 3. Consolidate
+python consolidate_trajectories.py PAPER CALIBRATION
+
+python consolidate_results.py PAPER CALIBRATION
+
+python generate_csv_tables.py PAPER --include-calibration
+# 4. Regenerate paper artifacts
+python generate_plots.py
+python generate_tex_tables.py
+\end{DocCode}
+
+These commands recompute trajectory metrics, consolidate results, and regenerate the paper artifacts.
+
 
 \end{document}

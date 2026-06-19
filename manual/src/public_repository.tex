@@ -11,35 +11,9 @@
 \phantomsection\label{docstart:public_repository}
 \label{sec:public-repository}
 
-This document describes the intended public GitHub repository for \name{}.
-It defines what the repository should communicate to external users and what concrete files, directories, and workflows should be included.
+This document describes the public GitHub repository for \name{}.
+It's located at \code{https://github.com/TommasoBendinelli/tsENV.git}
 
-\phantomsection\label{sec:public-repository-document-contents}
-\section*{Document Contents}
-The document is divided into two parts:
-\newcommand{\publicRepoContentsEntry}[2]{\hyperref[#1]{#2\hfill\pageref*{#1}}}
-\begin{center}
-\renewcommand{\arraystretch}{1.18}
-\begin{tabular}{|P{0.43\textwidth}|P{0.43\textwidth}|}
-\hline
-\textbf{\publicRepoContentsEntry{sec:public-repository-design-brief}{Design Brief}} &
-\textbf{\publicRepoContentsEntry{sec:public-repository-technical-brief}{Technical Brief}} \\
-\hline
-\publicRepoContentsEntry{sec:public-repository-overview}{Overview} &
-\publicRepoContentsEntry{sec:public-repository-layout}{Repository layout} \\
-\publicRepoContentsEntry{sec:public-repository-audience}{Audience and jobs} &
-\publicRepoContentsEntry{sec:public-repository-readme}{README.md} \\
-\publicRepoContentsEntry{sec:public-repository-positioning}{Positioning} &
-\publicRepoContentsEntry{sec:public-repository-artifacts}{Artifacts and downloads} \\
-\publicRepoContentsEntry{sec:public-repository-public-promise}{Public promise} &
-\publicRepoContentsEntry{sec:public-repository-submissions}{External submissions} \\
-&
-\publicRepoContentsEntry{sec:public-repository-validation}{Validation and automation} \\
-&
-\publicRepoContentsEntry{sec:public-repository-boundaries}{Public/private boundaries} \\
-\hline
-\end{tabular}
-\end{center}
 
 \phantomsection\label{sec:public-repository-design-brief}
 \section*{Design Brief}
@@ -47,24 +21,15 @@ The document is divided into two parts:
 \phantomsection\label{sec:public-repository-overview}
 \subsection*{Overview}
 
-The public repository is the primary code and documentation entrypoint for \name{}.
-It should let a reader understand what the benchmark measures, inspect the benchmark-generation logic, download or locate released artifacts, run supported examples, and submit new agent results through a controlled process.
-
-The repository should not try to host every large benchmark artifact directly.
-Large datasets, trajectories, complete result tables, and released benchmark bundles should live on the Hugging Face Hub.
-The public website, described in \hyperref[docstart:website]{Website}, should render public-facing summaries and leaderboards.
-The repository should explain and validate the benchmark workflow, while Hugging Face stores canonical release artifacts and the website displays them.
-
-\phantomsection\label{sec:public-repository-audience}
-\subsection*{Audience and jobs}
-
-The repository should serve four main audiences:
+It's used to allow user to run rollouts with the same setup as us so that people can be update their results.
+It also provides tools to inspect the trajectories and rollouts.
+Specifically, the repository should serve four main audiences:
 
 \begin{itemize}
-\item \textbf{Benchmark users} who want to download tasks, run an agent, and understand the expected output format.
-\item \textbf{Result submitters} who want to package trajectories and scores for review.
-\item \textbf{Researchers} who want to inspect the generation, filtering, rollout, and scoring methodology.
-\item \textbf{Maintainers} who need a reproducible place for validation scripts, release metadata, and GitHub Actions.
+\item who want to download tasks, run an agent, and understand the expected output format.
+\item who want to package trajectories and scores for review.
+\item people that wants to plot the results.    
+\item internal utilities used by GitHub actions.
 \end{itemize}
 
 The repository should make these jobs possible without requiring readers to search across private notes, local build artifacts, or the website implementation.

@@ -7,8 +7,8 @@
 \phantomsection\label{docstart:agentic_rollout}
 
 This stage runs the agentic experiments. 
-It creates the artifacts that are later submitted for evaluation or used for additional post-processing. 
-It also provides a convenient way to manage, resume, and inspect rollout runs.
+These experiments generate artifacts that are later submitted for evaluation or used for additional post-processing. 
+It also provides a convenient way to manage, resume, and inspect rollouts.
 
 There are two main scripts and a third ancillary one:
 \begin{itemize}
@@ -37,8 +37,8 @@ python workflows/rollout/question_run_orchestrator.py \
 \end{DocCode}
 Note that:
 \begin{itemize}
-  \item Note that when \code{--resume} is passed, no other argument can be passed. (The number of runs in parallel per agent is read from there).
-  \item Note that only one of \code{--question-slug}, \code{--row-slug},  \code{--shot-slug}, \code{--resume} can be passed simultaneously.
+  \item When \code{--resume} is passed, no other argument can be passed. (The number of runs in parallel per agent is read from there).
+  \item Only one of \code{--question-slug}, \code{--row-slug},  \code{--shot-slug}, \code{--resume} can be passed simultaneously.
   \item \code{--tag} Tag to attach to each run. Default: DEBUG
   \item \code{--name} Name of the configuration file. If name is not specified, then it's the current <timestamp>. If a file already exists with the same name it throws an error.
 \end{itemize}
@@ -46,28 +46,52 @@ Note that:
 
 Internal steps:
 \begin{enumerate}
-  \item Validate that arguments are valid.
+  \item Validate the command-line arguments
   \phantomsection\label{sec:agentic-rollout-run-configurations}
-  \item Build a json configuration file saved at \code{run_configurations/name.json}, with top keys  \code{timestamp}, \code{name}, \code{models}, \code{number_of_runs_in_parallel_per_agent}, \code{total_runs} and then a \code{runs} list with the following entries. The \code{models} key contains \termSimulator identifiers.
+  \item Build a JSON configuration file at \code{run_configurations/<name>.json}:
+  \begin{DocCode}
+    {
+      "timestamp": "...",
+      "name": "...",
+      "models": ["<simulator_id>", "..."],
+      "number_of_runs_in_parallel_per_agent": 1,
+      "total_runs": 1,
+      "runs": [
+        {
+          "question_schema": "...",
+          "question_slug": "...",
+          "model": "...",
+          "agent_id": "...",
+          "agentic_run_id": "...",
+          "status": "PENDING",
+          "path_to_the_run": "terminal-bench/runs/<agentic_run_id>",
+          "agent_prompt": "...",
+          "question": {
+            "recipe_info": { "..." : "..." }
+          }
+        }
+      ]
+    }
+    \end{DocCode}
+  where:
   \begin{itemize}
-    \item \code{question_schema}: \code{question_schema} from \code{tsENV_questions/<simulator_id>/questions.json::question}
-    \item \code{question_slug}
-    \item \code{model}: selected \termSimulator identifier
-    \item \code{agent_id}
-    \item \code{agentic_run_id}
-    \item \code{status}: PENDING|ERROR|DONE|RUNNING
+    \item \code{question_schema} is from \code{tsENV_questions/<simulator_id>/questions.json::question}
+    \item \code{status} can be one of PENDING|ERROR|DONE|RUNNING
     \item \code{path_to_the_run}: location of the run of the form \code{terminal-bench/runs/<agentic_run_id>}. 
     Note this does not exist if the run is not effectively run.
-    \item \code{agent_prompt}: the textual prompt passed to the agent. It's created by calling \code{shared/prompts.py::render_tsenv_agent_prompt(question_text: Mapping[str, Any]) -> str:}.
-    This script internally works as follow
+    \item \code{agent_prompt}: the user prompt that starts the experiment. 
+  \end{itemize} 
+  This script internally works as follow
     \begin{enumerate}
       \item It resolves any placeholder values with their corresponding values, specifically \code{questions.<question_slug>.question_text.possible_interventions}.
     \end{enumerate}
     \item if \code{--call-adapter} is passed then it also calls \code{terminal-bench/adapters/tsENV/run_adapter.py} (i.e step 2) of the main driver. 
-    Note that if the targer folder in \code{terminal_bench/tasks_runtime/manual/<simulator_id>/<question_slug>/question_0/agent_payload} already exists, the script will first delete it and recreate it.
+    Note that if the targer folder in \code{terminal-bench/tasks_runtime/manual/<simulator_id>/<question_slug>/question_0/agent_payload} already exists, the script will first delete it and recreate it.
     \item \code{question.recipe_info.*}: All the information stored at \code{question.recipe_info.*}
-  \end{itemize}
-  Note instead with \code{--resume} \code{configuration-file-path} we load the file and skip this step. If \code{--heal} is passed we also delete \code{path_to_the_run} and set again to "PENDING" the runs that are set to "ERROR"
+    \item The agent prompt is created from \hyperref[sec:generate-question-question-text]{\code{question_text}} by calling \code{shared/prompts.py::render_tsenv_agent_prompt}.
+
+  Note instead with \code{--resume} \code{configuration-file-path} we load the file and skip this step. 
+  If \code{--heal} is passed we also delete \code{path_to_the_run} and set again to "PENDING" the runs that are set to "ERROR"
   \item Call \code{workflows/rollout/run_single_question.py},   \code{--number-of-runs-in-parallel-per-agent} times in parallel.
   \item Update the status of the configuration files.
   \item When everything has finished run \code{docker image prune} and \code{docker buildx prune}
@@ -77,7 +101,13 @@ Internal steps:
 This script actually runs the jobs and creates the output artifacts. It can be called multiple times, provided that the \code{run_id} is different.
 Example invocation:
 \begin{DocCode}
-python workflows/rollout/run_single_question.py --model SIMULATOR --question-slug QUESTION_SLUG --agent-id AGENT_ID --agentic-run-id AGENTIC_RUN_ID [--keep-container] [--rollout-mode SINGLE|ORCHESTRATOR]
+python workflows/rollout/run_single_question.py \
+  --model SIMULATOR \
+  --question-slug QUESTION_SLUG \
+  --agent-id AGENT_ID \
+  --agentic-run-id AGENTIC_RUN_ID \
+  [--keep-container] \
+  [--rollout-mode SINGLE|ORCHESTRATOR]
 \end{DocCode}
 
 Additional flags:
@@ -110,7 +140,7 @@ Internal steps:
   \end{itemize}
   \item Call \verb|uv run tb run ...| to start the agentic run using terminal-bench harness.
   \begin{itemize} 
-    \item Copy \code{terminal_bench/tasks_runtime/manual/<simulator_id>/<question_slug>/question_0/agent_payload} to a \code{tmp/<runid>/agent_payload} folder to avoid any race condition
+    \item Copy \code{terminal-bench/tasks_runtime/manual/<simulator_id>/<question_slug>/question_0/agent_payload} to a \code{tmp/<runid>/agent_payload} folder to avoid any race condition
     \item Inside \code{/app} in the container, copy \code{tmp/<runid>/agent_payload}/
     This should be the folders \code{test_samples/<uuid>.parquet}, and optionally if the question has train samples, should also include \code{train_samples/<uuid>.parquet}, and \code{train_labels.json}.
     \item Run the agent, by using the command detailed in Platform Startup Commands in \code{docs/overleaf_paper/src/appendix/appendix_agents.tex}.
@@ -134,8 +164,8 @@ opencode export <session_id> > /agent-logs/opencode-session-<session_id>.json
   \item Run the post-rollout steps:
   \begin{itemize}
     \item It calls the Artifact scoring script \code{python workflows/rollout/evaluate_artifact.py <agentic_run_id>}
-    \item It calls the trajectory export \code{workflows/rollout/export_atif_trajectory.py <agentic_run_id>}
-    \item It calls the trajectory evaluation \code{workflows/trajectories/trajectory_evaluation_programmatic.py <agentic_run_id>}
+    \item It calls the trajectory export \code{python workflows/trajectory/export_atif_trajectory.py <agentic_run_id>}
+    \item It calls the trajectory evaluation \code{python workflows/trajectory/trajectory_evaluation_programmatic.py <agentic_run_id>}
   \end{itemize}
 \end{enumerate}
   

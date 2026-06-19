@@ -16,7 +16,7 @@ The input artifact is \code{terminal-bench/runs/<run_id>/<task>/<trial>/agent_lo
 \begin{DocCode}
 python workflows/trajectory/trajectory_evaluation_programmatic.py \
 [<agentic_run_id>] \ 
-[--llm [--parallel N]] \ 
+[--llm [--llm-model MODEL] [--parallel N]] \ 
 [--path PATH]
 \end{DocCode}
 Note that only one of \code{<agentic_run_id>} or \code{--path} may be passed.
@@ -250,12 +250,10 @@ Schema with optional LLM enrichment:
         "total_stdout_lines": 2,
         "total_stderr_lines": 0,
         "total_output_bytes": 12,
-        "llm_enrichment": {
-          "description": "Prints the first few time values.",
-          "number_of_semantically_relevant_numbers": 3,
-          "intent_class": "exploring",
-          "specific_subtype": "data_preview"
-        }
+        "description": "Prints the first few time values.",
+        "number_of_semantically_relevant_numbers": 3,
+        "intent_class": "exploring",
+        "specific_subtype": "data_preview"
       },
       "analyze.py": {
         "executions": 1,
@@ -267,18 +265,16 @@ Schema with optional LLM enrichment:
         "total_stdout_lines": 5,
         "total_stderr_lines": 2,
         "total_output_bytes": 130,
-        "llm_enrichment": {
-          "description": "Computes summary statistics for candidate classes.",
-          "number_of_semantically_relevant_numbers": 8,
-          "intent_class": "exploiting",
-          "specific_subtype": "summary_statistics"
-        }
+        "description": "Computes summary statistics for candidate classes.",
+        "number_of_semantically_relevant_numbers": 8,
+        "intent_class": "exploiting",
+        "specific_subtype": "summary_statistics"
       }
     }
   }
 }
 \end{DocCode}
-\code{llm_enrichment} is present only when the CLI is run with \code{--llm}.
+The LLM enrichment fields are present only when the CLI is run with \code{--llm}.
 
 Field semantics:
 \begin{itemize}
@@ -325,24 +321,26 @@ For instance this means that two numpy functions were called and one pandas func
 
 
 
-\subsubsection*{\code{llm_enrichment}}
+\subsubsection*{LLM enrichment fields}
 
-When the CLI is run with \code{--llm}, Codex is called once per Python invocation and the \code{llm_enrichment} is filled.
-This has the following schema
+When the CLI is run with \code{--llm}, Codex is called once per Python invocation and the enrichment fields are filled directly on the corresponding Python \code{detailed} entry.
+The enrichment model is defined with \code{--llm-model MODEL-REASONING}, if passed otherwise is gpt-5.3-codex-spark with reasoning model medium.
+If the \code{codex} executable is not on \code{PATH}, set \code{TSENV_CODEX_BIN} to the Codex binary path.
+The raw Codex prompt, response, error stream, and parsed metadata for each parsed Python invocation are stored next to the processed ATIF trajectory, under \code{agent_logs/atif_processed/codex_description_raw}.
+This folder acts as the LLM-enrichment cache: valid entries produced by the same Codex command are skipped by default on rerun, while missing or invalid entries are recomputed.
+The current schema is:
 \begin{DocCode}
 {
-  "llm_enrichment": {
-    "description": "Prints the first few time values.",
-    "number_of_semantically_relevant_numbers": 43,
-    "intent_class": "exploring",
-    "specific_subtype": "data_preview"
-  }
+  "description": "Prints the first few time values.",
+  "number_of_semantically_relevant_numbers": 43,
+  "intent_class": "exploring",
+  "specific_subtype": "data_preview"
 }
 \end{DocCode}
 The number of enriched entries equals the number of parsed Python invocation entries for which LLM enrichment was run.
 
 Each Codex request sees exactly one invocation and one matched observed output.
-The resulting enrichment is then attached to the corresponding Python \code{detailed} entry.
+The resulting enrichment fields are then attached to the corresponding Python \code{detailed} entry.
 
 The prompt sent to Codex to obtain these four fields is:
 
@@ -399,7 +397,6 @@ These fields are:
 
 
 
-If the enrichment subprocess fails, the Codex binary is missing, or the enrichment payload is invalid, these four fields can be present with \code{null} values.
 
 
 \end{document}
