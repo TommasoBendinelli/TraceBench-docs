@@ -5,19 +5,25 @@
 \begin{document}
 \docTitle{Stage: Agentic Trajectory Evaluation}
 \phantomsection\label{docstart:agentic_trajectory_evaluation}
-This stage is responsible for extracting quantitative insights from agent trajectories in the \hyperref[docstart:atif_transcription]{ATIF trajectory format}.
+This stage is responsible for extracting quantitative insights from one single agentic trajectory at the time in the \hyperref[docstart:atif_transcription]{ATIF trajectory format}.
 By default, it computes programmatic metrics such as token usage, interaction counts, tool-call counts, file artifacts, parsed Python invocations, library usage, and output sizes.
-When run with \code{--llm}, it additionally enriches each parsed Python invocation with an LLM-generated description, exploration/exploitation intent class, subtype, and count of meaningful numeric values printed in the matched Python output.
+When run with \code{--llm}, it additionally enriches each parsed Python invocation with an LLM-generated description, observable intent class, subtype, and count of meaningful numeric values printed in the matched Python output.
 The programmatic evaluation is run automatically during agentic rollout.
-The LLM enrichment is triggered manually in a second stage because it adds external model calls and may be less reproducible than the deterministic metrics.
+The LLM enrichment is triggered manually in a second stage because it adds external model calls and it is slow.
 
 The input artifact is \code{terminal-bench/runs/<run_id>/<task>/<trial>/agent_logs/atif_processed/atif_trajectory.json}.
+Additionally, for traceibility and as cache, raw LLM request, response, parsing metadata, and errors are stored separately under \code{agent_logs/atif_processed/codex_description_raw/}.
+If \code{codex_description_raw} already contains a valid \code{metadata.json} entry for the same parsed Python invocation and the same Codex command (model and reasoning effort included), the LLM call is skipped and the cached metadata is reused.
+Note that failed entry (i.e. the one that do not match schema below) are recomputed.
+
+
+The emitted value is one JSON object with name \code{trajectory_evaluation.json} with schema defined below and in the case the LLM enrichment is run
 
 \begin{DocCode}
 python workflows/trajectory/trajectory_evaluation_programmatic.py \
-[<agentic_run_id>] \ 
-[--llm [--llm-model MODEL] [--parallel N]] \ 
-[--path PATH]
+  [<agentic_run_id>] \
+  [--llm [--llm-model MODEL_REASONING] [--parallel N]] \
+  [--path PATH]
 \end{DocCode}
 Note that only one of \code{<agentic_run_id>} or \code{--path} may be passed.
 The \code{agentic_run_id} resolves to:
@@ -25,45 +31,44 @@ The \code{agentic_run_id} resolves to:
 terminal-bench/runs/<agentic_run_id>
 \end{DocCode}
 
-\section*{Output Schema}
+When the CLI is run with \code{--llm}, the configured LLM backend is called once per Python invocation and the enrichment fields are filled directly on the corresponding Python \code{detailed} entry.
+The enrichment model is selected with \code{--llm-model MODEL_REASONING}.
+If \code{--llm-model} is not passed, the default is \code{gpt-5.5,low}.
+An additional supported model is the locally served SGLang model \code{deepseek-v4-flash}, available through an OpenAI-compatible endpoint such as \code{http://127.0.0.1:31180/v1}.
 
-The emitted value is one JSON object with name \code{trajectory_evaluation.json} inside the run folder with the following keys:
 
-\begin{DocCode}
-{
+\section*{\code{trajectory_evaluation} Schema}
+
+\newcommand{\trajectoryEvaluationNumberOfInteractionsLink}{\hyperref[sec:trajectory-evaluation-number-of-interactions]{\texttt{number\_of\_interactions}}}
+
+\begin{LinkedDocCode}
+\{
   "agentic_run_id": "<run_id>",
   "agent_id": "<agent_profile_id>",
   "atif_trajectory_path": "/abs/path/to/atif_trajectory.json",
-  "tokens": {
+  "tokens": \{
     "total_prompt_tokens": 1200,
     "total_completion_tokens": 250,
     "avg_prompt_tokens_per_iteration": 80.0,
     "avg_completion_tokens_per_iteration": 16.67
-  },
-  "artifact_analysis": {
-    "python_scripts": {"created": 2, "executed": 1},
-    "json_files": {"created": 1},
-    "plots": {"generated": 4, "inspected": 3}
-  },
+  \},
+  "artifact_analysis": \{
+    "python_scripts": \{"created": 2, "executed": 1\},
+    "json_files": \{"created": 1\},
+    "plots": \{"generated": 4, "inspected": 3\}
+  \},
   "cost_usd": 0.123,
-  "number_of_interactions": {
-    "user": 1,
-    "system": 0,
-    "agent": {
-      "tool_call_steps": 51,
-      "tool_observation_steps": 51,
-      "steps": 20
-    }
-  },
-  "tool_calls": {
-    "run_shell_command": {"count": 9}
-  }
-}
-\end{DocCode}
+  "\trajectoryEvaluationNumberOfInteractionsLink": ...,
+  "tool_calls": \{
+    "run_shell_command": \{"count": 9\}
+  \}
+\}
+\end{LinkedDocCode}
 
 
 
 \section*{\code{number_of_interactions}}
+\phantomsection\label{sec:trajectory-evaluation-number-of-interactions}
 
 This is always a fixed object with the keys:
 \begin{itemize}
@@ -79,8 +84,6 @@ This is always a fixed object with the keys:
 \end{DocCode}
 \end{itemize}
 Note that \code{tool_call_steps} and \code{tool_observation_steps} must have the same value, otherwise it raises an error
-
-Each value is an integer count of steps whose \code{source} matches that bucket.
 
 \begin{DocCode}
 {
@@ -112,17 +115,16 @@ This section summarizes files created or used by the agent, including Python scr
   }
 }
 \end{DocCode}
-A plot is counted as \code{generated} when the trajectory creates an image-like artifact, such as a \code{.png}, \code{.jpg}, \code{.jpeg}, \code{.svg}, or \code{.pdf}, or when a parsed Python invocation calls a plotting save routine such as \code{savefig}.
+A plot is counted as \code{generated} when the trajectory creates an image-like artifact, such as a \code{.png}, \code{.jpg}, \code{.jpeg}, \code{.svg}, or \code{.pdf}.
 A plot is counted as \code{inspected} only when the trajectory contains a later image-capable read, open, or visualization event for that artifact.
 Merely creating a plot file, listing it, or mentioning its path does not count as inspection.
 
 \section*{\code{tool_calls}}
-\code{tool_calls} is an object keyed by tools defined in \code{agents.json::<agent_entry>::available_tools}. 
-The structure of each object must have a minimal key called "count". 
-And additional keys that the depends on \code{agents.json::<agent_entry>::available_tools::<tool>::parse_method}. 
-If \code{parse_method==False}, it means that the tool input/output are not parsed and we are just counting the calls.
-If \code{parse_method = "file_path"} we additionally have \code{"read"} entry which corresponds to the files that were read.
-If \code{parse_method = "tree_sitter_bash"}, we additionally have \code{"commands"} entry which corresponds to commands that were run.
+\code{tool_calls} is an object keyed by tools defined in \code{agents.json::<agent_entry>::available_tools}.
+The structure of each object must have a minimal key called "count" and additional keys that depends on \code{agents.json::<agent_entry>::available_tools::<tool>::parse_method}.
+If \code{parse_method == false}, it means that the tool input/output are not parsed and we are just counting the calls.
+If \code{parse_method == "file_path"} we additionally have \code{"read"} entry which corresponds to the files that were read.
+If \code{parse_method == "tree_sitter_bash"} we additionally have \code{"commands"} entry which corresponds to commands that were run.
 The total sums of each value in the parse-specific key, such as \code{read} or \code{commands}, must match \code{count}.
 
 Schematic example:
@@ -252,7 +254,7 @@ Schema with optional LLM enrichment:
         "total_output_bytes": 12,
         "description": "Prints the first few time values.",
         "number_of_semantically_relevant_numbers": 3,
-        "intent_class": "exploring",
+        "intent_class": "data_orientation",
         "specific_subtype": "data_preview"
       },
       "analyze.py": {
@@ -267,7 +269,7 @@ Schema with optional LLM enrichment:
         "total_output_bytes": 130,
         "description": "Computes summary statistics for candidate classes.",
         "number_of_semantically_relevant_numbers": 8,
-        "intent_class": "exploiting",
+        "intent_class": "numeric_inspection",
         "specific_subtype": "summary_statistics"
       }
     }
@@ -294,14 +296,14 @@ Field semantics:
 \item \code{detailed}: JSON object keyed by Python invocation identifier; each value summarizes one parsed invocation entry.
 \end{itemize}
 
-Details contanes
+Each entry in \code{detailed} contains:
 \begin{itemize}
 \item \code{python_identifier_id} that must be one of the following
   \begin{itemize}
   \item Inline \code{python -c ...} snippets use keys like \code{dash_c_1}, \code{dash_c_2}, etc.
   \item Heredoc Python snippets use keys like \code{heredoc_1}, \code{heredoc_2}, etc.
   \item Script-path invocations use the invoked script target string, for example \code{analyze.py}.
-  \item For unresolved script targets, the detailed entry still exists, but \code{lines_of_code} can be \code{null} and \code{library_calls} can be empty.  
+  \item For unresolved script targets, the detailed entry still exists, but \code{lines_of_code} can be \code{null} and \code{library_calls} can be empty.
   \end{itemize}
 \end{itemize}
 
@@ -323,49 +325,169 @@ For instance this means that two numpy functions were called and one pandas func
 
 \subsubsection*{LLM enrichment fields}
 
-When the CLI is run with \code{--llm}, Codex is called once per Python invocation and the enrichment fields are filled directly on the corresponding Python \code{detailed} entry.
-The enrichment model is defined with \code{--llm-model MODEL-REASONING}, if passed otherwise is gpt-5.3-codex-spark with reasoning model medium.
 If the \code{codex} executable is not on \code{PATH}, set \code{TSENV_CODEX_BIN} to the Codex binary path.
 The raw Codex prompt, response, error stream, and parsed metadata for each parsed Python invocation are stored next to the processed ATIF trajectory, under \code{agent_logs/atif_processed/codex_description_raw}.
 This folder acts as the LLM-enrichment cache: valid entries produced by the same Codex command are skipped by default on rerun, while missing or invalid entries are recomputed.
 The current schema is:
 \begin{DocCode}
 {
-  "description": "Prints the first few time values.",
+  "description": "Computes summary statistics for candidate classes.",
   "number_of_semantically_relevant_numbers": 43,
-  "intent_class": "exploring",
-  "specific_subtype": "data_preview"
+  "intent_class": "numeric_inspection",
+  "specific_subtype": "summary_statistics"
 }
 \end{DocCode}
-The number of enriched entries equals the number of parsed Python invocation entries for which LLM enrichment was run.
+Where
+\begin{itemize}
+\item \code{description}: A short natural-language summary of what the script does.
+\item \code{number_of_semantically_relevant_numbers}: The number of semantically meaningful numbers the script outputs.
+\item \code{intent_class}: One of \code{data_orientation}, \code{numeric_inspection}, \code{visualization}, \code{feature_extraction}, \code{decision_construction}, \code{prediction}, \code{validation}, \code{submission}, or \code{utility}.
+\item \code{specific_subtype}: A concise subtype compatible with the selected \code{intent_class}, such as \code{data_preview}, \code{summary_statistics}, \code{plot_generation}, \code{model_fit}, \code{rule_validation}, or \code{final_answer}.
+\end{itemize}
 
+In order to avoid silent errors, if the output doens't comply with this schema, we raise an error.
+
+
+
+The number of enriched entries equals the number of parsed Python invocation entries for which LLM enrichment was run.
 Each Codex request sees exactly one invocation and one matched observed output.
 The resulting enrichment fields are then attached to the corresponding Python \code{detailed} entry.
 
-The prompt sent to Codex to obtain these four fields is:
-
+The user prompt is:
 \begin{DocCode}
 Return only a JSON object with exactly these keys:
 description, number_of_semantically_relevant_numbers, intent_class, specific_subtype
-
-Guidelines:
-- description: In at most 20 words, describe what the Python code does and what it outputs. Avoid boilerplate such as "Run python3 script.py."
-- number_of_semantically_relevant_numbers: Count the meaningful numeric values visible in the execution context. Prioritize numbers from outputs. Ignore incidental numbers such as warnings, file paths, version numbers, timestamps, and library-internal values.
-- intent_class: Use exactly one of these values:
-  exploring: inspection, plotting, debugging, exploratory statistics, or hypothesis generation.
-  exploiting: inferring the label, producing the final answer, verifying a guessed class, or otherwise solving the task.
-  artifact: work that is not related to solving the task, such as metadata or file-management work.
-- specific_subtype: Use a concise subtype for the invocation, such as data_preview, summary_statistics, plotting, model_fit, rule_validation, or final_answer.
-Heuristics:
-- If the output includes labels, candidate classes, or answers, classify it as exploiting.
-- If the code is trying to train a black-box algorithm on the training data, classify it as exploiting.
-
-
+You are annotating one parsed Python invocation from an agent trajectory.
+Classify the observable action performed by this invocation using only the provided
+Python call and its matched observed output.
+Do not infer the agent's hidden mental state or assume what happened in earlier or later trajectory steps.
+Field requirements:
+- description:
+  In at most 20 words, describe what the Python code does and what it visibly outputs or creates.
+  Avoid boilerplate such as "Runs script.py."
+  Describe observable operations rather than inferred intentions.
+- number_of_semantically_relevant_numbers
+  Return a non-negative integer counting meaningful numeric values explicitly visible in the textual observed output.
+  Count:
+  - time-series measurements and time coordinates;
+  - computed statistics, scores, estimates, thresholds, and physical parameters;
+  - numeric predictions or class indices when they are task-relevant;
+  - each visibly printed occurrence, including repeated values.
+  Do not count:
+  - numeric literals appearing only in the Python code;
+  - numbers hidden inside files, arrays, or plots that are not textually displayed;
+  - filesystem identifiers, hashes, line numbers, library versions, or warning codes;
+  - wall-clock or logging timestamps unrelated to the analyzed time series;
+  - traceback metadata or other incidental execution numbers.
+  For plot-only or image-only output, return 0 unless numeric values are also printed as text.
+  For empty output or failure-only output, return 0.
+  Count only values that are actually visible; do not estimate omitted or truncated values.
+- intent_class:
+  Use exactly one of the following values:
+  data_orientation:
+    Inspects dataset structure, available files, columns, shapes, labels, class counts, or a small preview mainly to understand the data format.
+  numeric_inspection:
+    Makes numerical evidence visible in terminal output, including raw measurements, descriptive summaries, local time windows, event-aligned values, or comparisons.
+    Use this when the main action is inspecting printed values, even if simple derived quantities such as finite-difference acceleration are computed for that inspection.
+  visualization:
+    Generates, saves, displays, opens, or renders a plot or image for visual analysis.
+    Do not claim that a saved plot was inspected unless this invocation displays or opens it.
+  feature_extraction:
+    Computes reusable derived signals, detected events, change points, engineered features, or estimated physical parameters.
+    Use this when producing the derived representation is the main action, rather than merely printing a few values.
+  decision_construction:
+    Constructs or fits a diagnostic procedure, including thresholds, hand-written heuristics, similarity methods, classifiers, regressors, or reusable rules.
+  prediction:
+    Applies an existing procedure to unlabeled samples and outputs candidate labels, rankings, class scores, or predictions.
+  validation:
+    Evaluates or refines an existing rule, model, feature, threshold, or guessed label
+    using accuracy, errors, labeled examples, edge cases, or robustness checks.
+  submission:
+    Creates, updates, executes, or checks the required final task artifact, such as
+    results.json or rule.py.
+  utility:
+    Performs environment setup, package checks, file management, metadata inspection,
+    debugging, or code repair without itself carrying out substantive data analysis.
+- specific_subtype:
+  Use exactly one subtype compatible with the selected intent_class.
+  For data_orientation:
+    file_inventory
+    schema_inspection
+    shape_inspection
+    data_preview
+    label_inventory
+  For numeric_inspection:
+    raw_values
+    summary_statistics
+    local_time_window
+    event_aligned_values
+    pre_post_comparison
+    cross_sample_comparison
+  For visualization:
+    plot_generation
+    plot_display
+    plot_generation_and_display
+  For feature_extraction:
+    signal_processing
+    event_detection
+    change_point_detection
+    physical_parameter_estimation
+    feature_engineering
+  For decision_construction:
+    threshold_rule
+    heuristic_rule
+    similarity_method
+    model_fit
+    rule_implementation
+  For prediction:
+    candidate_labeling
+    batch_prediction
+    ranking
+  For validation:
+    training_evaluation
+    rule_validation
+    error_analysis
+    parameter_tuning
+    robustness_check
+    synthetic_test
+  For submission:
+    final_answer
+    artifact_validation
+    format_check
+  For utility:
+    debugging
+    code_repair
+    environment_check
+    file_management
+    package_check
+    other_utility
+Classification rules:
+1. Classify the invocation's main observable action, not every operation it contains.
+2. Writing results.json or rule.py is submission/final_answer, not utility.
+3. Checking whether the required artifact exists, parses, imports, or executes is
+   submission/artifact_validation or submission/format_check.
+4. Printing labels for test samples is prediction unless the invocation writes the
+   required final artifact, in which case it is submission.
+5. Computing accuracy, examining mistakes, or tuning a procedure against labeled
+   examples is validation.
+6. Fitting a model or constructing thresholds is decision_construction, even if the
+   model also prints training predictions.
+7. Computing a narrow local window of values for manual inspection is
+   numeric_inspection, not feature_extraction.
+8. Computing derived quantities systematically across samples for later use is
+   feature_extraction.
+9. A plot saved without being displayed is visualization/plot_generation.
+10. A plot displayed or opened is visualization/plot_display. Use
+    plot_generation_and_display when both occur in the same invocation.
+11. If an analytical invocation fails, classify the attempted analytical operation
+    when it is clear from the code. Use utility/debugging only when the invocation's
+    purpose is diagnosing or repairing the failure.
 Output requirements:
 - Return JSON only.
+- Do not include markdown, comments, or explanatory text.
 - Do not include any extra keys.
-- Use the exact key names shown above.
-
+- Use the exact key names and allowed values shown above.
+- number_of_semantically_relevant_numbers must be an integer.
 Entry key: <entry_key>
 Executions: <executions>
 Calls:
@@ -386,15 +508,6 @@ Observed output:
 - 1    0.15
 - 2    0.18
 \end{DocCode}
-
-These fields are:
-\begin{itemize}
-\item \code{description}: A short natural-language summary of what the script does.
-\item \code{number_of_semantically_relevant_numbers}: The number of semantically meaningful numbers the script outputs.
-\item \code{intent_class}: One of \code{exploring}, \code{exploiting}, or \code{artifact}.
-\item \code{specific_subtype}: A concise subtype for the invocation, such as \code{data_preview}, \code{summary_statistics}, \code{plotting}, \code{model_fit}, \code{rule_validation}, or \code{final_answer}.
-\end{itemize}
-
 
 
 

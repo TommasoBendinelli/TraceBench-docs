@@ -24,11 +24,6 @@ These files, together with  \code{simulink_model_original.mdl}, define a simulat
 Additionally, \termSimulator needs to be added to \hyperref[sec:allowed-tsenv-models]{\code{shared/benchmark_utils.py::ALLOWED_TSENV_MODELS}} and the \environmentBuildMetadataStageLink{} needs to be run.
 
 
-\paragraph{Policy Generation}
-The runs are sampled a generation policy.
-Since this way of sampling was introduced after the first public released of the dataset, we have a 10k version for each of the \termSimulator in the first version in distribution with the test set. 
-
-
 The files are located in \code{models/simulink/<simulator_id>/}.
 \newcommand{\environmentTreeSimulinkModelOriginal}{\hyperref[sec:environment-simulink-model-original]{simulink\_model\_original.mdl}}
 \newcommand{\environmentTreeDescriptionLevels}{\hyperref[sec:environment-description-levels]{description\_levels.json}}
@@ -36,8 +31,6 @@ The files are located in \code{models/simulink/<simulator_id>/}.
 \newcommand{\environmentTreeNoiseAdder}{\hyperref[sec:environment-noise-adder]{noise\_adder.py}}
 \newcommand{\environmentTreeGenerationPolicy}{\hyperref[sec:generation-policy-schema]{generation\_policies/\textless policy\_id\textgreater.json}}
 \newcommand{\environmentTreeDetectabilitySpecific}{\hyperref[sec:environment-detectability-specific]{detectability\_specific\_environment.py}}
-\newcommand{\environmentTreeFeatures}{\hyperref[sec:environment-optional-files]{features.py}}
-\newcommand{\environmentTreeBasicRule}{\hyperref[def:basic-rule-predict-interface]{basic\_rule.py}}
 \begin{LinkedDocCode}
 models/simulink/<simulator_id>/
 |-- \environmentTreeSimulinkModelOriginal
@@ -45,14 +38,22 @@ models/simulink/<simulator_id>/
 |-- \environmentTreeExperimentConfig
 |-- \environmentTreeNoiseAdder
 |-- \environmentTreeGenerationPolicy
-|-- \environmentTreeDetectabilitySpecific\quad optional
-|-- \environmentTreeFeatures\quad optional
-`-- \environmentTreeBasicRule\quad optional
+|-- \environmentTreeDetectabilitySpecific\quad
 \end{LinkedDocCode}
 
 In the following each of these files is described.
 \phantomsection\label{sec:generation-policy-schema}
 \subsection*{Generation Policy Schema}
+
+
+\paragraph{Policy Generation}
+Note that the original public test release on HuggingFace did not use this generation-policy-based sampling pipeline. 
+After introducing generation policies, we backfilled a 10k-family candidate pool for each simulator from the original dataset release, using the same sampling distribution used to construct the test set.
+
+Since this way of sampling was introduced after the first public released of the dataset, we have a 10k version for each of the \termSimulator in the first version in distribution with the test set. 
+
+
+The runs are sampled a generation policy.
 
 A generation policy defines:
 
@@ -393,30 +394,14 @@ The \code{add_noise(...)} interface is defined in \hyperref[def:add-noise-utilit
 \phantomsection\label{sec:environment-detectability-specific}
 \subsection*{Optional Implementation Hooks}
 
-\code{detectability_specific_environment.py} may expose:
+\code{detectability_specific_environment.py} exposes:
 
 \begin{DocCode}
 def is_detectable(intervention: pd.DataFrame, baseline: pd.DataFrame, run_parameters: dict, intervention_time: float, min_first_diff: float | None) -> str
 \end{DocCode}
 
 This hook is an environment-specific veto used by Stage: Cheap Filter Metrics.
-If it returns \code{"no"}, the child is marked as not detectable even if the generic RMS/SRD checks pass.
-\phantomsection\label{sec:environment-optional-files}
-\subsubsection*{Optional files}
-
-\begin{itemize}
-\item \code{features.py}: A self-contained script that contains a feature extractions set. It has a \code{FEATURE_NAMES: tuple[str, ...]} with a list of all available features.
-Each feature can be exposed independently. It also has utility functions that are shared among feature. 
-It's used by basic \code{rule.py} and by \code{detectability_specific_environment.py}.
-\item \code{basic_rule.py}: Optional baseline prediction rule used by metric-computation sweeps.
-\end{itemize}
-
-\phantomsection\label{def:basic-rule-predict-interface}
-If present, \code{basic_rule.py} must expose:
-
-\begin{DocCode}
-def predict(df) -> list[str]
-\end{DocCode}
+If it returns \code{"no"}, the child is marked as not detectable even if the generic RMS checks pass.
 
 
 \section*{Validation Rules}

@@ -158,11 +158,6 @@ if [ ! -f "${INDEX_SOURCE_FILE}" ]; then
   exit 1
 fi
 
-if [ ! -f "${DOC_ORDER_MANIFEST}" ]; then
-  echo "Error: docs order manifest not found at ${DOC_ORDER_MANIFEST}" >&2
-  exit 1
-fi
-
 if [ "${SKIP_PAPER}" != "true" ] && { [ ! -f "${NIPS_BUILD_SCRIPT}" ] || [ ! -r "${NIPS_BUILD_SCRIPT}" ]; }; then
   echo "Error: NIPS build script not found or not readable at ${NIPS_BUILD_SCRIPT}" >&2
   exit 1
@@ -175,6 +170,106 @@ shopt -u nullglob
 if [ "${#tex_files[@]}" -eq 0 ]; then
   echo "Error: no LaTeX files found in ${MANUAL_SRC_DIR}" >&2
   exit 1
+fi
+
+reconcile_doc_order_manifest() {
+  local tex_file
+  local tex_name
+  local raw_line
+  local temp_file
+  local source_tex_names=()
+  local existing_order=()
+  local reconciled_order=()
+  local source_registry=$'\n'
+  local existing_registry=$'\n'
+
+  for tex_file in "${tex_files[@]}"; do
+    tex_name="$(basename "${tex_file}")"
+    if [ "${tex_name}" = "documentation_index.tex" ] || [ "${tex_name}" = "docs_combined_compact.tex" ] || [ "${tex_name}" = "$(basename "${LAYOUT_CONFIG_FILE}")" ]; then
+      continue
+    fi
+    case "${tex_name}" in
+      appendix_*.tex)
+        continue
+        ;;
+    esac
+    source_tex_names+=("${tex_name}")
+    source_registry+="${tex_name}"$'\n'
+  done
+
+  if [ "${#source_tex_names[@]}" -eq 0 ]; then
+    echo "Error: no ordered document source files found in ${MANUAL_SRC_DIR}" >&2
+    exit 1
+  fi
+
+  if [ -f "${DOC_ORDER_MANIFEST}" ]; then
+    while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
+      tex_name="${raw_line%$'\r'}"
+      tex_name="${tex_name#"${tex_name%%[![:space:]]*}"}"
+      tex_name="${tex_name%"${tex_name##*[![:space:]]}"}"
+
+      if [ -z "${tex_name}" ] || [[ "${tex_name}" == \#* ]]; then
+        continue
+      fi
+
+      case "${tex_name}" in
+        /*|*../*|../*|*/*)
+          echo "Error: ${DOC_ORDER_MANIFEST#${SCRIPT_DIR}/} entries must be .tex filenames under manual/src: ${tex_name}" >&2
+          exit 1
+          ;;
+        *.tex)
+          ;;
+        *)
+          echo "Error: ${DOC_ORDER_MANIFEST#${SCRIPT_DIR}/} entry is not a .tex file: ${tex_name}" >&2
+          exit 1
+          ;;
+      esac
+
+      if [ "${tex_name}" = "documentation_index.tex" ] || [ "${tex_name}" = "docs_combined_compact.tex" ] || [ "${tex_name}" = "$(basename "${LAYOUT_CONFIG_FILE}")" ]; then
+        continue
+      fi
+      case "${tex_name}" in
+        appendix_*.tex)
+          continue
+          ;;
+      esac
+
+      if [[ "${source_registry}" == *$'\n'"${tex_name}"$'\n'* ]] &&
+        [[ "${existing_registry}" != *$'\n'"${tex_name}"$'\n'* ]]; then
+        existing_order+=("${tex_name}")
+        existing_registry+="${tex_name}"$'\n'
+      fi
+    done < "${DOC_ORDER_MANIFEST}"
+  fi
+
+  for tex_name in "${source_tex_names[@]}"; do
+    if [[ "${existing_registry}" != *$'\n'"${tex_name}"$'\n'* ]]; then
+      reconciled_order+=("${tex_name}")
+    fi
+  done
+  if [ "${#existing_order[@]}" -gt 0 ]; then
+    reconciled_order+=("${existing_order[@]}")
+  fi
+
+  temp_file="$(mktemp "${DOC_ORDER_MANIFEST}.tmp.XXXXXX")"
+  {
+    printf '# Canonical order for standalone docs included in the combined compact manual.\n'
+    printf '# One .tex filename per line. Do not list documentation_index.tex or\n'
+    printf '# docs_combined_compact.tex here; the build handles those separately.\n'
+    for tex_name in "${reconciled_order[@]}"; do
+      printf '%s\n' "${tex_name}"
+    done
+  } > "${temp_file}"
+
+  if [ -f "${DOC_ORDER_MANIFEST}" ] && cmp -s "${temp_file}" "${DOC_ORDER_MANIFEST}"; then
+    rm -f "${temp_file}"
+  else
+    mv "${temp_file}" "${DOC_ORDER_MANIFEST}"
+  fi
+}
+
+if [ ! -f "${DOC_ORDER_MANIFEST}" ]; then
+  reconcile_doc_order_manifest
 fi
 
 indexed_tex_files=()
@@ -403,12 +498,18 @@ compile_tex() {
   if [ "${FORCE_REBUILD}" = "true" ]; then
     cleanup_latexmk_target "${stem}"
   fi
-  (
+  if ! (
     cd "${SCRIPT_DIR}"
     TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
       latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
       -output-directory="${BUILD_DIR}" "${source_file}"
-  )
+  ); then
+    if [ -f "${BUILD_DIR}/${stem}.pdf" ]; then
+      echo "Warning: latexmk returned nonzero for ${display_source}, but ${BUILD_DIR#${SCRIPT_DIR}/}/${stem}.pdf was produced." >&2
+    else
+      exit 1
+    fi
+  fi
   if [ ! -f "${BUILD_DIR}/${stem}.pdf" ]; then
     echo "Error: expected rendered PDF at ${BUILD_DIR}/${stem}.pdf" >&2
     exit 1
@@ -687,12 +788,18 @@ create_build_wrapper "docs_combined_compact.tex" combined_wrapper "" "false"
 if [ "${FORCE_REBUILD}" = "true" ]; then
   cleanup_latexmk_target "docs_combined_compact"
 fi
-(
+if ! (
   cd "${SCRIPT_DIR}"
   TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
     latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_wrapper}"
-)
+); then
+  if [ -f "${BUILD_DIR}/docs_combined_compact.pdf" ]; then
+    echo "Warning: latexmk returned nonzero for docs_combined_compact, but ${BUILD_DIR#${SCRIPT_DIR}/}/docs_combined_compact.pdf was produced." >&2
+  else
+    exit 1
+  fi
+fi
 copy_rendered_pdf "docs_combined_compact" "${COMBINED_DOCS_ONLY_FILE}"
 
 create_build_wrapper "docs_combined_compact.tex" combined_numbered_wrapper "${NUMBERED_SUFFIX}" "true"
@@ -700,12 +807,18 @@ echo "Compiling docs-only combined manual numbered variant -> ${COMBINED_NUMBERE
 if [ "${FORCE_REBUILD}" = "true" ]; then
   cleanup_latexmk_target "docs_combined_compact${NUMBERED_SUFFIX}"
 fi
-(
+if ! (
   cd "${SCRIPT_DIR}"
   TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
     latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_numbered_wrapper}"
-)
+); then
+  if [ -f "${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" ]; then
+    echo "Warning: latexmk returned nonzero for docs_combined_compact${NUMBERED_SUFFIX}, but ${BUILD_DIR#${SCRIPT_DIR}/}/docs_combined_compact${NUMBERED_SUFFIX}.pdf was produced." >&2
+  else
+    exit 1
+  fi
+fi
 if [ ! -f "${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" ]; then
   echo "Error: expected rendered combined numbered PDF at ${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" >&2
   exit 1
@@ -727,24 +840,36 @@ echo "Recompiling docs-only combined manual with merged index page numbers -> ${
 if [ "${FORCE_REBUILD}" = "true" ]; then
   cleanup_latexmk_target "docs_combined_compact"
 fi
-(
+if ! (
   cd "${SCRIPT_DIR}"
   TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
     latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_wrapper}"
-)
+); then
+  if [ -f "${BUILD_DIR}/docs_combined_compact.pdf" ]; then
+    echo "Warning: latexmk returned nonzero for docs_combined_compact, but ${BUILD_DIR#${SCRIPT_DIR}/}/docs_combined_compact.pdf was produced." >&2
+  else
+    exit 1
+  fi
+fi
 copy_rendered_pdf "docs_combined_compact" "${COMBINED_DOCS_ONLY_FILE}"
 
 echo "Recompiling docs-only combined manual numbered variant with merged index page numbers -> ${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
 if [ "${FORCE_REBUILD}" = "true" ]; then
   cleanup_latexmk_target "docs_combined_compact${NUMBERED_SUFFIX}"
 fi
-(
+if ! (
   cd "${SCRIPT_DIR}"
   TEXINPUTS="${LATEX_TEXINPUTS}${TEXINPUTS:-}" \
     latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
     -output-directory="${BUILD_DIR}" "${combined_numbered_wrapper}"
-)
+); then
+  if [ -f "${BUILD_DIR}/docs_combined_compact${NUMBERED_SUFFIX}.pdf" ]; then
+    echo "Warning: latexmk returned nonzero for docs_combined_compact${NUMBERED_SUFFIX}, but ${BUILD_DIR#${SCRIPT_DIR}/}/docs_combined_compact${NUMBERED_SUFFIX}.pdf was produced." >&2
+  else
+    exit 1
+  fi
+fi
 copy_rendered_pdf "docs_combined_compact${NUMBERED_SUFFIX}" "${COMBINED_NUMBERED_DOCS_ONLY_FILE}"
 
 merge_pdfs "${COMBINED_OUTPUT_FILE}" "${COMBINED_DOCS_ONLY_FILE}" "${NIPS_MAIN_PDF}"

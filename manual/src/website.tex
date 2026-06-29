@@ -16,7 +16,6 @@
 This document defines the public-facing design and the technical contract of the TSENV website.
 It also describes the \hyperref[sec:website-deployment]{production deployment flow} needed to publish the site and benchmark artifacts.
 Benchmark data, public results, trajectories, and accepted submission artifacts are stored on the Hugging Face Hub and rendered by a static single-page application hosted through GitHub Pages.
-The GitHub page is a rendering layer, not a scoring layer. 
 The document is divided into two parts:
 \newcommand{\websiteContentsEntry}[2]{\hyperref[#1]{#2\hfill\pageref*{#1}}}
 \begin{center}
@@ -47,9 +46,10 @@ The document is divided into two parts:
 \section*{Design Brief}
 \phantomsection\label{sec:website-overview}
 \subsection*{Overview}
-This is the public website for tsENV. The goals of the website are to:
+The goals of the website are to:
 \begin{itemize}
     \item Make the benchmark understandable before a reader opens the paper or the repository.
+    Specifically, explain what TSENV measures, how tasks are generated, what results were observed, how users can inspect examples, and how external evaluations can be submitted.
     \item Enable people to download results, trajectories, and datasets.
     \item Allow third parties to submit their agentic scores.
 \end{itemize}
@@ -76,7 +76,7 @@ This works as follows:
 \end{itemize}
 The admin actions are
 \begin{itemize}
-  \item Populate the Hugging Face repository \code{TommasoBendinelli/tsenv-benchmark} with the initial Hugging Face dataset state from the current TSENV repository state.
+  \item Populate the Hugging Face repository \code{eth-siplab/tsenvbenchmark} with the initial Hugging Face dataset state from the current TSENV repository state.
   \item Regenerate the website JSON from Hugging Face with GitHub Actions  
   \item \phantomsection\label{sec:website-admin-review-submissions}Inspect and accept/reject submissions: Maintainers access the submission artifact from the pull request's GitHub Actions run and inspect the validation report, proposed canonical result rows, trajectory index, artifact index, and proposed accepted submission archive.
   If the submission is approved, a maintainer merges the pull request and triggers a separate maintainer-only GitHub Actions workflow for publication.
@@ -98,14 +98,12 @@ The intended style is minimalistic and simple.
 It should follow the design principle of `Perfection is not when there is nothing more to add, but there is nothing left to take away'.
 White background, simple navigation, strong typography, rectangular figures, thin divider lines, and a blue link style consistent with ETH SIPLAB pages should be the standard.
 
-The website goal is to explain what TSENV measures, how tasks are generated, what results were observed, how users can inspect examples, and how external evaluations can be submitted.
-
 The website should use a restrained research-lab style:
 
 \begin{itemize}
-    \item \textbf{Layout.} Use a wide centered content column with generous margins and strong vertical spacing.
+    \item \textbf{Layout.} Use a full-width main content area with a centered maximum-width content column; figures, plots, and interactive examples should span the full available content width and scale cleanly on mobile.
     \item \textbf{Typography.} Use large bold section titles, short descriptive subtitles, and compact body text.
-    \item \textbf{Navigation.} Use a simple top header menu with text links: \texttt{Home}, \texttt{Results}, \texttt{Environments}, \texttt{Get Started}, and \texttt{Contributors}. The website must be implemented as a single-page application with client-side routing. These links should update the browser URL and render the corresponding route without loading separate HTML documents or merely scrolling to sections within one long page.
+    \item \textbf{Navigation.} Use a simple top header menu with text links. The website must be implemented as a single-page application with client-side routing. These links should update the browser URL and render the corresponding route without loading separate HTML documents or merely scrolling to sections within one long page.
     \item \textbf{Visuals.} Prefer rectangular plots and tables.
     \item \textbf{Color.} Use mostly black, white, and grey. Use blue for links and active menu items. Use orange only as a secondary accent.
     \item \textbf{Components.} Prefer thin rules, tables, and flat panels over heavy cards or shadows.
@@ -113,12 +111,6 @@ The website should use a restrained research-lab style:
     Each page should begin directly with its main title and short subtitle/description.
     Section hierarchy should be communicated through headings, spacing, and thin divider lines rather than additional decorative labels.
 \end{itemize}
-
-\section*{Page specifications}
-\phantomsection\label{sec:website-page-overview}
-\subsection*{Page 1: Overview}
-
-The homepage should immediately explain TSENV, show the key benchmark statistics, and provide a compact example task visual before ending with the design principles.
 
 \subsubsection*{Header}
 
@@ -134,6 +126,14 @@ Paper, Code, and Hugging Face are external links in the same header.
 Note that the arXiv hasn't put online yet. 
 So the link should point to \code{https://arxiv.org}
 The Hugging Face link should point to \code{hf_dataset_url} from \code{site.json}.
+
+
+
+\section*{Page specifications}
+\phantomsection\label{sec:website-page-overview}
+\subsection*{Page 1: Overview}
+
+The homepage should immediately explain TSENV, show the key benchmark statistics, and provide a compact example task visual before ending with the design principles.
 
 \subsubsection*{Hero}
 
@@ -172,113 +172,20 @@ The \texttt{Design principles} section should appear near the bottom of the land
 
 
 \subsubsection*{Illustrative example}
-This subsection goal is to explain new user how the samples are generated with two subsection
-This should have two subsections one is data simulation (GIF) and the other is agentic question (time series plot example.)
+This homepage section explains to new users how samples are generated and how agents are prompted during evaluation on the generated sample.
+The section should contain two parts: \textbf{Data Simulation}, showing the generation process as a GIF, and \textbf{Agentic Question}, showing an example time-series plot and the corresponding agent-facing question.
+
 \paragraph{Data Simulation}
-The data simulation part includes a compact animated GIF of the BallDrop simulator as the first content section below the hero and above the statistic row.
+The data simulation part comprises GIF of the BallDrop simulator as the first content section below the hero and above the statistic row.
 The GIF should be displayed directly on the white page background, without an additional outer border, frame, card, or enclosing rectangle around the image.
 On the homepage, the GIF should be displayed at the full width of the main content column, matching the text column width.
-The GIF should be stored in the website repository at \code{assets/media/ball-drop-bounce.gif} and served from \code{/assets/media/ball-drop-bounce.gif}.
+The GIF should be stored and served in the website repository at \code{assets/media/ball-drop-bounce.gif}.
 
-The design brief used to generate the gif is 
-\begin{DocCode}
-Create a deterministic animation of a 1D BallDrop simulator and its matching height-time trace.
- Output:
-  - GIF: 4800×1800 px, 4 seconds, looping forever.
-  - Also export lighter optional versions as MP4 and WebM.
-  - Also provide the full source script used to generate the files.
-  - Final filenames:
-    - ball-drop-bounce.gif
-    - ball-drop-bounce.mp4
-    - ball-drop-bounce.webm
-    - ball-drop-bounce-source.py
-  - Implement with a 1600×600 logical canvas rendered at 3× scale to produce 4800×1800 output.
-
-  Overall style:
-  - White background.
-  - Academic/research style.
-  - Minimal black/gray linework.
-  - One restrained blue accent only for the ball outline and plotted trace.
-  - Orange only for the intervention marker.
-  - No decorative elements, no mascot-like styling, no shadows, no gradients.
-  - The GIF axis labels, tick labels, and intervention text must visually match the website
-    Plotly example plot typography, including sans-serif font family, font weight, font size,
-    text color, and label placement.
-
-  Composition:
-  - Split the 4800×1800 canvas into two unequal panels.
-  - Left panel: compact simulator panel, approximately 18–22% of the canvas width.
-  - Right panel: wide time-series plot panel, approximately 78–82% of the canvas width.
-  - The left panel should feel intentionally compact because the ball only moves vertically.
-  - The right plot should use the extra horizontal space to make the trace broad and easy to read.
-  - Leave a subtle vertical divider or whitespace gap between the two panels.
-  - Do not simply stretch an old 16:9 layout; redesign spacing for the wider 8:3 aspect ratio.
-
-  Left panel:
-  - Show a single outlined blue ball moving vertically.
-  - The ball starts above the ground, not on the ground.
-  - Show a thin black horizontal ground line near the bottom.
-  - The ball should only move vertically; no horizontal movement.
-  - Do not show any text labels in the simulator panel.
-  - In particular, do not write “ground”.
-  - Do not add a title above this panel.
-
-  Right panel:
-  - Show a simple time-series plot.
-  - x-axis label: “time”
-  - y-axis label: “ball height”
-  - Use thin black axes.
-  - The plotted blue trace should reveal over time.
-  - The plotted trace must match the ball’s vertical position exactly.
-  - Do not add a plot title above this panel.
-
-  Physics:
-  - Simulate vertical motion under gravity.
-  - Use deterministic trajectory generation; no randomness.
-  - The ball starts at a positive height above the ground.
-  - Use a bounce-height coefficient, not a velocity coefficient.
-  - The first 3 rebounds must use e = 0.9, so each rebound peak height is 90% of the previous peak height.
-  - Immediately after the third ground impact, mark the intervention time on the plot and switch the bounce-height coefficient
-  to e = 0.2.
-  - Show a vertical orange intervention marker on the plot at the intervention time.
-  - Label the marker with:
-    - “intervention”
-    - “e: 0.9 -> 0.2”
-  - The intervention label should be large enough to read at webpage display size.
-  - After the intervention, continue simulating repeated bounces using e = 0.2.
-  - Do not stop after only one post-intervention bounce.
-  - Each post-intervention bounce should reach 20% of the previous bounce height, producing a rapidly decaying sequence of small
-  bounces.
-  - The post-intervention motion should not appear as one small bounce followed by an immediate snap to zero.
-  - Only set the ball to rest on the ground after the bounce height becomes visually negligible, for example less than 0.005 of
-  the plot height.
-  - Then keep the ball resting on the ground for more than 1 second before the animation loops.
-  - The total rendered animation must still be exactly 4 seconds.
-
-  Animation behavior:
-  - The ball motion and the trace reveal should be synchronized frame-by-frame.
-  - The final portion may show the ball resting on the ground, but avoid making the animation feel unnecessarily static.
-  - Use a fixed frame rate and deterministic sampling so repeated runs produce the same result.
-  - The ball should never move horizontally.
-  - The plotted trace and the ball’s vertical position must come from the same trajectory data.
-
-  Implementation requirements:
-  - Generate the trajectory numerically or analytically in code.
-  - Generate all frames deterministically from the same trajectory data.
-  - Do not manually draw inconsistent ball and plot positions.
-  - Export:
-    - ball-drop-bounce.gif
-    - ball-drop-bounce.mp4
-    - ball-drop-bounce.webm
-    - ball-drop-bounce-source.py
-\end{DocCode}
+The design brief used to generate the GIF is located \hyperref[sec:website-ball-drop-gif-prompt]{here}.
 
 \paragraph{Question}
 The example time-series plot should be rendered from the generated environment JSON files under \code{public/data/environments/BallDrop/description.json} and \code{public/data/environments/data_main_page.json}.
-
-
-The example time-series plot should be rendered from the generated environment JSON files under \code{public/data/environments/BallDrop/description.json} and \code{public/data/environments/data_main_page.json}.
-This homepage example must not have any dashed intervention line.
+The plot should be rendered like the \hyperref[sec:website-environment-specific-page]{environment-specific examples}, with two differences: (i) zoom should be disabled and (ii) it must not have any dashed intervention line.
 The layout should be single-column: compact controls above the plot, the plot across the full content width, and the prompt panel below.
 
 The example visual should include compact controls grouped into labelled rows:
@@ -296,15 +203,6 @@ Together, these interactions should be just enough to demonstrate task mode and 
 The interaction should stay minimal, with highlighted controls showing the active state.
 There should be a button below with written 'reveal answer' and then correct answer should pop up.
 
-After the stats, the homepage should include a section titled \texttt{Design principles}.
-
-\paragraph{Key features}
-\begin{itemize}
-  \item \textbf{Physics-grounded generation.} Samples are produced by simulators rather than by static datasets, giving reliable intervention labels and controllable task variants.
-  \item \textbf{Evidence-grounded agent evaluation.} Correct answers require inspecting the observed signals; textual context alone is not sufficient.
-  \item \textbf{Controlled difficulty axes.} TSENV varies textual context, observation noise, labeled examples, and answer interface in matched experimental conditions.
-\end{itemize}
-
 
 \subsubsection*{Statistic row}
 
@@ -320,6 +218,15 @@ The homepage should include two compact statistics in the following exact order:
 \hline
 \end{tabular}
 \end{center}
+
+
+
+\paragraph{Key features}
+\begin{itemize}
+  \item \textbf{Physics-grounded generation.} Samples are produced by simulators rather than by static datasets, giving reliable intervention labels and controllable task variants.
+  \item \textbf{Evidence-grounded agent evaluation.} Correct answers require inspecting the observed signals; textual context alone is not sufficient.
+  \item \textbf{Controlled difficulty axes.} TSENV varies textual context, observation noise, labeled examples, and answer interface in matched experimental conditions.
+\end{itemize}
 
 
 
@@ -372,6 +279,7 @@ The Environments page should present all simulators in a square-card grid.
 Each card should show the simulator name and the one-line description from \code{description.json::short_one_line_description}. 
 Clicking a card should navigate within the single-page application to an environment-specific route, for example \code{/environments/BallDrop/}.
 
+\phantomsection\label{sec:website-environment-specific-page}
 \paragraph{Environment-specific page}
 Each environment-specific page explains one simulator in detail. 
 The page should begin with a full-width Plotly time-series plot, followed by the agent prompt for the selected task condition. 
@@ -454,7 +362,7 @@ The target destinations are:
 \item Website repository: https://github.com/tsenv/tsenv.github.io
 \item Deployed website: https://tsenv.github.io/
 \item Code repository: https://github.com/TommasoBendinelli/tsENV.git
-\item Hugging Face dataset repository: https://huggingface.co/datasets/TommasoBendinelli/tsenv-benchmark
+\item Hugging Face dataset repository: https://huggingface.co/datasets/eth-siplab/tsenvbenchmark
 \end{itemize}
 The local website checkout for implementation should be a sibling repository \code{/Users/tbe/repos/tsenv.github.io}.
 
@@ -503,8 +411,8 @@ Note that:
   {
     "website_url": "https://tsenv.github.io/",
     "code_url": "https://github.com/TommasoBendinelli/tsENV",
-    "hf_repo": "TommasoBendinelli/tsenv-benchmark",
-    "hf_dataset_url": "https://huggingface.co/datasets/TommasoBendinelli/tsenv-benchmark",
+    "hf_repo": "eth-siplab/tsenvbenchmark",
+    "hf_dataset_url": "https://huggingface.co/datasets/eth-siplab/tsenvbenchmark",
     "issues_url": "https://github.com/TommasoBendinelli/tsENV/issues",
     "affiliation_url": "https://siplab.org/",
     "paper_url": "https://arxiv.org",
@@ -556,7 +464,7 @@ These files are the result of running the rollout as defined in \hyperref[sec:ag
 
 \subsection*{Hugging Face structure}
 \begin{DocCode}
-TommasoBendinelli/tsenv-benchmark/
+eth-siplab/tsenvbenchmark/
   README.md
   LICENSE
   questions/
@@ -685,7 +593,7 @@ Repository -> Settings -> Pages -> Build and deployment -> Source -> GitHub Acti
 \subsection*{Required secrets}
   The following GitHub Actions secrets are used by the publication and deployment workflows.
   \begin{itemize}
-    \item \code{HF_TOKEN}: Hugging Face token with access to \code{TommasoBendinelli/tsenv-benchmark}.
+    \item \code{HF_TOKEN}: Hugging Face token with access to \code{eth-siplab/tsenvbenchmark}.
     It is required in the TSENV repository for \code{publish-base-dataset.yml} and \code{publish-submission.yml}, where it must have write access.
     It is also required in the \code{tsenv.github.io} repository if \code{deploy.yml} reads from a private Hugging Face dataset.
     If the Hugging Face dataset is public, \code{deploy.yml} may read without \code{HF_TOKEN}.
@@ -704,9 +612,9 @@ python scripts/generate_base_results.py \
     --output /tmp/tsenv_hf_dataset
 \end{DocCode}
 
-Create the Hugging Face repository \code{TommasoBendinelli/tsenv-benchmark}.
+Create the Hugging Face repository \code{eth-siplab/tsenvbenchmark}.
 Create an \code{HF_TOKEN} with read and write access to this dataset repository.
-Upload the generated folder in \code{/tmp/tsenv_hf_dataset} to \code{TommasoBendinelli/tsenv-benchmark} using Hugging Face tooling.
+Upload the generated folder in \code{/tmp/tsenv_hf_dataset} to \code{eth-siplab/tsenvbenchmark} using Hugging Face tooling.
 
 If the upload is performed through GitHub Actions, configure \code{HF_TOKEN} as a repository secret in the TSENV GitHub repository.
 
@@ -714,10 +622,10 @@ If the upload is performed through GitHub Actions, configure \code{HF_TOKEN} as 
 Then trigger:
 \begin{DocCode}
 cd /Users/tbe/repos/tsenv.github.io
-python scripts/sync_hf_to_website_data.py --hf-repo TommasoBendinelli/tsenv-benchmark
+python scripts/sync_hf_to_website_data.py --hf-repo eth-siplab/tsenvbenchmark
 \end{DocCode}
 
-If \code{TommasoBendinelli/tsenv-benchmark} is private, configure \code{HF_TOKEN} as a repository secret in the \code{tsenv.github.io} GitHub repository so \code{deploy.yml} can read from Hugging Face.
+If \code{eth-siplab/tsenvbenchmark} is private, configure \code{HF_TOKEN} as a repository secret in the \code{tsenv.github.io} GitHub repository so \code{deploy.yml} can read from Hugging Face.
 If the Hugging Face dataset is public, \code{deploy.yml} may read the website data without \code{HF_TOKEN}.
 
 Initialize and push the website repository if it is not already cloned:
@@ -831,7 +739,7 @@ public/data/environments/BallDrop/description.json
     "drag coefficient",
     "gravity acceleration"
   ],
-  "download_link": "https://huggingface.co/datasets/TommasoBendinelli/tsenv-benchmark/tree/main/questions/BallDrop"
+  "download_link": "https://huggingface.co/datasets/eth-siplab/tsenvbenchmark/tree/main/questions/BallDrop"
 }
 \end{DocCode}
 The \code{agent_instruction} field is stored as plain text and must contain the fully rendered prompt shown to the agent.
@@ -876,6 +784,96 @@ Specifically:
   \item \code{tsENV_questions/<environment>/dataframes/<run_id>.parquet} files.
 \end{itemize}
 
+\appendix
+\phantomsection\label{sec:website-ball-drop-gif-prompt}
+\section*{Appendix: BallDrop GIF Generation Prompt}
+
+\begin{DocCode}
+Create a deterministic animation of a 1D BallDrop simulator and its matching height-time trace that is generated by a python script.
+ Output:
+  - GIF: 4800×1800 px, 4 seconds, looping forever.
+  - Also provide the full source script used to generate the files.
+  - Final filenames:
+    - ball-drop-bounce.gif
+    - ball-drop-bounce-source.py
+  - Implement with a 1600×600 logical canvas rendered at 3× scale to produce 4800×1800 output.
+
+  Overall style:
+  - White background.
+  - Academic/research style.
+  - Minimal black/gray linework.
+  - One restrained blue accent only for the ball outline and plotted trace.
+  - Orange only for the intervention marker.
+  - No decorative elements, no mascot-like styling, no shadows, no gradients.
+  - The GIF axis labels, tick labels, and intervention text must visually match the website
+    Plotly example plot typography, including sans-serif font family, font weight, font size,
+    text color, and label placement.
+
+  Composition:
+  - Split the 4800×1800 canvas into two unequal panels.
+  - Left panel: compact simulator panel, approximately 18–22% of the canvas width.
+  - Right panel: wide time-series plot panel, approximately 78–82% of the canvas width.
+  - The left panel should feel intentionally compact because the ball only moves vertically.
+  - The right plot should use the extra horizontal space to make the trace broad and easy to read.
+  - Leave a subtle vertical divider or whitespace gap between the two panels.
+  - Do not simply stretch an old 16:9 layout; redesign spacing for the wider 8:3 aspect ratio.
+
+  Left panel:
+  - Show a single outlined blue ball moving vertically.
+  - The ball starts above the ground, not on the ground.
+  - Show a thin black horizontal ground line near the bottom.
+  - The ball should only move vertically; no horizontal movement.
+  - Do not show any text labels in the simulator panel.
+  - In particular, do not write “ground”.
+  - Do not add a title above this panel.
+
+  Right panel:
+  - Show a simple time-series plot.
+  - x-axis label: “time”
+  - y-axis label: “ball height”
+  - Use thin black axes.
+  - The plotted blue trace should reveal over time.
+  - The plotted trace must match the ball’s vertical position exactly.
+  - Do not add a plot title above this panel.
+
+  Physics:
+  - Simulate vertical motion under gravity.
+  - Use deterministic trajectory generation; no randomness.
+  - The ball starts at a positive height above the ground.
+  - Use a bounce-height coefficient, not a velocity coefficient.
+  - The first 3 rebounds must use e = 0.9, so each rebound peak height is 90% of the previous peak height.
+  - Immediately after the third ground impact, mark the intervention time on the plot and switch the bounce-height coefficient
+  to e = 0.2.
+  - Show a vertical orange intervention marker on the plot at the intervention time.
+  - Label the marker with:
+    - “intervention”
+    - “e: 0.9 -> 0.2”
+  - The intervention label should be large enough to read at webpage display size.
+  - After the intervention, continue simulating repeated bounces using e = 0.2.
+  - Do not stop after only one post-intervention bounce.
+  - Each post-intervention bounce should reach 20% of the previous bounce height, producing a rapidly decaying sequence of small
+  bounces.
+  - The post-intervention motion should not appear as one small bounce followed by an immediate snap to zero.
+  - Only set the ball to rest on the ground after the bounce height becomes visually negligible, for example less than 0.005 of
+  the plot height.
+  - Then keep the ball resting on the ground for more than 1 second before the animation loops.
+  - The total rendered animation must still be exactly 4 seconds.
+
+  Animation behavior:
+  - The ball motion and the trace reveal should be synchronized frame-by-frame.
+  - The final portion may show the ball resting on the ground, but avoid making the animation feel unnecessarily static.
+  - Use a fixed frame rate and deterministic sampling so repeated runs produce the same result.
+  - The ball should never move horizontally.
+  - The plotted trace and the ball’s vertical position must come from the same trajectory data.
+
+  Implementation requirements:
+  - Generate the trajectory numerically or analytically in code.
+  - Generate all frames deterministically from the same trajectory data.
+  - Do not manually draw inconsistent ball and plot positions.
+  - Export:
+    - ball-drop-bounce.gif
+    - ball-drop-bounce-source.py
+\end{DocCode}
 
 
 \end{document}

@@ -42,27 +42,26 @@
 \docTitle{Experiment Plan}
 \phantomsection\label{docstart:experiment_plan}
 This document describes how to use the agentic rollout stages to create the artifacts shown in the paper, as well as those used for human analysis and debugging.
-The experiments conducted here are designed to fill out the paper and to test the followng hypothesis:
+The experiments conducted here are designed to fill out the paper and to test the following hypotheses:
 \begin{itemize}
 \item Increasing observation noise decreases agent accuracy.
 \item Requiring reusable code-rule predictions decreases performance relative to direct prediction.
 \item Removing textual context decreases performance more than removing labeled examples.
 \item Higher tool use or token use does not necessarily imply better evidence-grounded time-series analysis.
 \end{itemize}
-Other questions we want to ask is: 
+Other questions we want to ask are:
 \begin{itemize}
   \item What are the most common types of errors made by the agents?
   \item Do agents more frequently confuse intervention cases with non-intervention cases, or do they make other types of mistakes?
 \end{itemize}
 The tables with all the experiments conducted are  \hyperref[tab:experiment-plan-calibration]{Table~\ref*{tab:experiment-plan-calibration}}, \hyperref[tab:experiment-plan-main]{Table~\ref*{tab:experiment-plan-main}}, and \hyperref[tab:experiment-plan-ablation]{Table~\ref*{tab:experiment-plan-ablation}}.
 
-Assuming we have run all the experiments, the exact commands to obtain the results are located here:
-\hyperref[sec:experiment-plan-commands-to-run]{Commands to run}.
+Assuming we have run all the experiments, the exact commands to obtain the results are located \hyperref[sec:experiment-plan-commands-to-run]{here}.
 
 \subsection*{Technical implementation brief}
 We first use a script that collects the necessary information from all runs and stores it in a specific folder.
 These outputs are then consolidated into single .csv files, which are subsequently used to generate the .tex tables, plots, detailed analysis and spotting errors/debugging.
-This structure also ensure lineage and traceability.
+This structure preserves lineage and traceability.
 We observed that ChatGPT is very effective at analyzing individual files. 
 Empirically, we found that providing ChatGPT with the entire folder of trajectories is an effective way to obtain insights and identify potential errors.
 Everything is done programmatically to ensure lineage and tracking. 
@@ -74,6 +73,28 @@ All the results by default are saved in three folders:
   \item \code{results_large_artifacts/} This folder is not committed to Git and contains anything that is large (agentic trajectories)
   \item \code{docs/overleaf_paper/generated} This folder contains the tables and plots that are shown in the paper or in the appendix.
 \end{itemize}
+
+\phantomsection\label{sec:experiment-plan-commands-to-run}
+\subsection*{Commands to run}
+\begin{DocCode}
+# 1. Recompute deterministic trajectory metrics
+for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
+  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id"
+done
+# 2. Optional: add LLM trajectory annotations with the DeepSeek SGLang model
+for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
+  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id" --llm --llm-model deepseek-v4-flash --parallel 8
+done
+# 3. Consolidate trajectories and DeepSeek-enriched numerical results
+python consolidate_trajectories.py PAPER CALIBRATION
+python consolidate_results.py PAPER CALIBRATION --llm-model deepseek-v4-flash
+# 4. Regenerate paper tables, plots, and statistical-significance artifacts
+python generate_paper_table.py PAPER --include-calibration
+python generate_plots.py
+python generate_statistical_significance.py
+\end{DocCode}
+
+These commands recompute trajectory metrics, add optional LLM trajectory annotations, consolidate results, and regenerate the paper artifacts.
 
 \begingroup
 \renewcommand{\arraystretch}{1.0}
@@ -184,9 +205,10 @@ python consolidate_trajectories.py [TAG ...] [--output-folder FOLDER]
 This script collects all the \code{atif_trajectory.json}, optionally filtered by tag, and stores them in \code{FOLDER}, by default \code{results_large_artifacts/trajectories}.
 
 \begin{DocCode}
-  python consolidate_results.py [TAG ...] [--output-folder FOLDER]
+python consolidate_results.py [TAG ...] [--llm-model MODEL] [--output-folder FOLDER]
 \end{DocCode}
 This script takes as input all \hyperref[sec:agentic-rollout-run-configurations]{\code{run_configurations/*.json}}, optionally filters them by tag, and generates two files in \code{FOLDER}, set by default at \code{results_large_artifacts/consolidated_numerical_results}.
+When the trajectory annotations were generated with DeepSeek, pass \code{--llm-model deepseek-v4-flash} so the consolidation reads the model-specific raw artifacts.
 \begin{itemize}
   \item \code{<row_slug>_summary.json} 
   \item \code{<row_slug>.json}
@@ -194,32 +216,33 @@ This script takes as input all \hyperref[sec:agentic-rollout-run-configurations]
 The schemas of these JSON outputs are documented in \hyperref[sec:experiment-plan-consolidated-json-schema-appendix]{Appendix: Consolidated JSON schemas}.
 
 \section{Generate final artifacts}
-\subsection{CSV Tables}
-This script converts the consolidated row-level JSON artifacts into CSV files used for analysis and paper-table generation.
+\subsection{CSV and TeX Tables}
+This script converts the consolidated row-level JSON artifacts into CSV files and TeX tables used for analysis and paper-table generation.
 \begin{DocCode}
-python generate_csv_tables.py [TAG …]
+python generate_paper_table.py [TAG ...] [--include-calibration]
 \end{DocCode}
-Where [TAG] if passed only includes results from the previous script with that corresponding tag.
+Where [TAG] if passed only includes consolidated results matching that corresponding tag.
 
-The output of this second script consists of two CSV artifact types (for direct analysis and inspection)
+The output consists of CSV artifact types for direct analysis and inspection, plus generated TeX tables for the paper.
 \begin{itemize}
   \item \code{results/consolidated/all_runs.csv}: This is committed to Git
   \item \code{results/consolidated/tables/all_samples.csv}
+  \item \code{docs/overleaf_paper/generated/tables/*}: paper and appendix TeX tables
 \end{itemize}
 
 The schemas of these CSV outputs are documented in \hyperref[sec:experiment-plan-consolidated-csv-schema-appendix]{Appendix: Consolidated CSV schemas}.
 
 \FloatBarrier
-\subsection{Generate TeX tables}
+\subsection{Canonical paper tables}
 Use the following command:
 \begin{DocCode}
-  python generate_tex_tables.py
+python generate_paper_table.py PAPER --include-calibration
 \end{DocCode}
 This generates the final tables for the paper presented in the experimental section and appendix.
-The script takes as input \code{results/consolidated/all_runs.csv}, \code{results/consolidated/tables/all_samples.csv}, and matching \code{all_runs_*CALIBRATION*.csv}/\code{all_samples_*CALIBRATION*.csv} auxiliary files when present.
+The script takes as input the consolidated row-level JSON artifacts and writes the matching CSV and TeX artifacts.
 Tables follow the following rules:
 \begin{itemize}
-\item The standard deviation is the `standard deviation per batch'; generated tables use \verb|\scorepm{91.2}{0.4}|, rendered as \(91.2 \pm {\scriptstyle 0.4}\).
+\item Means and standard deviations follow the convention described in \Cref{subsec:metrics}; generated tables use \verb|\scorepm{91.2}{0.4}|, rendered as \(91.2 \pm {\scriptstyle 0.4}\).
 \item Each number should display four digits, i.e., 0.559 is OK, 0.5593 is not OK; 123.4 is OK, 123.43 is not OK. 
 Both the main number and the std.
 \item All the tables follow the same font size and occupy the entire width.
@@ -232,11 +255,11 @@ Both the main number and the std.
 \item An entry is shown only if five repetition seeds are present for each \termSimulator.
 This holds also for the aggregate main paper tables.
 \end{itemize}
-The tables are saved at \code{docs/overleaf_paper/generated/tables/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
+The tables are saved at \code{docs/overleaf_paper/generated/tables/*/*} with name matching its label in the \code{.tex} and in the \code{used_by} entry.
 So for example
 \begin{DocCode}
 \label{tab:acc_main_experiment_table}
-\input{generated/tables/acc_main_experiment_table}
+\input{generated/tables/main/acc_main_experiment_table}
 \end{DocCode}
 Additionally tables in the Appendix follow these stylistic rules:
 \begin{itemize}
@@ -250,10 +273,16 @@ Additionally tables in the Appendix follow these stylistic rules:
   \item Plots Inspected shows how many generated plot artifacts were actually seen by the agent.
   \item Cumulative Tokens shows total token usage, computed as \code{total_prompt_tokens} plus \code{total_completion_tokens}, in M.
   \item Number Of Steps shows how many agent steps were recorded.
-  \item Percentage of python calls over the total number of python calls in a trajectory, marked as exploitation by the LLM 
-  \item Percentage of python calls over the total number of python calls in a trajectory, marked as exploration by the LLM
-  \item Percentage of python calls over the total number of python calls in a trajectory, marked as artifacts by the LLM
-  \item Number of sementically meaningful numbers explored marked by the LLM
+  \item Python Calls Data Orientation Percentage shows the percentage of enriched Python calls labeled \code{data_orientation}.
+  \item Python Calls Numeric Inspection Percentage shows the percentage of enriched Python calls labeled \code{numeric_inspection}.
+  \item Python Calls Visualization Percentage shows the percentage of enriched Python calls labeled \code{visualization}.
+  \item Python Calls Feature Extraction Percentage shows the percentage of enriched Python calls labeled \code{feature_extraction}.
+  \item Python Calls Decision Construction Percentage shows the percentage of enriched Python calls labeled \code{decision_construction}.
+  \item Python Calls Prediction Percentage shows the percentage of enriched Python calls labeled \code{prediction}.
+  \item Python Calls Validation Percentage shows the percentage of enriched Python calls labeled \code{validation}.
+  \item Python Calls Submission Percentage shows the percentage of enriched Python calls labeled \code{submission}.
+  \item Python Calls Utility Percentage shows the percentage of enriched Python calls labeled \code{utility}.
+  \item Semantically Meaningful Numbers Explored shows the total number of semantically meaningful printed numeric values marked by the LLM.
   \item Successful Runs shows how many successful runs contributed to each visible cell.
   Under the five-repetition-seed visibility rule, visible cells contain five successful runs.
   This table should contain integers rather than std.
@@ -466,7 +495,7 @@ For model-ranking tests, \code{condition_a} and \code{condition_b} are the same 
 The generated TeX table reports, for each comparison, the effect size in percentage points, the 95\% paired bootstrap confidence interval, the number of matched units, and whether the comparison supports the corresponding paper claim.
 
 \paragraph{How to run.}
-The statistical-significance artifacts are generated after the result-consolidation and CSV-generation steps have completed.
+The statistical-significance artifacts are generated after the result-consolidation and paper-table generation steps have completed.
 Run:
 \begin{DocCode}
 python generate_statistical_significance.py
@@ -487,12 +516,12 @@ docs/overleaf_paper/generated/tables/statistical_significance_tests.tex
 The expected workflow is therefore:
 \begin{DocCode}
 python consolidate_trajectories.py [TAG ...]
-python consolidate_results.py [TAG ...]
-python generate_csv_tables.py [TAG ...]
+python consolidate_results.py [TAG ...] --llm-model deepseek-v4-flash
+python generate_paper_table.py [TAG ...] --include-calibration
 python generate_statistical_significance.py
 \end{DocCode}
 
-If the input CSV files are missing or stale, rerun the consolidation and CSV-generation steps before running the statistical-significance script.
+If the input CSV files are missing or stale, rerun the consolidation and paper-table generation steps before running the statistical-significance script.
 The script should fail loudly if any pre-specified comparison has no matched simulator--repetition-seed units, rather than silently producing an empty confidence interval.
 
 \subsection*{Analysis of class swapping when adding noise}
@@ -544,10 +573,16 @@ The summary artifact additionally contains:
     \item \code{python_calls}
     \item \code{plots_generated}: number of plot artifacts generated by the agent.
     \item \code{plots_inspected}: number of generated plot artifacts later inspected by the agent.
-    \item \code{llm_semantically_relevant_numbers_total}: total numbers considered good for enrichment.
-    \item \code{llm_exploring_calls}: count of enriched Python calls labeled \code{exploring}.
-    \item \code{llm_exploiting_calls}: count of enriched Python calls labeled \code{exploiting}.
-    \item \code{llm_artifact_calls}: count of enriched Python calls labeled \code{artifact}.
+    \item \code{llm_semantically_relevant_numbers_total}: total numbers considered semantically meaningful by \code{--llm} enrichment.
+    \item \code{llm_data_orientation_calls}: count of enriched Python calls labeled \code{data_orientation}.
+    \item \code{llm_numeric_inspection_calls}: count of enriched Python calls labeled \code{numeric_inspection}.
+    \item \code{llm_visualization_calls}: count of enriched Python calls labeled \code{visualization}.
+    \item \code{llm_feature_extraction_calls}: count of enriched Python calls labeled \code{feature_extraction}.
+    \item \code{llm_decision_construction_calls}: count of enriched Python calls labeled \code{decision_construction}.
+    \item \code{llm_prediction_calls}: count of enriched Python calls labeled \code{prediction}.
+    \item \code{llm_validation_calls}: count of enriched Python calls labeled \code{validation}.
+    \item \code{llm_submission_calls}: count of enriched Python calls labeled \code{submission}.
+    \item \code{llm_utility_calls}: count of enriched Python calls labeled \code{utility}.
   \end{itemize}
 \end{itemize}
 
@@ -574,31 +609,6 @@ Each row in \code{results/consolidated/tables/all_samples.csv} describes one eva
 
 \allSamplesCsvSchemaTable
 
-
-
-\phantomsection\label{sec:experiment-plan-commands-to-run}
-\subsection*{Commands to run}
-\begin{DocCode}
-# 1. Recompute deterministic trajectory metrics
-for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
-  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id"
-done
-# 2. Optional: add LLM trajectory annotations
-for run_id in $(find terminal-bench/runs -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); do
-  python workflows/trajectory/trajectory_evaluation_programmatic.py "$run_id" --llm --parallel 8
-done
-# 3. Consolidate
-python consolidate_trajectories.py PAPER CALIBRATION
-
-python consolidate_results.py PAPER CALIBRATION
-
-python generate_csv_tables.py PAPER --include-calibration
-# 4. Regenerate paper artifacts
-python generate_plots.py
-python generate_tex_tables.py
-\end{DocCode}
-
-These commands recompute trajectory metrics, consolidate results, and regenerate the paper artifacts.
 
 
 \end{document}

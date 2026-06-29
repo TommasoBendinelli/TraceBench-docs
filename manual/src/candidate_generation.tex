@@ -125,6 +125,7 @@ The paper describes the third kind as the static-change probe.
 The implementation may keep the name \code{time0_baseline} for backward compatibility.
 
 \section*{\texorpdfstring{\titlecode{run_nodes.jsonl}}{run\_nodes.jsonl}}
+\phantomsection\label{sec:candidate-generation-run-nodes}
 Each line of \code{run_nodes.jsonl} is a complete runnable simulation run.
 The resolved plan gives every run a stable \code{run_id}, gives every recipe a \code{recipe_hash}, and records baseline/intervention/time-zero relationships in \code{run_edges.jsonl}.
 
@@ -229,7 +230,7 @@ It contains:
 \item \code{intervention}: changed parameter, post-intervention value, and intervention time. The top-level \code{kind} determines how these fields are interpreted.
 \end{itemize}
 
-\subsection*{Baseline Recipe}
+\subsection*{Baseline Recipe}\label{sec:candidate-generation-baseline-recipe}
 
 A baseline run has \code{kind = "baseline"} and no intervention.
 
@@ -276,7 +277,7 @@ It applies the changed value at \code{intervention.time}.
 }
 \end{DocCode}
 
-\subsection*{Time-Zero / Static-Change Recipe}
+\subsection*{Time-Zero / Static-Change Recipe}\label{sec:candidate-generation-time0-baseline-recipe}
 
 A time-zero/static-change run has \code{kind = "time0_baseline"}.
 It uses the same changed parameter and post-intervention value as the matched intervention run, but the value is active from time zero.
@@ -347,6 +348,7 @@ Stage: Simulate reads top-level \code{kind} together with \code{recipe.intervent
 It must not read \code{recipe.intervention.mode}.
 
 \section*{\texorpdfstring{\titlecode{run_edges.jsonl}}{run\_edges.jsonl}}
+\phantomsection\label{sec:candidate-generation-run-edges}
 
 \code{run_edges.jsonl} is a JSON Lines file.
 Each line is one relationship between run nodes.
@@ -429,21 +431,14 @@ Stage: Simulate may refuse to materialize a plan whose validation report has \co
 
 \section*{Core Validation Rules}
 
-The following rules apply to every resolved run graph:
+The following rules apply to every resolved run graph with reference to \code{  run_nodes.jsonl}, \code{  run_edges.jsonl} and \code{validation_report.json}
 
 \begin{itemize}
-\item Every \code{run_id} must be unique.
-\item Every node must have \code{run_id}, \code{kind}, \code{family_id}, \code{recipe_hash}, \code{recipe}, and \code{metadata}.
-\item Every \code{kind} must be one of \code{baseline}, \code{intervention}, or \code{time0_baseline}.
-\item Every recipe must include \code{model} (the \termSimulator identifier), \code{baseline_parameters}, and \code{intervention}.
 \item Every baseline recipe must include all exposed parameters and initial-state variables.
-\item Every baseline parameter value must respect \code{experiment_config.json::exposed_variables::*::allowed_intervals}.
 \item Every \code{kind = "baseline"} node must have \code{intervention.parameter}, \code{intervention.value}, and \code{intervention.time} set to \code{null}.
 \item Every \code{kind = "intervention"} node must change exactly one variable listed under \code{experiment_config.json::exposed_variables.parameters}.
 \item No intervention may change a variable listed only under \code{experiment_config.json::exposed_variables.initial_state}.
 \item Every intervention value must respect the changed parameter's \code{allowed_intervals}.
-\item Every \code{kind = "intervention"} node must satisfy \code{0 < intervention.time < experiment_config.json::end_time_input_s}.
-\item Every \code{kind = "time0_baseline"} node must match its paired intervention's changed parameter and value, and must have \code{intervention.time = 0.0}.
 \item Every edge must point to existing run IDs.
 \item Every \code{baseline_to_intervention} edge must connect a baseline node to an intervention node.
 \item Every \code{intervention_to_time0_baseline} edge must connect an intervention node to a time-zero/static-change node.

@@ -10,7 +10,7 @@ This is the canonical format used in \name{}.
 Each platform produces its own format, and this is a way of standardizing stuff.
 Our format is based on ATIF v1.6 \url{https://github.com/harbor-framework/harbor/blob/main/rfcs/0001-trajectory-format.md}.
 In this stage the main script converts the trajectory in this format from the supported platforms.
-We additionally have a light version of the format, to easy analytics. 
+We additionally emit a light version of the format for lightweight analytics.
 The light version is stripped of heavy metadata.
 
 \subsection*{Technical Documentation}
@@ -27,7 +27,8 @@ terminal-bench/runs/<agentic_run_id>
 This script takes as input:
 \begin{itemize}
   \item \code{scenario_info.json} to read information regarding \code{agent_id}, \code{question_id}, \code{tag}
-  \item \code{terminal-bench/runs/<run_id>/question_0/question_0.1-of-<run_id>/agent_logs/*.json}.
+  \item item the platform-specific raw trajectory under \code{terminal-bench/runs/<run_id>/question_0/question_0.1-of-<run_id>/agent_logs/},
+  for example \code{rollout-*.jsonl} for Codex or \code{.claude/projects/*.jsonl} for Claude.
 \end{itemize}
 
 And produces
@@ -143,6 +144,8 @@ Each element of \code{steps} keeps only:
 \begin{itemize}
   \item Computed durations cannot be negative. This includes \code{steps[i].duration}, \code{steps[i].observation[j].duration}, \code{total_duration}, and \code{total_tool_duration}.
   \item If the original format exposes already the cumulative count, our computation and the cumulative count must match
+  \item The exported trajectory must contain exactly one \code{USER} step. 
+  If the raw plaform specific trajectory contains additional 'fake' user-side system records, such as continuation summaries or background-task notifications, those records are dropped, but all \code{AGENT} tool calls and observations are preserved.
 \end{itemize}
-In case these are not respected, the conversion will fail
+If these rules are not respected, conversion fails.
 \end{document}
